@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+        }
+        canvas {
+            background-color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="320" height="320"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const boxSize = 16;
+        let snake = [{ x: boxSize * 5, y: boxSize * 5 }];
+        let direction = 'RIGHT';
+        let score = 0;
+
+        // Function to generate a random food position within bounds
+        function createFood() {
+            return {
+                x: Math.floor(Math.random() * ((canvas.width - boxSize) / boxSize)) * boxSize,
+                y: Math.floor(Math.random() * ((canvas.height - boxSize) / boxSize)) * boxSize,
+            };
+        }
+        let food = createFood();
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw the snake
+            ctx.fillStyle = 'green';
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillRect(snake[i].x, snake[i].y, boxSize, boxSize);
+            }
+
+            // Draw the food
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, boxSize, boxSize);
+
+            // Move the snake
+            let snakeX = snake[0].x;
+            let snakeY = snake[0].y;
+            if (direction === 'LEFT') snakeX -= boxSize;
+            if (direction === 'UP') snakeY -= boxSize;
+            if (direction === 'RIGHT') snakeX += boxSize;
+            if (direction === 'DOWN') snakeY += boxSize;
+
+            // Snake eats the food
+            if (snakeX === food.x && snakeY === food.y) {
+                food = createFood();
+                score++;
+            } else {
+                snake.pop();
+            }
+
+            // Game Over conditions
+            if (
+                snakeX < 0 || snakeY < 0 || 
+                snakeX >= canvas.width || snakeY >= canvas.height || 
+                snake.some((segment, index) => index !== 0 && segment.x === snakeX && segment.y === snakeY)
+            ) {
+                alert('Game Over! Score: ' + score);
+                snake = [{ x: boxSize * 5, y: boxSize * 5 }];
+                direction = 'RIGHT';
+                score = 0;
+                food = createFood();
+                return;
+            }
+
+            // Add new head to the snake
+            const newHead = { x: snakeX, y: snakeY };
+            snake.unshift(newHead);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+            else if (e.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+            else if (e.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+            else if (e.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+        });
+
+        // Touch controls for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+        document.addEventListener('touchmove', (e) => {
+            if (!touchStartX || !touchStartY) return;
+
+            const touchEndX = e.touches[0].clientX;
+            const touchEndY = e.touches[0].clientY;
+
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > 0 && direction !== 'LEFT') direction = 'RIGHT';
+                else if (diffX < 0 && direction !== 'RIGHT') direction = 'LEFT';
+            } else {
+                if (diffY > 0 && direction !== 'UP') direction = 'DOWN';
+                else if (diffY < 0 && direction !== 'DOWN') direction = 'UP';
+            }
+
+            touchStartX = 0;
+            touchStartY = 0;
+        });
+
+        setInterval(draw, 100);
+    </script>
+</body>
+</html>
