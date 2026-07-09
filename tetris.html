@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            touch-action: none;
+        }
+        h1 { margin: 10px 0; color: #2c3e50; }
+        #wrap { display: flex; gap: 16px; align-items: flex-start; }
+        canvas { background-color: #2c3e50; border-radius: 6px; }
+        #side { color: #2c3e50; font-size: 18px; min-width: 110px; }
+        #side div { margin-bottom: 12px; }
+        p { color: #7f8c8d; text-align: center; max-width: 420px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Tetris</h1>
+    <div id="wrap">
+        <canvas id="board" width="240" height="480"></canvas>
+        <div id="side">
+            <div>Score<br><b id="score">0</b></div>
+            <div>Lines<br><b id="lines">0</b></div>
+            <div>Level<br><b id="level">1</b></div>
+            <div>Best<br><b id="best">0</b></div>
+            <div>Next<br><canvas id="next" width="96" height="96"></canvas></div>
+        </div>
+    </div>
+    <p>← → move · ↑ rotate · ↓ soft drop · Space hard drop.<br>
+       Touch: swipe to move/drop, tap to rotate.</p>
+    <script>
+        const COLS = 10, ROWS = 20, SIZE = 24;
+        const canvas = document.getElementById('board');
+        const ctx = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('next');
+        const nctx = nextCanvas.getContext('2d');
+
+        const SHAPES = {
+            I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+            J: [[1,0,0],[1,1,1],[0,0,0]],
+            L: [[0,0,1],[1,1,1],[0,0,0]],
+            O: [[1,1],[1,1]],
+            S: [[0,1,1],[1,1,0],[0,0,0]],
+            T: [[0,1,0],[1,1,1],[0,0,0]],
+            Z: [[1,1,0],[0,1,1],[0,0,0]],
+        };
+        const COLORS = {
+            I: '#1abc9c', J: '#3498db', L: '#e67e22',
+            O: '#f1c40f', S: '#2ecc71', T: '#9b59b6', Z: '#e74c3c',
+        };
+
+        let grid, piece, nextType, score, lines, level, gameOver, dropTimer, dropInterval;
+        let best = Number(localStorage.getItem('tetrisBest') || 0);
+        document.getElementById('best').textContent = best;
+
+        function randomType() {
+            const keys = Object.keys(SHAPES);
+            return keys[Math.floor(Math.random() * keys.length)];
+        }
+
+        function newPiece(type) {
+            const shape = SHAPES[type].map(row => row.slice());
+            return { type, shape, x: Math.floor((COLS - shape[0].length) / 2), y: 0 };
+        }
+
+        function collides(shape, px, py) {
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (!shape[y][x]) continue;
+                    const gx = px + x, gy = py + y;
+                    if (gx < 0 || gx >= COLS || gy >= ROWS) return true;
+                    if (gy >= 0 && grid[gy][gx]) return true;
+                }
+            }
+            return false;
+        }
+
+        function rotate() {
+            const s = piece.shape;
+            const rotated = s[0].map((_, i) => s.map(row => row[i]).reverse());
+            // Simple wall kicks
+            for (const kick of [0, -1, 1, -2, 2]) {
+                if (!collides(rotated, piece.x + kick, piece.y)) {
+                    piece.shape = rotated;
+                    piece.x += kick;
+                    return;
+                }
+            }
+        }
+
+        function move(dx) {
+            if (!collides(piece.shape, piece.x + dx, piece.y)) piece.x += dx;
+        }
+
+        function softDrop() {
+            if (!collides(piece.shape, piece.x, piece.y + 1)) {
+                piece.y++;
+            } else {
+                lockPiece();
+            }
+        }
+
+        function hardDrop() {
+            while (!collides(piece.shape, piece.x, piece.y + 1)) piece.y++;
+            lockPiece();
+        }
+
+        function lockPiece() {
+            piece.shape.forEach((row, y) => row.forEach((v, x) => {
+                if (v && piece.y + y >= 0) grid[piece.y + y][piece.x + x] = piece.type;
+            }));
+
+            let cleared = 0;
+            for (let y = ROWS - 1; y >= 0; y--) {
+                if (grid[y].every(c => c)) {
+                    grid.splice(y, 1);
+                    grid.unshift(Array(COLS).fill(null));
+                    cleared++;
+                    y++;
+                }
+            }
+            if (cleared) {
+                score += [0, 100, 300, 500, 800][cleared] * level;
+                lines += cleared;
+                level = Math.floor(lines / 10) + 1;
+                dropInterval = Math.max(100, 800 - (level - 1) * 70);
+            }
+
+            piece = newPiece(nextType);
+            nextType = randomType();
+            if (collides(piece.shape, piece.x, piece.y)) {
+                gameOver = true;
+                if (score > best) {
+                    best = score;
+                    localStorage.setItem('tetrisBest', best);
+                }
+            }
+            updateSide();
+        }
+
+        function updateSide() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('lines').textContent = lines;
+            document.getElementById('level').textContent = level;
+            document.getElementById('best').textContent = best;
+        }
+
+        function drawCell(c, x, y, color, size) {
+            c.fillStyle = color;
+            c.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            grid.forEach((row, y) => row.forEach((v, x) => {
+                if (v) drawCell(ctx, x, y, COLORS[v], SIZE);
+            }));
+
+            // Ghost piece
+            let ghostY = piece.y;
+            while (!collides(piece.shape, piece.x, ghostY + 1)) ghostY++;
+            piece.shape.forEach((row, y) => row.forEach((v, x) => {
+                if (v) drawCell(ctx, piece.x + x, ghostY + y, 'rgba(236,240,241,0.15)', SIZE);
+            }));
+
+            piece.shape.forEach((row, y) => row.forEach((v, x) => {
+                if (v) drawCell(ctx, piece.x + x, piece.y + y, COLORS[piece.type], SIZE);
+            }));
+
+            nctx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+            const ns = SHAPES[nextType];
+            const off = (4 - ns.length) / 2;
+            ns.forEach((row, y) => row.forEach((v, x) => {
+                if (v) drawCell(nctx, x + off, y + off, COLORS[nextType], 24);
+            }));
+
+            if (gameOver) {
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ecf0f1';
+                ctx.textAlign = 'center';
+                ctx.font = '24px Arial';
+                ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 10);
+                ctx.font = '15px Arial';
+                ctx.fillText('Press Enter or tap', canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText('to play again', canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        function newGame() {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+            score = 0; lines = 0; level = 1;
+            dropInterval = 800;
+            dropTimer = 0;
+            gameOver = false;
+            piece = newPiece(randomType());
+            nextType = randomType();
+            updateSide();
+        }
+
+        let last = 0;
+        function loop(time) {
+            const dt = time - last;
+            last = time;
+            if (!gameOver) {
+                dropTimer += dt;
+                if (dropTimer > dropInterval) {
+                    dropTimer = 0;
+                    softDrop();
+                }
+            }
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (gameOver) {
+                if (e.key === 'Enter') newGame();
+                return;
+            }
+            if (e.key === 'ArrowLeft') move(-1);
+            else if (e.key === 'ArrowRight') move(1);
+            else if (e.key === 'ArrowUp') rotate();
+            else if (e.key === 'ArrowDown') { softDrop(); dropTimer = 0; }
+            else if (e.key === ' ') { e.preventDefault(); hardDrop(); }
+        });
+
+        // Touch: tap = rotate, horizontal swipe = move, swipe down = hard drop
+        let touchX = 0, touchY = 0, touchMoved = false;
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            touchX = e.touches[0].clientX;
+            touchY = e.touches[0].clientY;
+            touchMoved = false;
+        });
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            if (gameOver) return;
+            const dx = e.touches[0].clientX - touchX;
+            const dy = e.touches[0].clientY - touchY;
+            if (Math.abs(dx) > 24) {
+                move(dx > 0 ? 1 : -1);
+                touchX = e.touches[0].clientX;
+                touchMoved = true;
+            } else if (dy > 60) {
+                hardDrop();
+                touchY = e.touches[0].clientY + 1000;
+                touchMoved = true;
+            }
+        });
+        canvas.addEventListener('touchend', e => {
+            e.preventDefault();
+            if (gameOver) { newGame(); return; }
+            if (!touchMoved) rotate();
+        });
+
+        newGame();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
