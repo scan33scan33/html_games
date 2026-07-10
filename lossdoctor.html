@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loss Curve Doctor</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2c3e50;
+        }
+        h1 { margin: 12px 0 2px; }
+        p.sub { color: #7f8c8d; margin: 0 0 10px; font-size: 13px; text-align: center; }
+        #game {
+            width: 95%;
+            max-width: 560px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 10px;
+            padding: 16px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        #meta { display: flex; justify-content: space-between; font-size: 13px; color: #95a5a6; margin-bottom: 8px; }
+        #meta b { color: #f1c40f; }
+        canvas { width: 100%; border-radius: 8px; background: #10141f; display: block; }
+        #note { font-size: 13.5px; color: #bdc3c7; margin: 10px 0; line-height: 1.5; }
+        #note b { color: #ecf0f1; }
+        #answers { display: grid; gap: 8px; }
+        #answers button {
+            text-align: left; padding: 10px 12px; font-size: 14px; line-height: 1.35;
+            border: none; border-radius: 8px; background: #3d4f63; color: #ecf0f1; cursor: pointer;
+        }
+        #answers button:hover:not(:disabled) { background: #48607c; }
+        #answers button.correct { background: #27ae60; }
+        #answers button.wrong { background: #c0392b; }
+        #answers button:disabled { cursor: default; opacity: 0.92; }
+        #feedback { font-size: 13px; line-height: 1.5; margin-top: 10px; min-height: 20px; color: #bdc3c7; }
+        #feedback .hit { color: #2ecc71; font-weight: bold; }
+        #feedback .miss { color: #e74c3c; font-weight: bold; }
+        #nextBtn {
+            display: none; margin: 12px auto 0; padding: 10px 26px; font-size: 15px;
+            border: none; border-radius: 8px; background: #3498db; color: #fff; cursor: pointer;
+        }
+        #screen { text-align: center; padding: 30px 10px; display: none; }
+        #screen .big { font-size: 56px; }
+        #screen button {
+            margin-top: 14px; padding: 10px 26px; font-size: 15px;
+            border: none; border-radius: 8px; background: #3498db; color: #fff; cursor: pointer;
+        }
+        a.back { color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>📉 Loss Curve Doctor</h1>
+    <p class="sub">Ten training runs walk into your clinic. Read the curves, make the diagnosis.</p>
+    <div id="game">
+        <div id="play">
+            <div id="meta">
+                <span>Patient <b id="round">1</b>/10</span>
+                <span>Correct <b id="score">0</b></span>
+                <span>Best <b id="best">0</b>/10</span>
+            </div>
+            <canvas id="chart" width="528" height="270"></canvas>
+            <div id="note"></div>
+            <div id="answers"></div>
+            <div id="feedback"></div>
+            <button id="nextBtn">Next patient ▶</button>
+        </div>
+        <div id="screen">
+            <div class="big" id="sEmoji">🩺</div>
+            <h2 id="sTitle"></h2>
+            <div id="sText" style="font-size:14px;color:#bdc3c7"></div>
+            <button id="sBtn">New shift</button>
+        </div>
+    </div>
+    <a class="back" href="index.html">← All games</a>
+    <script>
+        // Seeded RNG so each case's curve is stable while drawn
+        function mulberry32(seed) {
+            return function () {
+                seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+                let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        const N = 100; // epochs plotted
+        // Each case: note shown to the player, curve generator -> {train, val}, options, answer, explanation
+        const CASES = [
+            {
+                note: '<b>Image classifier, LR 3e-4.</b> The team says "looks fine to us?" — confirm or deny.',
+                gen: r => curve(e => 2.2 * Math.exp(-e / 22) + 0.35, e => 2.2 * Math.exp(-e / 24) + 0.48, r, 0.02),
+                options: ['Healthy run — keep going', 'Learning rate is too high', 'Severe overfitting', 'Data leakage'],
+                answer: 0,
+                expl: 'Smooth exponential decay, val tracking slightly above train with a small stable gap — this is what healthy training looks like.',
+            },
+            {
+                note: '<b>New run after someone "sped up" training.</b> Loss went down briefly, then…',
+                gen: r => curve(e => e < 15 ? 2.2 - e * 0.05 : 1.45 + (e - 15) * 0.08 + r() * 0.3, e => e < 15 ? 2.3 - e * 0.045 : 1.6 + (e - 15) * 0.09 + r() * 0.3, r, 0.05),
+                options: ['Underfitting — model too small', 'Learning rate too high — loss diverges', 'Label noise', 'Healthy warmup'],
+                answer: 1,
+                expl: 'Initial progress followed by steady climb (often with oscillation) is the signature of an LR that overshoots minima. Lower it or add decay/clipping.',
+            },
+            {
+                note: '<b>Train vs validation after epoch ~30.</b> Train keeps improving; val does not.',
+                gen: r => curve(e => 2.0 * Math.exp(-e / 18) + 0.15, e => e < 30 ? 2.0 * Math.exp(-e / 20) + 0.3 : 2.0 * Math.exp(-30 / 20) + 0.3 + (e - 30) * 0.012, r, 0.02),
+                options: ['Underfitting', 'Overfitting — regularize, augment, or stop early', 'Exploding gradients', 'Bad random seed'],
+                answer: 1,
+                expl: 'The widening train/val gap after epoch 30 is textbook overfitting. Early stopping, augmentation, dropout/weight decay, or more data all attack it.',
+            },
+            {
+                note: '<b>Both curves after 100 epochs.</b> The intern suggests training for 500 more.',
+                gen: r => curve(e => 2.3 - 0.25 * (1 - Math.exp(-e / 15)), e => 2.35 - 0.24 * (1 - Math.exp(-e / 15)), r, 0.015),
+                options: ['Overfitting', 'Underfitting — increase capacity or train differently', 'Data leakage', 'Perfect convergence'],
+                answer: 1,
+                expl: 'Both losses plateau high and close together: the model can\'t even fit training data. More epochs won\'t help — you need more capacity, better features, or a higher LR.',
+            },
+            {
+                note: '<b>Everything was smooth until epoch ~40.</b> Then the loss became a skyscraper and stayed broken.',
+                gen: r => curve(e => e < 40 ? 1.8 * Math.exp(-e / 20) + 0.3 : 6 + r(), e => e < 40 ? 1.8 * Math.exp(-e / 21) + 0.4 : 6 + r(), r, 0.02),
+                options: ['Scheduled LR increase', 'Numerical blow-up — add gradient clipping / lower LR / check for bad batch', 'Validation set changed', 'Healthy exploration'],
+                answer: 1,
+                expl: 'A sudden irreversible spike usually means exploding gradients, an fp16 overflow, or a corrupted batch. Clipping, loss-scaling, and data checks are the fixes.',
+            },
+            {
+                note: '<b>10-class classifier.</b> Training loss sits at 2.30 from the very first step and never moves.',
+                gen: r => curve(() => 2.303, () => 2.303, r, 0.006),
+                options: ['Model is too large', 'The model predicts uniform — check for shuffled labels, LR=0, or frozen weights', 'Overfitting', 'Loss is already optimal'],
+                answer: 1,
+                expl: 'ln(10) ≈ 2.303 is the loss of predicting uniform probabilities over 10 classes. Flat at exactly that value = no learning signal: broken labels, zero LR, frozen params, or a detached graph.',
+            },
+            {
+                note: '<b>Val loss dropped to ~0 within one epoch</b> and sits far below train. The PM is thrilled.',
+                gen: r => curve(e => 1.8 * Math.exp(-e / 25) + 0.4, e => 0.05 + r() * 0.01, r, 0.02),
+                options: ['The model is simply excellent', 'Data leakage — target information is in the features or val overlaps train', 'Dropout effect', 'Val set is large'],
+                answer: 1,
+                expl: 'Near-zero validation loss immediately — and *below* train — screams leakage: a feature derived from the label, or val rows duplicated in training. Audit before celebrating.',
+            },
+            {
+                note: '<b>The curve looks like a seismograph.</b> Decreasing overall, but violently noisy step to step.',
+                gen: r => curve(e => 2.0 * Math.exp(-e / 30) + 0.4 + (r() - 0.5) * 0.5, e => 2.05 * Math.exp(-e / 30) + 0.5 + (r() - 0.5) * 0.25, r, 0),
+                options: ['Batch size too small (or LR too high) — noisy gradient estimates', 'Model too deep', 'Validation leakage', 'Perfectly normal for transformers'],
+                answer: 0,
+                expl: 'Trend is fine but variance is huge: tiny batches give noisy gradients. Increase batch size, accumulate gradients, or lower the LR to calm it down.',
+            },
+            {
+                note: '<b>Loss plateaus, then drops sharply at epochs 40 and 70.</b> Nobody touched the run.',
+                gen: r => curve(e => (e < 40 ? 1.4 : e < 70 ? 0.9 : 0.6) + 0.25 * Math.exp(-(e % 40) / 8), e => (e < 40 ? 1.5 : e < 70 ? 1.0 : 0.72) + 0.25 * Math.exp(-(e % 40) / 8), r, 0.015),
+                options: ['Random restarts', 'A step LR schedule kicking in — expected behavior', 'Data corruption', 'Overfitting cliffs'],
+                answer: 1,
+                expl: 'Staircase drops at fixed epochs are the signature of a step/multi-step LR scheduler: each LR cut lets the model settle deeper into the minimum.'
+            },
+            {
+                note: '<b>Validation loss is consistently BELOW training loss</b>, both trending down. The junior eng thinks the sets are swapped.',
+                gen: r => curve(e => 1.9 * Math.exp(-e / 25) + 0.55, e => 1.9 * Math.exp(-e / 25) + 0.38, r, 0.02),
+                options: ['Definitely a bug — val can never be lower', 'Often normal: dropout/augmentation active during training but off at eval', 'Data leakage, always', 'Underfitting'],
+                answer: 1,
+                expl: 'Train loss is measured with dropout and augmentation ON; eval runs clean. A modest, consistent val<train gap is expected in regularized models (leakage is worth ruling out for extreme gaps).',
+            },
+            {
+                note: '<b>Train loss reaches near zero. Val loss never moves at all</b> — flat from epoch 1.',
+                gen: r => curve(e => 2.0 * Math.exp(-e / 12) + 0.05, () => 2.1, r, 0.02),
+                options: ['Train/val distribution mismatch (or broken val pipeline)', 'Learning rate too low', 'Healthy generalization', 'Batch norm bug only'],
+                answer: 0,
+                expl: 'The model learns train perfectly while val is untouched: val data comes from a different distribution, or the eval pipeline is broken (wrong preprocessing, empty labels). Inspect val batches first.',
+            },
+            {
+                note: '<b>fp16 fine-tuning of a 7B LLM.</b> Loss decreases, but every ~15 epochs there\'s a sharp spike that recovers.',
+                gen: r => curve(e => 1.6 * Math.exp(-e / 35) + 0.3 + (e % 15 === 0 && e > 0 ? 1.2 : 0), e => 1.65 * Math.exp(-e / 35) + 0.4 + (e % 15 === 1 && e > 1 ? 0.8 : 0), r, 0.02),
+                options: ['Recoverable loss spikes — bad batches or fp16 instability; try clipping, loss scaling, or skip-batch logic', 'The model is memorizing', 'Scheduler bug, harmless', 'Eval contamination'],
+                answer: 0,
+                expl: 'Recurring recoverable spikes in large-model training usually trace to outlier batches or fp16 range issues. Gradient clipping, bf16, and anomaly-batch skipping are standard medicine.',
+            },
+        ];
+
+        function curve(fTrain, fVal, r, noise) {
+            const train = [], val = [];
+            for (let e = 0; e < N; e++) {
+                train.push(Math.max(0.01, fTrain(e) + (r() - 0.5) * 2 * noise));
+                val.push(Math.max(0.01, fVal(e) + (r() - 0.5) * 2 * noise));
+            }
+            return { train, val };
+        }
+
+        const $ = id => document.getElementById(id);
+        const canvas = $('chart');
+        const ctx = canvas.getContext('2d');
+        let order, round, score, current, state;
+        let best = Number(localStorage.getItem('lossDocBest') || 0);
+        $('best').textContent = best;
+
+        let audio = null;
+        function blip(freqs, type) {
+            try {
+                if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+                freqs.forEach((f, i) => {
+                    const o = audio.createOscillator(), g = audio.createGain();
+                    o.type = type || 'square'; o.frequency.value = f;
+                    const t = audio.currentTime + i * 0.09;
+                    g.gain.setValueAtTime(0.07, t);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                    o.connect(g).connect(audio.destination);
+                    o.start(t); o.stop(t + 0.14);
+                });
+            } catch {}
+        }
+
+        function shuffle(a) {
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function drawCurves(data) {
+            const W = canvas.width, H = canvas.height;
+            const padL = 44, padR = 12, padT = 14, padB = 30;
+            ctx.clearRect(0, 0, W, H);
+            const all = data.train.concat(data.val);
+            const ymax = Math.min(8, Math.max(...all) * 1.1);
+            const ymin = 0;
+            const px = i => padL + (W - padL - padR) * i / (N - 1);
+            const py = v => padT + (H - padT - padB) * (1 - (Math.min(v, ymax) - ymin) / (ymax - ymin));
+
+            // grid + axes
+            ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+            ctx.fillStyle = '#7f8c8d';
+            ctx.font = '11px Arial';
+            ctx.textAlign = 'right';
+            for (let g = 0; g <= 4; g++) {
+                const v = ymin + (ymax - ymin) * g / 4;
+                ctx.beginPath();
+                ctx.moveTo(padL, py(v));
+                ctx.lineTo(W - padR, py(v));
+                ctx.stroke();
+                ctx.fillText(v.toFixed(1), padL - 6, py(v) + 4);
+            }
+            ctx.textAlign = 'center';
+            for (let g = 0; g <= 4; g++) {
+                const e = Math.round((N - 1) * g / 4);
+                ctx.fillText(e, px(e), H - 10);
+            }
+            ctx.fillText('epoch', W / 2, H - 0.5);
+
+            const plot = (arr, color) => {
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                arr.forEach((v, i) => i ? ctx.lineTo(px(i), py(v)) : ctx.moveTo(px(i), py(v)));
+                ctx.stroke();
+            };
+            plot(data.train, '#3498db');
+            plot(data.val, '#e67e22');
+
+            // legend
+            ctx.fillStyle = '#3498db'; ctx.fillRect(padL + 6, padT + 2, 14, 3);
+            ctx.fillStyle = '#bdc3c7'; ctx.textAlign = 'left'; ctx.fillText('train', padL + 24, padT + 7);
+            ctx.fillStyle = '#e67e22'; ctx.fillRect(padL + 62, padT + 2, 14, 3);
+            ctx.fillStyle = '#bdc3c7'; ctx.fillText('val', padL + 80, padT + 7);
+        }
+
+        function newShift() {
+            order = shuffle([...CASES.keys()]).slice(0, 10);
+            round = 0;
+            score = 0;
+            $('screen').style.display = 'none';
+            $('play').style.display = 'block';
+            nextCase();
+        }
+
+        function nextCase() {
+            current = CASES[order[round]];
+            const r = mulberry32(order[round] * 1000 + 7);
+            drawCurves(current.gen(r));
+            $('note').innerHTML = current.note;
+            $('round').textContent = round + 1;
+            $('score').textContent = score;
+            const opts = shuffle([...current.options.keys()]);
+            const box = $('answers');
+            box.innerHTML = '';
+            opts.forEach(oi => {
+                const b = document.createElement('button');
+                b.textContent = current.options[oi];
+                b.dataset.oi = oi;
+                b.addEventListener('click', () => answer(b));
+                box.appendChild(b);
+            });
+            $('feedback').innerHTML = '';
+            $('nextBtn').style.display = 'none';
+            state = 'question';
+        }
+
+        function answer(btn) {
+            if (state !== 'question') return;
+            state = 'feedback';
+            const oi = Number(btn.dataset.oi);
+            const correct = oi === current.answer;
+            for (const b of $('answers').children) {
+                b.disabled = true;
+                if (Number(b.dataset.oi) === current.answer) b.classList.add('correct');
+                else if (b === btn) b.classList.add('wrong');
+            }
+            if (correct) {
+                score++;
+                $('feedback').innerHTML = '<span class="hit">✅ Correct diagnosis.</span> ' + current.expl;
+                blip([523, 659, 784]);
+            } else {
+                $('feedback').innerHTML = '<span class="miss">❌ Misdiagnosis.</span> ' + current.expl;
+                blip([196, 147], 'sawtooth');
+            }
+            $('score').textContent = score;
+            round++;
+            $('nextBtn').textContent = round >= 10 ? 'Finish shift ▶' : 'Next patient ▶';
+            $('nextBtn').style.display = 'block';
+        }
+
+        $('nextBtn').addEventListener('click', () => {
+            if (round >= 10) return endShift();
+            nextCase();
+        });
+
+        function endShift() {
+            if (score > best) {
+                best = score;
+                localStorage.setItem('lossDocBest', best);
+            }
+            $('play').style.display = 'none';
+            $('screen').style.display = 'block';
+            const grade = score >= 9 ? ['🏆', 'Attending physician!'] :
+                          score >= 7 ? ['🩺', 'Solid resident.'] :
+                          score >= 5 ? ['📚', 'Intern — keep reading.'] :
+                                       ['💀', 'The models did not survive.'];
+            $('sEmoji').textContent = grade[0];
+            $('sTitle').textContent = grade[1];
+            $('sText').innerHTML = 'Diagnosed ' + score + '/10 correctly. Best: ' + best + '/10.';
+        }
+        $('sBtn').addEventListener('click', newShift);
+
+        window.CASES = CASES; // exposed for tests
+        newShift();
+    </script>
+</body>
+</html>

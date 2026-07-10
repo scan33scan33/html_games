@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Quiz Boss</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2c3e50;
+        }
+        h1 { margin: 12px 0 2px; }
+        p.sub { color: #7f8c8d; margin: 0 0 10px; font-size: 13px; text-align: center; }
+        #game {
+            width: 95%;
+            max-width: 560px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 10px;
+            padding: 16px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        #bossRow { display: flex; align-items: center; gap: 12px; }
+        #bossEmoji { font-size: 44px; }
+        #bossInfo { flex: 1; }
+        #bossName { font-weight: bold; margin-bottom: 4px; }
+        .bar { background: #10141f; border-radius: 4px; height: 16px; overflow: hidden; position: relative; }
+        .bar > div { height: 100%; transition: width 0.3s; }
+        #bossHpFill { background: #9b59b6; }
+        #heroHpFill { background: #e74c3c; }
+        .bar span {
+            position: absolute; inset: 0; font-size: 11px; line-height: 16px; text-align: center;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        #heroRow { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 14px; }
+        #heroRow .bar { flex: 1; }
+        #meta { display: flex; justify-content: space-between; font-size: 13px; color: #95a5a6; margin: 8px 0; }
+        #meta b { color: #f1c40f; }
+        #timerBar { background: #10141f; border-radius: 3px; height: 6px; overflow: hidden; margin-bottom: 10px; }
+        #timerFill { background: #2ecc71; height: 100%; }
+        #cat {
+            display: inline-block; background: #3d4f63; border-radius: 10px;
+            font-size: 11px; padding: 3px 10px; margin-bottom: 8px; color: #aeb9c4;
+        }
+        #question { font-size: 17px; line-height: 1.45; min-height: 48px; margin-bottom: 12px; }
+        #answers { display: grid; gap: 8px; }
+        #answers button {
+            text-align: left; padding: 10px 12px; font-size: 14px; line-height: 1.35;
+            border: none; border-radius: 8px; background: #3d4f63; color: #ecf0f1; cursor: pointer;
+        }
+        #answers button:hover:not(:disabled) { background: #48607c; }
+        #answers button.correct { background: #27ae60; }
+        #answers button.wrong { background: #c0392b; }
+        #answers button:disabled { cursor: default; opacity: 0.9; }
+        #feedback { font-size: 13px; line-height: 1.5; margin-top: 10px; min-height: 20px; color: #bdc3c7; }
+        #feedback .hit { color: #2ecc71; font-weight: bold; }
+        #feedback .miss { color: #e74c3c; font-weight: bold; }
+        #nextBtn {
+            display: none; margin: 12px auto 0; padding: 10px 26px; font-size: 15px;
+            border: none; border-radius: 8px; background: #3498db; color: #fff; cursor: pointer;
+        }
+        #screen {
+            text-align: center; padding: 30px 10px; display: none;
+        }
+        #screen .big { font-size: 56px; }
+        #screen button {
+            margin-top: 14px; padding: 10px 26px; font-size: 15px;
+            border: none; border-radius: 8px; background: #3498db; color: #fff; cursor: pointer;
+        }
+        a.back { color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Quiz Boss</h1>
+    <p class="sub">Defeat the bosses with correct answers. Fast answers and streaks hit harder.</p>
+    <div id="game">
+        <div id="play">
+            <div id="bossRow">
+                <div id="bossEmoji">👾</div>
+                <div id="bossInfo">
+                    <div id="bossName"></div>
+                    <div class="bar"><div id="bossHpFill"></div><span id="bossHpText"></span></div>
+                </div>
+            </div>
+            <div id="heroRow">🧑‍💻<div class="bar"><div id="heroHpFill"></div><span id="heroHpText"></span></div></div>
+            <div id="meta">
+                <span>Score <b id="score">0</b></span>
+                <span>Combo <b id="combo">×0</b></span>
+                <span>Best <b id="best">0</b></span>
+            </div>
+            <div id="timerBar"><div id="timerFill"></div></div>
+            <span id="cat"></span>
+            <div id="question"></div>
+            <div id="answers"></div>
+            <div id="feedback"></div>
+            <button id="nextBtn">Next ▶</button>
+        </div>
+        <div id="screen">
+            <div class="big" id="sEmoji">🏆</div>
+            <h2 id="sTitle"></h2>
+            <div id="sText" style="font-size:14px;color:#bdc3c7"></div>
+            <button id="sBtn">Play again</button>
+        </div>
+    </div>
+    <a class="back" href="index.html">← All games</a>
+    <script>
+        // [category, question, [4 options], correctIndex, explanation]
+        const BANK = [
+            // --- ML Fundamentals ---
+            ['ML Fundamentals', 'A model has very low training error but high test error. This is a symptom of…',
+             ['High bias (underfitting)', 'High variance (overfitting)', 'Data leakage', 'Vanishing gradients'], 1,
+             'A large train/test gap means the model memorized training data instead of generalizing — classic overfitting (high variance).'],
+            ['ML Fundamentals', 'Which regularization tends to produce sparse weights (many exactly zero)?',
+             ['L2 (ridge)', 'L1 (lasso)', 'Dropout', 'Early stopping'], 1,
+             'The L1 penalty has a constant subgradient toward zero, so it pushes small weights all the way to zero — useful for feature selection.'],
+            ['ML Fundamentals', 'The standard loss for training logistic regression is…',
+             ['Mean squared error', 'Hinge loss', 'Cross-entropy (log loss)', 'Huber loss'], 2,
+             'Log loss is the negative log-likelihood of the Bernoulli model; it is convex for logistic regression, unlike MSE.'],
+            ['ML Fundamentals', 'Precision is defined as…',
+             ['TP / (TP + FN)', 'TP / (TP + FP)', 'TN / (TN + FP)', '(TP + TN) / total'], 1,
+             'Precision = of everything you predicted positive, how much was right. TP/(TP+FN) is recall.'],
+            ['ML Fundamentals', 'For a cancer screening model where missing a case is catastrophic, you should prioritize…',
+             ['Precision', 'Recall', 'Accuracy', 'Specificity'], 1,
+             'Recall measures how many true positives you catch. In screening, false negatives (missed cancers) are the costly error.'],
+            ['ML Fundamentals', 'ROC-AUC can be interpreted as the probability that…',
+             ['The model is calibrated', 'A random positive is ranked above a random negative', 'Predictions exceed 0.5', 'The classes are balanced'], 1,
+             'AUC is exactly the probability a randomly chosen positive example gets a higher score than a randomly chosen negative one.'],
+            ['ML Fundamentals', 'The main purpose of k-fold cross-validation is to…',
+             ['Speed up training', 'Get a more reliable estimate of generalization', 'Reduce model size', 'Prevent data leakage'], 1,
+             'Every point serves in validation once, giving a lower-variance estimate of out-of-sample performance than a single split.'],
+            ['ML Fundamentals', 'Random forests mainly improve on single decision trees by…',
+             ['Reducing bias via deeper trees', 'Reducing variance via bagging + random feature subsets', 'Using gradient descent', 'Pruning aggressively'], 1,
+             'Averaging many decorrelated trees (bootstrap samples + random feature subsets) cancels out individual trees\' overfitting.'],
+            ['ML Fundamentals', 'Gradient boosting builds its ensemble by…',
+             ['Training trees independently in parallel', 'Sequentially fitting each tree to the current residual errors', 'Majority voting of random stumps', 'Averaging bootstrapped trees'], 1,
+             'Each new tree fits the negative gradient (≈ residuals) of the loss so far, so the ensemble improves step by step.'],
+            ['ML Fundamentals', 'Your dataset is 99% negative class. Which metric is most misleading?',
+             ['PR-AUC', 'F1 score', 'Accuracy', 'Recall'], 2,
+             'Predicting "negative" for everything already gives 99% accuracy. Precision/recall-based metrics expose that failure.'],
+            // --- Deep Learning ---
+            ['Deep Learning', 'Vanishing gradients in deep sigmoid networks happen because…',
+             ['Learning rates are too high', 'Sigmoid derivatives are ≤ 0.25 and multiply across layers', 'Weights are too large', 'Batches are too small'], 1,
+             'Backprop multiplies layer-wise derivatives; many small sigmoid/tanh derivatives shrink the gradient exponentially with depth. ReLUs and residuals mitigate this.'],
+            ['Deep Learning', 'Batch normalization primarily helps by…',
+             ['Adding regularization noise only', 'Normalizing layer inputs, smoothing optimization', 'Reducing parameter count', 'Preventing data leakage'], 1,
+             'Normalizing activations per mini-batch keeps their distribution stable, allowing higher learning rates and faster, more stable training.'],
+            ['Deep Learning', 'At inference time, dropout is…',
+             ['Applied with the same rate', 'Turned off (activations scaled during training instead)', 'Replaced by batch norm', 'Applied only to the last layer'], 1,
+             'With inverted dropout, activations are scaled by 1/(1-p) during training so that at test time the network runs deterministically with no dropout.'],
+            ['Deep Learning', 'Adam differs from plain SGD mainly by…',
+             ['Using second-order Hessians', 'Adapting per-parameter learning rates via moment estimates', 'Removing momentum', 'Requiring larger batches'], 1,
+             'Adam tracks exponential moving averages of the gradient (1st moment) and its square (2nd moment) to scale each parameter\'s step size.'],
+            ['Deep Learning', 'Xavier/He weight initialization aims to…',
+             ['Make all weights zero', 'Keep activation/gradient variance stable across layers', 'Guarantee convexity', 'Sparsify the network'], 1,
+             'Scaling initial weights by fan-in/fan-out keeps signal variance roughly constant layer to layer, avoiding early vanishing/exploding activations.'],
+            ['Deep Learning', 'Residual (skip) connections primarily…',
+             ['Add regularization', 'Ease optimization of very deep nets by letting gradients flow directly', 'Reduce inference memory', 'Replace attention'], 1,
+             'The identity path gives gradients a short route backward, letting layers learn residual corrections and making 100+ layer networks trainable.'],
+            ['Deep Learning', 'Learning-rate warmup is used to…',
+             ['Speed up the final epochs', 'Avoid instability from large early updates', 'Reduce overfitting directly', 'Replace weight decay'], 1,
+             'Early in training, gradients and Adam\'s statistics are noisy; ramping the LR up over the first steps avoids destructive early updates.'],
+            ['Deep Learning', 'Gradient clipping protects against…',
+             ['Vanishing gradients', 'Exploding gradients', 'Overfitting', 'Dead ReLUs'], 1,
+             'Capping the gradient norm prevents rare huge gradients (common in RNNs/transformers) from blowing up parameters in one step.'],
+            ['Deep Learning', 'Weight sharing in CNNs provides…',
+             ['Rotation invariance', 'Translation equivariance with far fewer parameters', 'Attention over pixels', 'Exact position encoding'], 1,
+             'The same kernel slides everywhere, so a feature detected in one place is detected anywhere — with a parameter count independent of image size.'],
+            ['Deep Learning', 'Early stopping works as regularization because…',
+             ['It shrinks weights to zero', 'It halts before the model fits noise, using validation as the signal', 'It increases the learning rate', 'It prunes layers'], 1,
+             'Stopping at the validation-loss minimum effectively limits model complexity — training longer past that point mostly fits noise.'],
+            // --- Transformers & LLMs ---
+            ['Transformers & LLMs', 'Scaled dot-product attention divides QKᵀ by √d because…',
+             ['It normalizes sequence length', 'It keeps dot-product variance ~1 so softmax doesn\'t saturate', 'It reduces memory', 'It enforces causality'], 1,
+             'Dot products of d-dim random vectors have variance ~d; dividing by √d keeps logits in a range where softmax has useful gradients.'],
+            ['Transformers & LLMs', 'The time/memory complexity of standard self-attention over sequence length n is…',
+             ['O(n)', 'O(n log n)', 'O(n²)', 'O(n³)'], 2,
+             'Every token attends to every other token — the n×n attention matrix is the bottleneck that motivates FlashAttention, sliding windows, etc.'],
+            ['Transformers & LLMs', 'Multi-head attention exists so the model can…',
+             ['Run on multiple GPUs', 'Attend to different representation subspaces/positions in parallel', 'Avoid positional encodings', 'Reduce total FLOPs'], 1,
+             'Each head learns its own projection of Q/K/V, letting different heads track different relations (syntax, coreference, position…) simultaneously.'],
+            ['Transformers & LLMs', 'Positional encodings are required because self-attention is…',
+             ['Nonlinear', 'Permutation-invariant over its inputs', 'Causal by default', 'Too deep'], 1,
+             'Without position information, attention treats the input as a bag of tokens — "dog bites man" and "man bites dog" would be identical.'],
+            ['Transformers & LLMs', 'The causal mask in a decoder-only LLM…',
+             ['Hides padding tokens', 'Blocks attention to future positions', 'Randomly drops tokens', 'Masks rare words'], 1,
+             'Setting future logits to -∞ before softmax ensures each position only conditions on the past, which is what makes next-token training valid.'],
+            ['Transformers & LLMs', 'The KV cache speeds up autoregressive generation by…',
+             ['Compressing the vocabulary', 'Storing past keys/values so each new token costs O(n) instead of recomputing O(n²)', 'Caching the final logits', 'Skipping layer norms'], 1,
+             'Past tokens\' K and V never change, so caching them means each decode step only computes attention for the newest query.'],
+            ['Transformers & LLMs', 'Raising sampling temperature…',
+             ['Sharpens the distribution toward the top token', 'Flattens the distribution, increasing randomness', 'Increases context length', 'Speeds up decoding'], 1,
+             'Logits are divided by T before softmax: T>1 flattens probabilities (more diverse), T→0 approaches greedy decoding.'],
+            ['Transformers & LLMs', 'Top-p (nucleus) sampling samples from…',
+             ['The p highest-probability tokens', 'The smallest token set whose cumulative probability ≥ p', 'All tokens above probability p', 'A uniform subset'], 1,
+             'The cutoff adapts to the shape of the distribution: confident steps use few tokens, uncertain steps allow many.'],
+            ['Transformers & LLMs', 'The classic RLHF pipeline order is…',
+             ['Reward model → SFT → RL', 'SFT → reward model from human preferences → RL (e.g. PPO)', 'RL → SFT → reward model', 'Preference data → distillation → SFT'], 1,
+             'First supervised fine-tuning, then train a reward model on human preference comparisons, then optimize the policy against it with RL.'],
+            ['Transformers & LLMs', 'LoRA fine-tunes efficiently by…',
+             ['Quantizing to 4-bit', 'Training small low-rank matrices added to frozen weights', 'Pruning attention heads', 'Shortening the context'], 1,
+             'Weight updates are parameterized as ΔW = BA with tiny rank r, cutting trainable parameters by orders of magnitude while the base stays frozen.'],
+            ['Transformers & LLMs', 'Mixture-of-Experts layers give models…',
+             ['Fewer parameters overall', 'More parameters at similar FLOPs per token, via sparse routing', 'Deterministic routing', 'Longer context windows'], 1,
+             'A router sends each token to a few expert FFNs, so only a fraction of the total parameters is active per token.'],
+            ['Transformers & LLMs', 'The most direct mitigation for factual hallucinations in production is…',
+             ['Higher temperature', 'Retrieval-augmented generation grounding answers in sources', 'Longer max tokens', 'Beam search'], 1,
+             'RAG injects retrieved evidence into the context so the model can cite real data instead of relying on parametric memory.'],
+            // --- ML Systems ---
+            ['ML Systems', 'Training-serving skew most often means…',
+             ['GPU vs CPU numeric differences', 'Features computed differently offline (training) vs online (serving)', 'Different batch sizes', 'Slow inference'], 1,
+             'If the serving path builds features with different code/data freshness than the training pipeline, the model sees a shifted distribution and quietly degrades.'],
+            ['ML Systems', 'Data drift vs concept drift: concept drift means…',
+             ['Input distribution P(x) changes', 'The relationship P(y|x) changes', 'Labels get noisier', 'Features get dropped'], 1,
+             'Data drift changes the inputs; concept drift changes what the right answer is for the same input (e.g., fraud patterns evolve).'],
+            ['ML Systems', 'A shadow deployment is when the new model…',
+             ['Serves 1% of users', 'Runs on live traffic but its outputs are never served', 'Runs only in staging', 'Replaces the old model at night'], 1,
+             'Shadow mode compares candidate outputs against production on real traffic with zero user risk — a canary actually serves a small % of users.'],
+            ['ML Systems', 'A feature store\'s core value is…',
+             ['Faster GPU training', 'Consistent, reusable features across offline training and online serving', 'Automatic labeling', 'Model versioning'], 1,
+             'One definition of each feature, computed once and served both to training jobs and low-latency inference, prevents skew and duplication.'],
+            ['ML Systems', 'Post-training quantization to INT8 mainly trades…',
+             ['Accuracy for smaller/faster inference', 'Latency for throughput', 'Memory for accuracy gains', 'Nothing — it\'s free'], 0,
+             'Lower-precision weights/activations cut memory and speed up inference, usually with a small (often acceptable) accuracy drop.'],
+            ['ML Systems', 'Knowledge distillation compresses a model by…',
+             ['Removing attention layers', 'Training a small student to match a large teacher\'s outputs', 'Quantizing gradients', 'Caching predictions'], 1,
+             'The student learns from the teacher\'s soft probability distributions, which carry more signal than hard labels alone.'],
+            ['ML Systems', 'Dynamic batching at inference improves…',
+             ['Per-request latency always', 'GPU throughput, at some latency cost', 'Model accuracy', 'Memory usage only'], 1,
+             'Grouping concurrent requests amortizes kernel launch and memory overhead — throughput rises, but requests wait briefly to form batches.'],
+            ['ML Systems', 'A canary release ships the new model to…',
+             ['All users with a feature flag', 'A small % of traffic first, watching metrics before rollout', 'Internal users only', 'A replica cluster with synthetic traffic'], 1,
+             'Serving a slice of real traffic bounds the blast radius: if guardrail metrics regress, you roll back before full exposure.'],
+            ['ML Systems', 'A model registry primarily provides…',
+             ['AutoML search', 'Versioned lineage of models for reproducibility and rollback', 'Feature computation', 'Distributed training'], 1,
+             'Knowing exactly which artifact, data, and code produced the serving model is what makes audits, comparisons, and rollbacks possible.'],
+            ['ML Systems', 'For an A/B test of a new ranking model, you should…',
+             ['Ship if the target metric is up on day one', 'Run to predetermined significance while watching guardrail metrics', 'Compare offline AUC only', 'Test on employees first'], 1,
+             'Peeking early inflates false positives, and wins on the target metric can hide losses on latency, revenue, or retention guardrails.'],
+            // --- Data & Evaluation ---
+            ['Data & Evaluation', 'Data leakage means…',
+             ['Losing training data', 'Information unavailable at prediction time contaminates training', 'Labels are imbalanced', 'The dataset is too small'], 1,
+             'Examples: target-derived features, test rows in training, or future data in time-series splits. Result: great offline metrics, broken production model.'],
+            ['Data & Evaluation', 'The proper roles of train/validation/test sets are…',
+             ['Train on all three for maximum data', 'Fit on train, tune on validation, report test once', 'Tune on test, report validation', 'Rotate them each epoch'], 1,
+             'Every decision made by looking at a set leaks into it; the test set stays untouched until the final measurement.'],
+            ['Data & Evaluation', 'Perplexity of a language model is…',
+             ['The gradient norm', 'exp(average negative log-likelihood) — lower is better', 'Tokens per second', 'The vocabulary size'], 1,
+             'Perplexity ≈ the effective branching factor: a perplexity of 20 means the model is as uncertain as choosing among 20 equally likely tokens.'],
+            ['Data & Evaluation', 'ROUGE, commonly used for summarization, primarily measures…',
+             ['Semantic embedding distance', 'N-gram overlap with reference text (recall-oriented)', 'Factual accuracy', 'Grammar quality'], 1,
+             'ROUGE counts overlapping n-grams/longest common subsequences with references — useful but blind to paraphrase and factuality.'],
+            ['Data & Evaluation', 'Retrieval systems are typically evaluated with…',
+             ['BLEU', 'Recall@k / MRR / nDCG', 'Perplexity', 'F1 on tokens'], 1,
+             'What matters is whether relevant documents appear in the top-k and how high they rank — recall@k, MRR, and nDCG capture that.'],
+            ['Data & Evaluation', 'The cold-start problem in recommenders is…',
+             ['Slow model loading', 'No interaction history for new users/items', 'Stale embeddings', 'Overfitting to popular items'], 1,
+             'Collaborative signals don\'t exist yet for new entities, so systems fall back to content features, popularity priors, or exploration.'],
+            ['Data & Evaluation', 'A sensible first response to suspected label noise is…',
+             ['Train longer', 'Audit a sample, fix the labeling process, consider robust losses', 'Add more layers', 'Lower the learning rate'], 1,
+             'Measure the noise first — relabel a sample to estimate error rate; then fix guidelines/annotators or use noise-robust training.'],
+            ['Data & Evaluation', 'Stratified splitting is used to…',
+             ['Speed up training', 'Preserve class proportions in each split', 'Remove duplicates', 'Sort by time'], 1,
+             'With imbalanced classes, random splits can leave a split with almost no positives; stratification keeps class ratios consistent.'],
+            ['Data & Evaluation', 'A known failure mode of LLM-as-judge evaluation is…',
+             ['It cannot output scores', 'Position, verbosity, and self-preference biases', 'It requires labels', 'It only works in English'], 1,
+             'Judges favor the first-listed answer, longer answers, and outputs from models like themselves — randomize order and calibrate against humans.'],
+            // --- Coding & CS ---
+            ['Coding & CS', 'Average-case lookup in a hash map is…',
+             ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 0,
+             'Hashing jumps straight to a bucket. Worst case degrades to O(n) with many collisions, which good hash functions and resizing avoid.'],
+            ['Coding & CS', 'Binary search requires the array to be ___ and runs in ___',
+             ['Sorted, O(log n)', 'Sorted, O(n)', 'Any order, O(log n)', 'Distinct, O(1)'], 0,
+             'Each comparison halves the search space — but only if ordering lets you know which half to keep.'],
+            ['Coding & CS', 'Quicksort\'s average and worst-case complexities are…',
+             ['O(n log n) and O(n log n)', 'O(n log n) and O(n²)', 'O(n) and O(n log n)', 'O(n²) and O(n²)'], 1,
+             'Random pivots give O(n log n) on average, but adversarial (e.g., already-sorted with naive pivot) input degrades to O(n²).'],
+            ['Coding & CS', 'To find the shortest path in an unweighted graph, use…',
+             ['DFS', 'BFS', 'Dijkstra with a heap', 'Union-Find'], 1,
+             'BFS explores nodes in order of hop distance, so the first time you reach a node is via a shortest path. Dijkstra is for weighted graphs.'],
+            ['Coding & CS', 'For a min-heap, peek-min and pop-min cost…',
+             ['O(1) and O(log n)', 'O(log n) and O(log n)', 'O(1) and O(1)', 'O(n) and O(log n)'], 0,
+             'The minimum sits at the root (O(1) to read); removing it requires sifting the last element down, O(log n).'],
+            ['Coding & CS', 'Dynamic programming applies when a problem has…',
+             ['Random inputs', 'Overlapping subproblems + optimal substructure', 'A greedy solution', 'Sorted input'], 1,
+             'You must be able to build optimal answers from optimal sub-answers, and reuse (memoize) sub-answers that repeat.'],
+            ['Coding & CS', 'The optimal single-pass Two Sum solution uses…',
+             ['Sorting + two pointers, O(n log n)', 'A hash map of seen values, O(n)', 'Brute force, O(n²)', 'Binary search per element'], 1,
+             'For each number, check if target-x was already seen in a hash map — one pass, O(n) time, O(n) space.'],
+            ['Coding & CS', 'Python\'s GIL means CPU-bound parallelism should use…',
+             ['threading', 'multiprocessing (or native/C extensions)', 'asyncio', 'recursion'], 1,
+             'The GIL lets only one thread run Python bytecode at a time; separate processes (or NumPy/C code that releases the GIL) get real parallelism.'],
+            ['Coding & CS', 'Naive multiplication of an (n×m) and (m×p) matrix costs…',
+             ['O(nmp)', 'O(n+m+p)', 'O(nm + mp)', 'O(n³ log n)'], 0,
+             'Each of the n×p output cells needs an m-length dot product. For square n×n matrices that is the familiar O(n³).'],
+        ];
+
+        const BOSSES = [
+            { name: 'Overfit Ogre', emoji: '👹', hp: 80, dmg: 15 },
+            { name: 'Gradient Ghoul', emoji: '👻', hp: 100, dmg: 18 },
+            { name: 'Latency Lich', emoji: '💀', hp: 120, dmg: 21 },
+            { name: 'Hallucination Hydra', emoji: '🐉', hp: 140, dmg: 24 },
+            { name: 'The Interview Dragon', emoji: '🐲', hp: 170, dmg: 28 },
+        ];
+        const QTIME = 25;
+
+        const $ = id => document.getElementById(id);
+        let deck, deckPos, bossIdx, bossHp, heroHp, score, combo, state, qStart, timerId, current;
+        let best = Number(localStorage.getItem('quizBossBest') || 0);
+        $('best').textContent = best;
+
+        // tiny sfx
+        let audio = null;
+        function blip(freqs, type) {
+            try {
+                if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+                freqs.forEach((f, i) => {
+                    const o = audio.createOscillator(), g = audio.createGain();
+                    o.type = type || 'square'; o.frequency.value = f;
+                    const t = audio.currentTime + i * 0.09;
+                    g.gain.setValueAtTime(0.08, t);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                    o.connect(g).connect(audio.destination);
+                    o.start(t); o.stop(t + 0.14);
+                });
+            } catch {}
+        }
+
+        function shuffle(a) {
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function newGame() {
+            deck = shuffle([...BANK.keys()]);
+            deckPos = 0;
+            bossIdx = 0;
+            heroHp = 100;
+            score = 0;
+            combo = 0;
+            state = 'question';
+            $('screen').style.display = 'none';
+            $('play').style.display = 'block';
+            startBoss();
+        }
+
+        function startBoss() {
+            bossHp = BOSSES[bossIdx].hp;
+            $('bossEmoji').textContent = BOSSES[bossIdx].emoji;
+            $('bossName').textContent = 'Boss ' + (bossIdx + 1) + '/' + BOSSES.length + ': ' + BOSSES[bossIdx].name;
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            if (deckPos >= deck.length) { deck = shuffle([...BANK.keys()]); deckPos = 0; }
+            const q = BANK[deck[deckPos++]];
+            const order = shuffle([0, 1, 2, 3]);
+            current = { q, order, answered: false };
+            $('cat').textContent = q[0];
+            $('question').textContent = q[1];
+            const box = $('answers');
+            box.innerHTML = '';
+            order.forEach(oi => {
+                const b = document.createElement('button');
+                b.textContent = q[2][oi];
+                b.dataset.oi = oi;
+                b.addEventListener('click', () => answer(b));
+                box.appendChild(b);
+            });
+            $('feedback').innerHTML = '';
+            $('nextBtn').style.display = 'none';
+            state = 'question';
+            qStart = performance.now();
+            clearInterval(timerId);
+            timerId = setInterval(tickTimer, 100);
+            render();
+        }
+
+        function tickTimer() {
+            const left = QTIME - (performance.now() - qStart) / 1000;
+            $('timerFill').style.width = Math.max(0, left / QTIME * 100) + '%';
+            $('timerFill').style.background = left < 6 ? '#e74c3c' : '#2ecc71';
+            if (left <= 0) timeout();
+        }
+
+        function timeout() {
+            if (state !== 'question') return;
+            clearInterval(timerId);
+            state = 'feedback';
+            combo = 0;
+            heroHp -= BOSSES[bossIdx].dmg;
+            markButtons(null);
+            $('feedback').innerHTML = '<span class="miss">⏱️ Time\'s up! -' + BOSSES[bossIdx].dmg + ' HP.</span> ' + current.q[4];
+            blip([196, 147], 'sawtooth');
+            afterAnswer();
+        }
+
+        function answer(btn) {
+            if (state !== 'question') return;
+            clearInterval(timerId);
+            state = 'feedback';
+            const oi = Number(btn.dataset.oi);
+            const correct = oi === current.q[3];
+            markButtons(btn);
+            if (correct) {
+                combo++;
+                const secLeft = Math.max(0, QTIME - (performance.now() - qStart) / 1000);
+                const dmg = 12 + Math.round(secLeft / 2) + Math.min(combo * 2, 12);
+                bossHp -= dmg;
+                score += dmg;
+                $('feedback').innerHTML = '<span class="hit">✅ Hit for ' + dmg + '!</span> ' + current.q[4];
+                blip([523, 659, 784]);
+            } else {
+                combo = 0;
+                heroHp -= BOSSES[bossIdx].dmg;
+                $('feedback').innerHTML = '<span class="miss">❌ -' + BOSSES[bossIdx].dmg + ' HP.</span> ' + current.q[4];
+                blip([196, 147], 'sawtooth');
+            }
+            afterAnswer();
+        }
+
+        function markButtons(clicked) {
+            for (const b of $('answers').children) {
+                b.disabled = true;
+                if (Number(b.dataset.oi) === current.q[3]) b.classList.add('correct');
+                else if (b === clicked) b.classList.add('wrong');
+            }
+        }
+
+        function afterAnswer() {
+            render();
+            if (heroHp <= 0) return setTimeout(gameOver, 900);
+            if (bossHp <= 0) return setTimeout(bossDown, 900);
+            $('nextBtn').style.display = 'block';
+        }
+
+        function bossDown() {
+            score += 50;
+            blip([523, 659, 784, 1047]);
+            bossIdx++;
+            if (bossIdx >= BOSSES.length) return victory();
+            heroHp = Math.min(100, heroHp + 30);
+            $('feedback').innerHTML = '<span class="hit">🎉 Boss defeated! +50 score, +30 HP. A stronger boss approaches…</span>';
+            $('nextBtn').style.display = 'block';
+            $('nextBtn').onclick = () => { $('nextBtn').onclick = defaultNext; startBoss(); };
+            render();
+        }
+
+        function defaultNext() { nextQuestion(); }
+        $('nextBtn').onclick = defaultNext;
+
+        function endScreen(emoji, title, text) {
+            if (score > best) {
+                best = score;
+                localStorage.setItem('quizBossBest', best);
+                text += '<br><b style="color:#f1c40f">New best score!</b>';
+            }
+            $('play').style.display = 'none';
+            $('screen').style.display = 'block';
+            $('sEmoji').textContent = emoji;
+            $('sTitle').textContent = title;
+            $('sText').innerHTML = text;
+        }
+        function gameOver() {
+            blip([330, 262, 196, 131], 'sawtooth');
+            endScreen('😵', 'The interview got you…',
+                'Score: ' + score + ' · Reached boss ' + (bossIdx + 1) + '/' + BOSSES.length +
+                '<br>Review the explanations and try again!');
+        }
+        function victory() {
+            endScreen('🏆', 'Offer secured!',
+                'You defeated all ' + BOSSES.length + ' bosses. Final score: ' + score);
+        }
+        $('sBtn').addEventListener('click', newGame);
+
+        function render() {
+            const B = BOSSES[bossIdx] || BOSSES[BOSSES.length - 1];
+            $('bossHpFill').style.width = Math.max(0, bossHp / B.hp * 100) + '%';
+            $('bossHpText').textContent = Math.max(0, bossHp) + ' / ' + B.hp;
+            $('heroHpFill').style.width = Math.max(0, heroHp) + '%';
+            $('heroHpText').textContent = 'You ' + Math.max(0, heroHp) + ' / 100';
+            $('score').textContent = score;
+            $('combo').textContent = '×' + combo;
+            $('best').textContent = best;
+        }
+
+        window.BANK = BANK; // exposed for tests
+        newGame();
+    </script>
+</body>
+</html>

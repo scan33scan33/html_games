@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big-O Blitz</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2c3e50;
+        }
+        h1 { margin: 12px 0 2px; }
+        p.sub { color: #7f8c8d; margin: 0 0 10px; font-size: 13px; text-align: center; }
+        #game {
+            width: 95%;
+            max-width: 540px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 10px;
+            padding: 16px;
+            box-sizing: border-box;
+            margin-bottom: 16px;
+        }
+        #meta { display: flex; justify-content: space-between; font-size: 14px; color: #95a5a6; margin-bottom: 8px; }
+        #meta b { color: #f1c40f; }
+        #clock { font-size: 22px; font-weight: bold; color: #2ecc71; }
+        #clock.low { color: #e74c3c; }
+        #prompt {
+            font-size: 17px; line-height: 1.45; min-height: 66px;
+            display: flex; align-items: center; justify-content: center; text-align: center;
+            padding: 8px;
+        }
+        #answers { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        #answers button {
+            padding: 14px 8px; font-size: 17px; font-family: 'Courier New', monospace; font-weight: bold;
+            border: none; border-radius: 8px; background: #3d4f63; color: #ecf0f1; cursor: pointer;
+        }
+        #answers button:hover:not(:disabled) { background: #48607c; }
+        #answers button.correct { background: #27ae60; }
+        #answers button.wrong { background: #c0392b; }
+        #flash { font-size: 13px; min-height: 18px; margin-top: 8px; color: #bdc3c7; text-align: center; }
+        #screen { text-align: center; padding: 24px 10px; }
+        #screen .big { font-size: 56px; }
+        #screen button {
+            margin-top: 14px; padding: 12px 30px; font-size: 16px;
+            border: none; border-radius: 8px; background: #3498db; color: #fff; cursor: pointer;
+        }
+        #miss {
+            text-align: left; font-size: 12.5px; color: #bdc3c7; margin-top: 12px;
+            max-height: 180px; overflow-y: auto;
+        }
+        #miss div { margin: 4px 0; }
+        #miss code { color: #f1c40f; font-family: 'Courier New', monospace; }
+        a.back { color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>⏱️ Big-O Blitz</h1>
+    <p class="sub">60 seconds. Name the complexity. Streaks multiply your score.</p>
+    <div id="game">
+        <div id="play" style="display:none">
+            <div id="meta">
+                <span id="clock">60.0</span>
+                <span>Score <b id="score">0</b></span>
+                <span>Streak <b id="streak">×0</b></span>
+                <span>Best <b id="best">0</b></span>
+            </div>
+            <div id="prompt"></div>
+            <div id="answers"></div>
+            <div id="flash"></div>
+        </div>
+        <div id="screen">
+            <div class="big" id="sEmoji">⏱️</div>
+            <h2 id="sTitle">Ready?</h2>
+            <div id="sText" style="font-size:14px;color:#bdc3c7">Classic algorithms + ML ops. Answer fast, keep the streak.</div>
+            <div id="miss"></div>
+            <button id="sBtn">Start ▶</button>
+        </div>
+    </div>
+    <a class="back" href="index.html">← All games</a>
+    <script>
+        // [prompt, [options], correctIndex]
+        const ITEMS = [
+            ['Lookup by key in a hash map (average case)', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 0],
+            ['Binary search in a sorted array of n items', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 1],
+            ['Scanning a linked list for a value', ['O(1)', 'O(log n)', 'O(n)', 'O(n²)'], 2],
+            ['Merge sort on n items', ['O(n)', 'O(n log n)', 'O(n²)', 'O(log n)'], 1],
+            ['Quicksort — worst case', ['O(n log n)', 'O(n²)', 'O(n)', 'O(2ⁿ)'], 1],
+            ['Insert into a binary min-heap', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 1],
+            ['Peek the minimum of a min-heap', ['O(1)', 'O(log n)', 'O(n)', 'O(n²)'], 0],
+            ['BFS/DFS over a graph with V nodes, E edges', ['O(V)', 'O(V+E)', 'O(V·E)', 'O(E log V)'], 1],
+            ['Dijkstra with a binary heap', ['O(V+E)', 'O((V+E) log V)', 'O(V²·E)', 'O(E)'], 1],
+            ['Append to a dynamic array (amortized)', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 0],
+            ['Insert at the FRONT of an array of n items', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 2],
+            ['Pop from a stack', ['O(1)', 'O(log n)', 'O(n)', 'O(n²)'], 0],
+            ['Check if two strings of length n are anagrams (counting)', ['O(1)', 'O(n)', 'O(n log n)', 'O(n²)'], 1],
+            ['Brute-force Two Sum (all pairs)', ['O(n)', 'O(n log n)', 'O(n²)', 'O(2ⁿ)'], 2],
+            ['Two Sum with a hash map', ['O(1)', 'O(n)', 'O(n log n)', 'O(n²)'], 1],
+            ['Binary search tree lookup — balanced', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 1],
+            ['Binary search tree lookup — fully degenerate (a chain)', ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 2],
+            ['Naive fibonacci by pure recursion', ['O(n)', 'O(n²)', 'O(2ⁿ)', 'O(n log n)'], 2],
+            ['Fibonacci with memoization', ['O(1)', 'O(n)', 'O(n²)', 'O(2ⁿ)'], 1],
+            ['All subsets of an n-element set', ['O(n²)', 'O(n!)', 'O(2ⁿ)', 'O(n log n)'], 2],
+            ['All permutations of n distinct items', ['O(2ⁿ)', 'O(n!)', 'O(n²)', 'O(nⁿ)'], 1],
+            ['Building a heap from n items (heapify)', ['O(n)', 'O(n log n)', 'O(log n)', 'O(n²)'], 0],
+            ['Union-Find find() with path compression (amortized)', ['O(α(n)) ≈ O(1)', 'O(log n)', 'O(n)', 'O(n log n)'], 0],
+            ['Sliding-window max with a deque, n items', ['O(n)', 'O(n log n)', 'O(n·k)', 'O(n²)'], 0],
+            // --- ML flavored ---
+            ['Self-attention over sequence length n (per layer)', ['O(n)', 'O(n log n)', 'O(n²)', 'O(n³)'], 2],
+            ['One decode step WITH a KV cache, context length n', ['O(1)', 'O(n)', 'O(n²)', 'O(n³)'], 1],
+            ['Naive matrix multiply of two n×n matrices', ['O(n²)', 'O(n² log n)', 'O(n³)', 'O(n⁴)'], 2],
+            ['Multiplying (n×d) by (d×m) matrices', ['O(ndm)', 'O(n+d+m)', 'O(nd+dm)', 'O(n²m)'], 0],
+            ['Naive k-NN inference: N stored points, d dims', ['O(d log N)', 'O(N·d)', 'O(N²)', 'O(k·d)'], 1],
+            ['One epoch of SGD over N examples (fixed model size)', ['O(1)', 'O(log N)', 'O(N)', 'O(N²)'], 2],
+            ['One k-means iteration: N points, k centroids, d dims', ['O(N·k·d)', 'O(N+k+d)', 'O(N² k)', 'O(k·d)'], 0],
+            ['Softmax over a vocabulary of V logits', ['O(1)', 'O(log V)', 'O(V)', 'O(V²)'], 2],
+            ['Greedy decoding of T tokens, no KV cache (attention only)', ['O(T)', 'O(T²)', 'O(T³)', 'O(T log T)'], 1],
+            ['Beam search step: beam width b, vocab V', ['O(b·V)', 'O(b+V)', 'O(b²)', 'O(V²)'], 0],
+            ['Backprop vs forward pass cost (same network)', ['~Same order (constant factor)', 'Quadratically worse', 'Exponentially worse', 'Logarithmic'], 0],
+            ['Cosine similarity of two d-dim embeddings', ['O(1)', 'O(log d)', 'O(d)', 'O(d²)'], 2],
+        ];
+
+        const GAME_LEN = 60;
+        const $ = id => document.getElementById(id);
+        let deck, pos, score, streak, endTime, timerId, current, missed;
+        let best = Number(localStorage.getItem('bigoBest') || 0);
+        $('best').textContent = best;
+
+        let audio = null;
+        function blip(freqs, type) {
+            try {
+                if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+                freqs.forEach((f, i) => {
+                    const o = audio.createOscillator(), g = audio.createGain();
+                    o.type = type || 'square'; o.frequency.value = f;
+                    const t = audio.currentTime + i * 0.07;
+                    g.gain.setValueAtTime(0.07, t);
+                    g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+                    o.connect(g).connect(audio.destination);
+                    o.start(t); o.stop(t + 0.12);
+                });
+            } catch {}
+        }
+
+        function shuffle(a) {
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function start() {
+            deck = shuffle([...ITEMS.keys()]);
+            pos = 0;
+            score = 0;
+            streak = 0;
+            missed = [];
+            endTime = performance.now() + GAME_LEN * 1000;
+            $('screen').style.display = 'none';
+            $('play').style.display = 'block';
+            clearInterval(timerId);
+            timerId = setInterval(tick, 100);
+            next();
+        }
+
+        function tick() {
+            const left = (endTime - performance.now()) / 1000;
+            $('clock').textContent = Math.max(0, left).toFixed(1);
+            $('clock').classList.toggle('low', left < 10);
+            if (left <= 0) finish();
+        }
+
+        function next() {
+            if (pos >= deck.length) { deck = shuffle([...ITEMS.keys()]); pos = 0; }
+            current = ITEMS[deck[pos++]];
+            $('prompt').textContent = current[0];
+            const order = shuffle([...current[1].keys()]);
+            const box = $('answers');
+            box.innerHTML = '';
+            order.forEach(oi => {
+                const b = document.createElement('button');
+                b.textContent = current[1][oi];
+                b.dataset.oi = oi;
+                b.addEventListener('click', () => answer(b));
+                box.appendChild(b);
+            });
+            $('flash').textContent = '';
+        }
+
+        function answer(btn) {
+            const oi = Number(btn.dataset.oi);
+            const correct = oi === current[2];
+            for (const b of $('answers').children) {
+                b.disabled = true;
+                if (Number(b.dataset.oi) === current[2]) b.classList.add('correct');
+                else if (b === btn) b.classList.add('wrong');
+            }
+            if (correct) {
+                streak++;
+                const gained = 10 * Math.min(streak, 5);
+                score += gained;
+                $('flash').textContent = '+' + gained + (streak >= 3 ? '  🔥 streak ×' + Math.min(streak, 5) : '');
+                blip([659, 880]);
+                setTimeout(next, 250);
+            } else {
+                streak = 0;
+                missed.push(current);
+                $('flash').textContent = 'Answer: ' + current[1][current[2]];
+                blip([196, 147], 'sawtooth');
+                setTimeout(next, 900);
+            }
+            $('score').textContent = score;
+            $('streak').textContent = '×' + streak;
+        }
+
+        function finish() {
+            clearInterval(timerId);
+            if (score > best) {
+                best = score;
+                localStorage.setItem('bigoBest', best);
+            }
+            $('play').style.display = 'none';
+            $('screen').style.display = 'block';
+            $('sEmoji').textContent = score >= 400 ? '🏆' : score >= 250 ? '⚡' : '🐢';
+            $('sTitle').textContent = 'Time! Score: ' + score;
+            $('sText').innerHTML = 'Best: ' + best;
+            const m = $('miss');
+            m.innerHTML = missed.length ? '<b>Review your misses:</b>' : 'Perfect round — nothing missed! 🎯';
+            for (const it of missed) {
+                const d = document.createElement('div');
+                d.innerHTML = '• ' + it[0] + ' → <code>' + it[1][it[2]] + '</code>';
+                m.appendChild(d);
+            }
+            $('sBtn').textContent = 'Play again ▶';
+        }
+
+        $('sBtn').addEventListener('click', start);
+        window.ITEMS = ITEMS; // exposed for tests
+    </script>
+</body>
+</html>
