@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Invaders</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            touch-action: none;
+        }
+        h1 { margin: 0 0 10px; color: #2c3e50; }
+        canvas { background-color: #10141f; border-radius: 6px; max-width: 95vw; }
+        p { color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <h1>👾 Space Invaders</h1>
+    <canvas id="gameCanvas" width="480" height="520"></canvas>
+    <p>← → or drag to move · Space or tap to shoot</p>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const SHIP_W = 36, SHIP_H = 18, SHIP_Y = canvas.height - 46;
+        let ship, aliens, playerShot, bombs, stars;
+        let score, lives, wave, state, stepTimer, stepInterval, dir;
+        let leftPressed = false, rightPressed = false;
+        let best = Number(localStorage.getItem('invadersBest') || 0);
+
+        function makeStars() {
+            stars = Array.from({ length: 60 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                r: Math.random() * 1.5 + 0.3,
+            }));
+        }
+
+        function spawnWave() {
+            aliens = [];
+            const startY = 70 + Math.min(wave - 1, 4) * 12;
+            for (let r = 0; r < 5; r++) {
+                for (let c = 0; c < 10; c++) {
+                    aliens.push({
+                        x: 40 + c * 40, y: startY + r * 34,
+                        emoji: ['🛸', '👾', '👾', '👽', '👽'][r],
+                        points: (5 - r) * 10,
+                    });
+                }
+            }
+            dir = 1;
+            stepInterval = Math.max(200, 620 - (wave - 1) * 60);
+            stepTimer = 0;
+            playerShot = null;
+            bombs = [];
+        }
+
+        function newGame() {
+            ship = { x: canvas.width / 2 };
+            score = 0;
+            lives = 3;
+            wave = 1;
+            state = 'playing';
+            spawnWave();
+        }
+
+        function fire() {
+            if (state === 'over') { newGame(); return; }
+            if (!playerShot) playerShot = { x: ship.x, y: SHIP_Y - 10 };
+        }
+
+        function stepAliens() {
+            let hitEdge = false;
+            for (const a of aliens) {
+                a.x += dir * 12;
+                if (a.x < 24 || a.x > canvas.width - 24) hitEdge = true;
+            }
+            if (hitEdge) {
+                for (const a of aliens) { a.x -= dir * 12; a.y += 18; }
+                dir = -dir;
+            }
+            // Bottom-row aliens occasionally drop bombs
+            const chance = 0.25 + wave * 0.05;
+            if (Math.random() < chance && aliens.length) {
+                const shooter = aliens[Math.floor(Math.random() * aliens.length)];
+                if (!aliens.some(a => a.x === shooter.x && a.y > shooter.y)) {
+                    bombs.push({ x: shooter.x, y: shooter.y + 14 });
+                }
+            }
+        }
+
+        function update(dt) {
+            if (state !== 'playing') return;
+
+            if (leftPressed) ship.x -= 6;
+            if (rightPressed) ship.x += 6;
+            ship.x = Math.min(Math.max(ship.x, SHIP_W / 2), canvas.width - SHIP_W / 2);
+
+            stepTimer += dt;
+            if (stepTimer > stepInterval) { stepTimer = 0; stepAliens(); }
+
+            if (playerShot) {
+                playerShot.y -= 9;
+                if (playerShot.y < 0) playerShot = null;
+                else {
+                    const hit = aliens.findIndex(a =>
+                        Math.abs(a.x - playerShot.x) < 16 && Math.abs(a.y - playerShot.y) < 14);
+                    if (hit >= 0) {
+                        score += aliens[hit].points;
+                        aliens.splice(hit, 1);
+                        playerShot = null;
+                        stepInterval = Math.max(120, stepInterval - 4);
+                    }
+                }
+            }
+
+            for (let i = bombs.length - 1; i >= 0; i--) {
+                bombs[i].y += 4 + wave * 0.4;
+                if (bombs[i].y > canvas.height) { bombs.splice(i, 1); continue; }
+                if (Math.abs(bombs[i].x - ship.x) < SHIP_W / 2 &&
+                    bombs[i].y > SHIP_Y - 6 && bombs[i].y < SHIP_Y + SHIP_H) {
+                    bombs.splice(i, 1);
+                    loseLife();
+                }
+            }
+
+            if (aliens.some(a => a.y > SHIP_Y - 24)) return gameOver();
+            if (!aliens.length) { wave++; spawnWave(); }
+        }
+
+        function loseLife() {
+            lives--;
+            if (lives <= 0) return gameOver();
+            ship.x = canvas.width / 2;
+            bombs = [];
+        }
+
+        function gameOver() {
+            state = 'over';
+            if (score > best) {
+                best = score;
+                localStorage.setItem('invadersBest', best);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#dfe6ee';
+            for (const s of stars) {
+                ctx.globalAlpha = 0.6;
+                ctx.fillRect(s.x, s.y, s.r, s.r);
+            }
+            ctx.globalAlpha = 1;
+
+            ctx.font = '24px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (const a of aliens) ctx.fillText(a.emoji, a.x, a.y);
+
+            // Ship
+            ctx.fillStyle = '#2ecc71';
+            ctx.beginPath();
+            ctx.moveTo(ship.x, SHIP_Y - 8);
+            ctx.lineTo(ship.x - SHIP_W / 2, SHIP_Y + SHIP_H - 8);
+            ctx.lineTo(ship.x + SHIP_W / 2, SHIP_Y + SHIP_H - 8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.fillRect(ship.x - 3, SHIP_Y - 14, 6, 8);
+
+            if (playerShot) {
+                ctx.fillStyle = '#f1c40f';
+                ctx.fillRect(playerShot.x - 2, playerShot.y - 6, 4, 12);
+            }
+            ctx.fillStyle = '#e74c3c';
+            for (const b of bombs) ctx.fillRect(b.x - 2, b.y - 5, 4, 10);
+
+            ctx.fillStyle = '#ecf0f1';
+            ctx.font = '16px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('Score: ' + score, 10, 20);
+            ctx.textAlign = 'center';
+            ctx.fillText('Wave ' + wave, canvas.width / 2, 20);
+            ctx.textAlign = 'right';
+            ctx.fillText('♥'.repeat(Math.max(0, lives)), canvas.width - 10, 20);
+
+            if (state === 'over') {
+                ctx.fillStyle = 'rgba(0,0,0,0.65)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ecf0f1';
+                ctx.textAlign = 'center';
+                ctx.font = 'bold 34px Arial';
+                ctx.fillText('Game Over', canvas.width / 2, canvas.height / 2 - 25);
+                ctx.font = '18px Arial';
+                ctx.fillText('Score: ' + score + '   Best: ' + best, canvas.width / 2, canvas.height / 2 + 10);
+                ctx.fillText('Tap or press Space to play again', canvas.width / 2, canvas.height / 2 + 40);
+            }
+        }
+
+        let last = 0;
+        function loop(t) {
+            update(t - last);
+            last = t;
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowLeft') leftPressed = true;
+            if (e.key === 'ArrowRight') rightPressed = true;
+            if (e.key === ' ') { e.preventDefault(); fire(); }
+        });
+        document.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft') leftPressed = false;
+            if (e.key === 'ArrowRight') rightPressed = false;
+        });
+
+        function canvasX(clientX) {
+            const rect = canvas.getBoundingClientRect();
+            return (clientX - rect.left) * (canvas.width / rect.width);
+        }
+        canvas.addEventListener('mousemove', e => { if (state === 'playing') ship.x = canvasX(e.clientX); });
+        canvas.addEventListener('mousedown', fire);
+        let dragging = false;
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            dragging = false;
+            fire();
+        });
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
+            dragging = true;
+            if (state === 'playing') ship.x = canvasX(e.touches[0].clientX);
+        });
+
+        makeStars();
+        newGame();
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>

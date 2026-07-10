@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            touch-action: none;
+        }
+        h1 { margin: 0 0 10px; color: #2c3e50; }
+        canvas { background-color: #2c3e50; border-radius: 6px; max-width: 95vw; }
+        p { color: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <h1>🏓 Pong</h1>
+    <canvas id="gameCanvas" width="560" height="400"></canvas>
+    <p>You're on the left — move with mouse, touch, or ↑ ↓ keys. First to 7 wins.</p>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const W = canvas.width, H = canvas.height;
+        const PW = 10, PH = 70, WIN = 7;
+        const player = { x: 20, y: H / 2 - PH / 2 };
+        const cpu = { x: W - 30, y: H / 2 - PH / 2, speed: 3.6 };
+        const ball = { x: W / 2, y: H / 2, r: 7, dx: 0, dy: 0, speed: 5 };
+        let scores = { p: 0, c: 0 };
+        let state = 'ready'; // ready -> playing -> point -> over
+        let upPressed = false, downPressed = false;
+        let serveTimer = null;
+
+        function serve(toward) {
+            ball.x = W / 2;
+            ball.y = H / 2;
+            ball.speed = 5;
+            const angle = (Math.random() * 0.5 - 0.25) * Math.PI;
+            ball.dx = Math.cos(angle) * ball.speed * toward;
+            ball.dy = Math.sin(angle) * ball.speed;
+            state = 'playing';
+        }
+
+        function start() {
+            if (state === 'over') { scores = { p: 0, c: 0 }; }
+            if (state === 'ready' || state === 'over') serve(Math.random() < 0.5 ? 1 : -1);
+        }
+
+        function bounceOff(paddle) {
+            const hit = (ball.y - (paddle.y + PH / 2)) / (PH / 2);
+            const angle = hit * Math.PI / 3.2;
+            const toward = paddle === player ? 1 : -1;
+            ball.speed = Math.min(ball.speed + 0.35, 11);
+            ball.dx = Math.cos(angle) * ball.speed * toward;
+            ball.dy = Math.sin(angle) * ball.speed;
+        }
+
+        function point(who) {
+            scores[who]++;
+            if (scores[who] >= WIN) {
+                state = 'over';
+            } else {
+                state = 'point';
+                clearTimeout(serveTimer);
+                serveTimer = setTimeout(() => serve(who === 'p' ? -1 : 1), 900);
+            }
+        }
+
+        function update() {
+            if (upPressed) player.y -= 6;
+            if (downPressed) player.y += 6;
+            player.y = Math.min(Math.max(player.y, 0), H - PH);
+
+            if (state !== 'playing') return;
+
+            // CPU follows the ball with limited speed (and a little lag)
+            const target = ball.y - PH / 2;
+            const diff = target - cpu.y;
+            cpu.y += Math.min(Math.max(diff * 0.2, -cpu.speed), cpu.speed);
+            cpu.y = Math.min(Math.max(cpu.y, 0), H - PH);
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            if (ball.y < ball.r) { ball.y = ball.r; ball.dy = -ball.dy; }
+            if (ball.y > H - ball.r) { ball.y = H - ball.r; ball.dy = -ball.dy; }
+
+            if (ball.dx < 0 && ball.x - ball.r < player.x + PW && ball.x > player.x &&
+                ball.y > player.y - ball.r && ball.y < player.y + PH + ball.r) {
+                ball.x = player.x + PW + ball.r;
+                bounceOff(player);
+            }
+            if (ball.dx > 0 && ball.x + ball.r > cpu.x && ball.x < cpu.x + PW &&
+                ball.y > cpu.y - ball.r && ball.y < cpu.y + PH + ball.r) {
+                ball.x = cpu.x - ball.r;
+                bounceOff(cpu);
+            }
+
+            if (ball.x < -20) point('c');
+            if (ball.x > W + 20) point('p');
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            ctx.strokeStyle = 'rgba(236,240,241,0.25)';
+            ctx.setLineDash([8, 10]);
+            ctx.beginPath();
+            ctx.moveTo(W / 2, 0);
+            ctx.lineTo(W / 2, H);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#ecf0f1';
+            ctx.fillRect(player.x, player.y, PW, PH);
+            ctx.fillRect(cpu.x, cpu.y, PW, PH);
+
+            if (state === 'playing' || state === 'point') {
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+                ctx.fillStyle = '#f1c40f';
+                ctx.fill();
+            }
+
+            ctx.font = 'bold 42px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(236,240,241,0.7)';
+            ctx.fillText(scores.p, W / 2 - 60, 55);
+            ctx.fillText(scores.c, W / 2 + 60, 55);
+
+            if (state === 'ready') {
+                ctx.font = '20px Arial';
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillText('Click, tap, or press Space to start', W / 2, H / 2 + 70);
+            } else if (state === 'over') {
+                ctx.fillStyle = 'rgba(0,0,0,0.55)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#ecf0f1';
+                ctx.font = 'bold 34px Arial';
+                ctx.fillText(scores.p > scores.c ? 'You win! 🏆' : 'CPU wins 🤖', W / 2, H / 2 - 15);
+                ctx.font = '18px Arial';
+                ctx.fillText('Click, tap, or press Space for a rematch', W / 2, H / 2 + 25);
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function moveTo(clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const y = (clientY - rect.top) * (H / rect.height);
+            player.y = Math.min(Math.max(y - PH / 2, 0), H - PH);
+        }
+
+        canvas.addEventListener('mousemove', e => moveTo(e.clientY));
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('touchstart', e => { e.preventDefault(); start(); moveTo(e.touches[0].clientY); });
+        canvas.addEventListener('touchmove', e => { e.preventDefault(); moveTo(e.touches[0].clientY); });
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w') upPressed = true;
+            if (e.key === 'ArrowDown' || e.key === 's') downPressed = true;
+            if (e.key === ' ') { e.preventDefault(); start(); }
+        });
+        document.addEventListener('keyup', e => {
+            if (e.key === 'ArrowUp' || e.key === 'w') upPressed = false;
+            if (e.key === 'ArrowDown' || e.key === 's') downPressed = false;
+        });
+
+        loop();
+    </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simon</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2c3e50;
+            touch-action: manipulation;
+        }
+        h1 { margin: 12px 0 4px; }
+        #info { display: flex; gap: 20px; font-size: 16px; margin-bottom: 14px; }
+        #info b { color: #3498db; }
+        #simon {
+            position: relative;
+            width: 300px; height: 300px;
+            border-radius: 50%;
+            background: #2c3e50;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .pad {
+            border: none;
+            cursor: pointer;
+            opacity: 0.55;
+            transition: opacity 0.12s;
+        }
+        .pad.lit { opacity: 1; }
+        #g { background: #2ecc71; border-radius: 130px 8px 8px 8px; }
+        #r { background: #e74c3c; border-radius: 8px 130px 8px 8px; }
+        #y { background: #f1c40f; border-radius: 8px 8px 8px 130px; }
+        #b { background: #3498db; border-radius: 8px 8px 130px 8px; }
+        #center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 110px; height: 110px;
+            border-radius: 50%;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 6px solid #f4f4f9;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #msg { min-height: 22px; margin-top: 14px; color: #7f8c8d; }
+        a.back { color: #7f8c8d; font-size: 13px; margin-top: 14px; }
+    </style>
+</head>
+<body>
+    <h1>🎵 Simon</h1>
+    <div id="info">
+        <span>Round: <b id="round">–</b></span>
+        <span>Best: <b id="best">0</b></span>
+    </div>
+    <div id="simon">
+        <button class="pad" id="g"></button>
+        <button class="pad" id="r"></button>
+        <button class="pad" id="y"></button>
+        <button class="pad" id="b"></button>
+        <button id="center">START</button>
+    </div>
+    <div id="msg">Watch the pattern, then repeat it.</div>
+    <a class="back" href="index.html">← All games</a>
+    <script>
+        const PADS = ['g', 'r', 'y', 'b'];
+        const TONES = { g: 392, r: 330, y: 262, b: 494 };
+        const $ = id => document.getElementById(id);
+
+        let audio = null;
+        let sequence = [];
+        let inputPos = 0;
+        let state = 'idle'; // idle | showing | input | over
+        let best = Number(localStorage.getItem('simonBest') || 0);
+        $('best').textContent = best;
+
+        function tone(freq, ms, type) {
+            if (!audio) return;
+            const osc = audio.createOscillator();
+            const gain = audio.createGain();
+            osc.type = type || 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.25, audio.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + ms / 1000);
+            osc.connect(gain).connect(audio.destination);
+            osc.start();
+            osc.stop(audio.currentTime + ms / 1000);
+        }
+
+        function flash(pad, ms) {
+            const el = $(pad);
+            el.classList.add('lit');
+            tone(TONES[pad], ms);
+            setTimeout(() => el.classList.remove('lit'), ms);
+        }
+
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        async function showSequence() {
+            state = 'showing';
+            $('msg').textContent = 'Watch…';
+            await sleep(600);
+            const speed = Math.max(220, 550 - sequence.length * 18);
+            for (const pad of sequence) {
+                flash(pad, speed * 0.8);
+                await sleep(speed);
+            }
+            state = 'input';
+            inputPos = 0;
+            $('msg').textContent = 'Your turn!';
+        }
+
+        async function nextRound() {
+            sequence.push(PADS[Math.floor(Math.random() * 4)]);
+            $('round').textContent = sequence.length;
+            await showSequence();
+        }
+
+        function startGame() {
+            if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+            sequence = [];
+            state = 'idle';
+            $('center').textContent = '…';
+            nextRound();
+        }
+
+        async function padPress(pad) {
+            if (state !== 'input') return;
+            flash(pad, 250);
+            if (pad === sequence[inputPos]) {
+                inputPos++;
+                if (inputPos === sequence.length) {
+                    state = 'idle';
+                    const round = sequence.length;
+                    if (round > best) {
+                        best = round;
+                        localStorage.setItem('simonBest', best);
+                        $('best').textContent = best;
+                    }
+                    $('msg').textContent = 'Nice! Round ' + (round + 1) + '…';
+                    await sleep(700);
+                    nextRound();
+                }
+            } else {
+                state = 'over';
+                tone(110, 700, 'sawtooth');
+                $('msg').textContent = '❌ Wrong pad! You reached round ' + sequence.length + '.';
+                $('center').textContent = 'RETRY';
+            }
+        }
+
+        for (const pad of PADS) {
+            $(pad).addEventListener('click', () => padPress(pad));
+        }
+        $('center').addEventListener('click', () => {
+            if (state === 'idle' && sequence.length === 0 || state === 'over') startGame();
+        });
+    </script>
+</body>
+</html>
