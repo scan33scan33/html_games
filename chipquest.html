@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chip Quest</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2c3e50;
+            touch-action: none;
+        }
+        h1 { margin: 12px 0 2px; }
+        p.sub { color: #7f8c8d; margin: 0 0 10px; font-size: 13px; text-align: center; }
+        #hud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px 14px;
+            align-items: center;
+            justify-content: center;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 8px 8px 0 0;
+            padding: 8px 14px;
+            font-size: 14px;
+            max-width: 96vw;
+            box-sizing: border-box;
+        }
+        #hud b { color: #f1c40f; }
+        #hpWrap {
+            background: #10141f; border-radius: 4px;
+            width: 110px; height: 15px; overflow: hidden; position: relative;
+        }
+        #hpFill { background: #e74c3c; height: 100%; transition: width 0.25s; }
+        #hpWrap span {
+            position: absolute; inset: 0; font-size: 10px; line-height: 15px;
+            text-align: center; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        #wrap { position: relative; }
+        canvas { background: #22303f; display: block; max-width: 96vw; }
+        .overlay {
+            position: absolute; inset: 0;
+            background: rgba(10, 14, 25, 0.88);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ecf0f1;
+            text-align: center;
+            padding: 12px;
+        }
+        .overlay.open { display: flex; }
+        .overlay .big { font-size: 52px; margin: 4px; }
+        .overlay h2 { margin: 4px 0 10px; }
+        .obar {
+            background: #10141f; border-radius: 4px; width: 200px; height: 16px;
+            overflow: hidden; position: relative; margin: 4px auto;
+        }
+        .obar > div { height: 100%; transition: width 0.2s; }
+        .obar span {
+            position: absolute; inset: 0; font-size: 11px; line-height: 16px;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+        .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+        .overlay button, #controls button {
+            padding: 9px 14px; font-size: 14px; border: none; border-radius: 6px;
+            background: #3498db; color: #fff; cursor: pointer;
+        }
+        .overlay button:disabled { background: #566573; }
+        .overlay button.danger, #controls button.danger { background: #e74c3c; }
+        #log {
+            background: #2c3e50; color: #bdc3c7;
+            width: 100%; box-sizing: border-box;
+            border-radius: 0 0 8px 8px;
+            font-size: 13px; line-height: 1.45;
+            height: 76px; overflow-y: auto; padding: 6px 12px;
+        }
+        #log .good { color: #2ecc71; } #log .bad { color: #e74c3c; } #log .gold { color: #f1c40f; }
+        #controls { margin: 10px 0 4px; display: flex; gap: 8px; }
+        p.help { color: #7f8c8d; font-size: 13px; text-align: center; max-width: 480px; margin: 6px 12px; }
+        a.back { color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🐲 Chip Quest</h1>
+    <p class="sub">Puzzle dungeons with RPG battles — Cookie Quest meets Micro Chips. Saved in a cookie.</p>
+    <div id="hud">
+        <span>🏰 Floor <b id="hFloor">1</b></span>
+        <span>🧙 Lv <b id="hLv">1</b></span>
+        <div id="hpWrap"><div id="hpFill"></div><span id="hpText"></span></div>
+        <span>✨ <b id="hXp">0</b></span>
+        <span>💰 <b id="hGold">0</b></span>
+        <span>🧪 <b id="hPotions">0</b></span>
+        <span>💾 <b id="hChips">0</b></span>
+        <span id="hInv"></span>
+    </div>
+    <div id="wrap">
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="overlay" id="battle">
+            <div class="big" id="bEmoji">🟢</div>
+            <h2 id="bName">Slime</h2>
+            <div class="obar"><div id="bMhp" style="background:#e67e22"></div><span id="bMhpText"></span></div>
+            <div class="obar"><div id="bHhp" style="background:#e74c3c"></div><span id="bHhpText"></span></div>
+            <div class="btnrow">
+                <button id="bAttack">⚔️ Attack</button>
+                <button id="bPotion">🧪 Potion</button>
+                <button id="bFlee">🏃 Flee</button>
+            </div>
+        </div>
+
+        <div class="overlay" id="shop">
+            <div class="big">🏪</div>
+            <h2>Dungeon Shop</h2>
+            <div class="btnrow" id="shopItems"></div>
+            <div class="btnrow"><button id="shopLeave">↩️ Leave</button></div>
+        </div>
+
+        <div class="overlay" id="modal">
+            <div class="big" id="mEmoji">💀</div>
+            <h2 id="mTitle"></h2>
+            <div id="mText"></div>
+            <div class="btnrow" id="mBtns"></div>
+        </div>
+    </div>
+    <div id="log"></div>
+    <div id="controls">
+        <button id="restartFloor">↻ Restart floor</button>
+        <button id="newGame" class="danger">🔄 New game</button>
+    </div>
+    <p class="help">Arrows/WASD or swipe to move. Bump a monster to battle it. Collect every 💾 to open
+        the socket. 🔥 burns you without boots, 🌊 blocks you without flippers — the shop sells both.</p>
+    <a class="back" href="index.html">← All games</a>
+    <script>
+        // ---- Map legend: # wall · . floor · P start · c chip · * chip on ice
+        // r/y keys · R/Y doors · O block · w water · f fire · i ice · o gold · p potion
+        // A flippers · H boots · $ shop · S socket · E exit · 1-7 monster of that tier
+        const FLOORS = [
+            { name: 'The Entrance', map: [
+                '##############',
+                '#P..1.....c..#',
+                '#....##.##...#',
+                '#.o..#...#.2.#',
+                '#....#.c.#...#',
+                '#.1..#...##.##',
+                '#....#p$.#c.##',
+                '#.c..#...#.SE#',
+                '##############',
+            ]},
+            { name: 'Locked Halls', map: [
+                '############',
+                '#P...#..c..#',
+                '#..r.#..3..#',
+                '#..2.R.....#',
+                '#...p#o.b..#',
+                '######B#####',
+                '#..c...4..##',
+                '#.o..c..$SE#',
+                '############',
+            ]},
+            { name: 'Flooded Depths', map: [
+                '############',
+                '#P...p..w.o#',
+                '#..O....w.c#',
+                '#...4...w..#',
+                '#..O....w.c#',
+                '#..A....w.##',
+                '#o..5...wSE#',
+                '############',
+            ]},
+            { name: 'Fire & Ice', map: [
+                '##############',
+                '#P...5..c...H#',
+                '############.#',
+                '#op..fff..c..#',
+                '#.############',
+                '#.iii*iii.5..#',
+                '############.#',
+                '#ES......6.o.#',
+                '##############',
+            ]},
+            { name: "Dragon's Lair", map: [
+                '##############',
+                '#P.c.#...c...#',
+                '#....6...5...#',
+                '#..o.#..r...p#',
+                '#R############',
+                '#..$..6.o..y.#',
+                '############Y#',
+                '#....c....7..#',
+                '#ES###########',
+                '##############',
+            ]},
+        ];
+
+        const MONSTERS = [null,
+            { name: 'Slime', emoji: '🟢', hp: 15, atk: 4, xp: 20, gold: 8 },
+            { name: 'Goblin', emoji: '👺', hp: 25, atk: 6, xp: 35, gold: 15 },
+            { name: 'Wolf', emoji: '🐺', hp: 35, atk: 9, xp: 55, gold: 24 },
+            { name: 'Skeleton', emoji: '💀', hp: 50, atk: 13, xp: 80, gold: 38 },
+            { name: 'Orc', emoji: '👹', hp: 70, atk: 17, xp: 120, gold: 60 },
+            { name: 'Dark Knight', emoji: '🖤', hp: 95, atk: 22, xp: 180, gold: 95 },
+            { name: 'Dragon', emoji: '🐉', hp: 160, atk: 30, xp: 350, gold: 250 },
+        ];
+        const WEAPONS = [
+            { name: 'Stick', power: 2, cost: 0 }, { name: 'Dagger', power: 5, cost: 40 },
+            { name: 'Sword', power: 9, cost: 120 }, { name: 'War Axe', power: 14, cost: 300 },
+            { name: 'Flame Blade', power: 20, cost: 650 }, { name: 'Dragonslayer', power: 28, cost: 1200 },
+        ];
+        const ARMORS = [
+            { name: 'Rags', def: 0, cost: 0 }, { name: 'Leather', def: 2, cost: 60 },
+            { name: 'Chainmail', def: 4, cost: 180 }, { name: 'Plate', def: 7, cost: 450 },
+            { name: 'Dragon Scale', def: 11, cost: 900 },
+        ];
+        const POTION_COST = 15, POTION_HEAL = 40, GEAR_COST = 80;
+        const DOOR_COLORS = { R: '#e74c3c', Y: '#f1c40f' };
+        const KEY_OF_DOOR = { R: 'r', Y: 'y' };
+
+        const TILE = 34;
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const $ = id => document.getElementById(id);
+        const rand = n => Math.floor(Math.random() * n);
+
+        // ---- Persistent hero (cookie) ----
+        const SAVE_COOKIE = 'chipQuestSave';
+        function setCookie(name, value) {
+            document.cookie = name + '=' + encodeURIComponent(value) + '; max-age=31536000; path=/; SameSite=Lax';
+        }
+        function getCookie(name) {
+            for (const part of document.cookie.split('; ')) {
+                const eq = part.indexOf('=');
+                if (part.slice(0, eq) === name) return decodeURIComponent(part.slice(eq + 1));
+            }
+            return null;
+        }
+        function deleteCookie(name) { document.cookie = name + '=; max-age=0; path=/; SameSite=Lax'; }
+
+        function newHero() {
+            return { lv: 1, xp: 0, maxhp: 50, hp: 50, gold: 20, potions: 1,
+                     weapon: 0, armor: 0, kills: 0, flippers: false, boots: false, floor: 0 };
+        }
+        let hero = newHero();
+        function save() { setCookie(SAVE_COOKIE, JSON.stringify(hero)); }
+        function loadSave() {
+            try {
+                const raw = getCookie(SAVE_COOKIE);
+                if (!raw) return false;
+                const h = JSON.parse(raw);
+                if (typeof h.lv !== 'number' || typeof h.floor !== 'number') return false;
+                hero = Object.assign(newHero(), h);
+                return true;
+            } catch { return false; }
+        }
+        const xpNext = () => hero.lv * 50;
+
+        // ---- Floor state ----
+        let grid, items, blocks, monsters, keys, player, chipsLeft, cols, rows, slideDir, slideId;
+        let uiState = 'map'; // map | battle | shop | modal
+        let battleMon = null;
+
+        function loadFloor(i) {
+            hero.floor = i;
+            const F = FLOORS[i];
+            rows = F.map.length;
+            cols = F.map[0].length;
+            canvas.width = cols * TILE;
+            canvas.height = rows * TILE;
+            grid = []; items = {}; blocks = {}; monsters = {};
+            keys = { r: 0, y: 0 };
+            chipsLeft = 0;
+            slideDir = null;
+            clearTimeout(slideId);
+            uiState = 'map';
+
+            for (let y = 0; y < rows; y++) {
+                grid.push([]);
+                for (let x = 0; x < cols; x++) {
+                    const ch = F.map[y][x];
+                    let tile = '.';
+                    if ('#wfSE'.includes(ch)) tile = ch;
+                    else if (ch === 'i' || ch === '*') tile = 'i';
+                    else if ('RY'.includes(ch)) tile = ch;
+                    grid[y].push(tile);
+
+                    const k = x + ',' + y;
+                    if (ch === 'P') player = { x, y };
+                    else if (ch === 'c' || ch === '*') { items[k] = 'c'; chipsLeft++; }
+                    else if ('rypoAH$'.includes(ch)) items[k] = ch;
+                    else if (ch === 'O') blocks[k] = true;
+                    else if (ch >= '1' && ch <= '7') monsters[k] = Number(ch);
+                }
+            }
+            log('🏰 <b>Floor ' + (i + 1) + ': ' + F.name + '</b>', 'gold');
+            save();
+            updateHud();
+            draw();
+        }
+
+        // ---- Map rules ----
+        const tileAt = (x, y) => (x < 0 || y < 0 || x >= cols || y >= rows) ? '#' : grid[y][x];
+
+        function tryMove(dx, dy) {
+            if (uiState !== 'map' || slideDir) return;
+            step(dx, dy);
+        }
+
+        function step(dx, dy) {
+            const nx = player.x + dx, ny = player.y + dy;
+            const k = nx + ',' + ny;
+
+            if (monsters[k]) { slideDir = null; return startBattle(k); }
+
+            if (blocks[k]) {
+                const bx = nx + dx, by = ny + dy;
+                const bk = bx + ',' + by;
+                const bt = tileAt(bx, by);
+                if (bt === '#' || 'RYSE'.includes(bt) || blocks[bk] || monsters[bk]) { slideDir = null; return; }
+                delete blocks[k];
+                if (bt === 'w') { grid[by][bx] = 'd'; log('The crate sinks — a bridge! 📦', 'good'); }
+                else blocks[bk] = true;
+            } else {
+                const t = tileAt(nx, ny);
+                if (t === '#') { slideDir = null; return; }
+                if ('RY'.includes(t)) {
+                    if (!keys[KEY_OF_DOOR[t]]) { log('Locked. You need a key. 🔒', 'bad'); slideDir = null; return; }
+                    keys[KEY_OF_DOOR[t]]--;
+                    grid[ny][nx] = '.';
+                    log('You unlock the door. 🔑', 'good');
+                }
+                if (t === 'S') {
+                    if (chipsLeft > 0) { log('The socket needs ' + chipsLeft + ' more 💾.', 'bad'); slideDir = null; return; }
+                    grid[ny][nx] = '.';
+                    log('The socket opens!', 'good');
+                }
+                if (t === 'w' && !hero.flippers) { log("You can't swim! You need flippers. 🌊", 'bad'); slideDir = null; return; }
+            }
+
+            player.x = nx; player.y = ny;
+            enterTile(nx, ny, dx, dy);
+        }
+
+        function enterTile(x, y, dx, dy) {
+            const k = x + ',' + y;
+            const item = items[k];
+            if (item) {
+                delete items[k];
+                if (item === 'c') { chipsLeft--; log('Chip collected. 💾 ' + chipsLeft + ' left.'); }
+                else if (item === 'o') { const g = 10 + rand(16) + hero.floor * 5; hero.gold += g; log('A pile of <b>' + g + '</b> gold! 💰', 'gold'); }
+                else if (item === 'p') { hero.potions++; log('Found a potion. 🧪', 'good'); }
+                else if (item === 'A') { hero.flippers = true; log('You got <b>flippers</b>! You can swim. 🥽', 'good'); }
+                else if (item === 'H') { hero.boots = true; log('You got <b>fire boots</b>! 🥾', 'good'); }
+                else if (item === '$') { items[k] = '$'; openShop(); }
+                else if ('ry'.includes(item)) { keys[item]++; log('Picked up a key. 🔑', 'good'); }
+                save();
+            }
+
+            const t = tileAt(x, y);
+            if (t === 'f' && !hero.boots) {
+                const dmg = 15 + hero.floor * 3;
+                hero.hp -= dmg;
+                log('The fire sears you for <b>' + dmg + '</b>! 🔥', 'bad');
+                if (hero.hp <= 0) return die('You burned up in the flames.');
+            }
+            if (t === 'E') return floorClear();
+
+            if (t === 'i') {
+                slideDir = [dx, dy];
+                clearTimeout(slideId);
+                slideId = setTimeout(() => {
+                    if (uiState === 'map' && slideDir) step(slideDir[0], slideDir[1]);
+                    updateHud(); draw();
+                }, 110);
+            } else slideDir = null;
+
+            updateHud();
+            draw();
+        }
+
+        function floorClear() {
+            if (hero.floor + 1 >= FLOORS.length) {
+                hero.hp = hero.maxhp;
+                save();
+                return showModal('🏆', 'Dungeon conquered!',
+                    'You cleared all ' + FLOORS.length + ' floors and slew the Dragon.<br>' +
+                    'Level ' + hero.lv + ' · ' + hero.kills + ' monsters defeated.',
+                    [['🔁 Loop again (keep hero)', () => { closeModal(); loadFloor(0); }],
+                     ['🔄 Fresh start', resetAll]]);
+            }
+            log('You descend deeper... ⬇️', 'gold');
+            loadFloor(hero.floor + 1);
+        }
+
+        // ---- Battle (Cookie Quest rules) ----
+        function startBattle(posKey) {
+            const tier = monsters[posKey];
+            const m = MONSTERS[tier];
+            battleMon = { posKey, tier, name: m.name, emoji: m.emoji, atk: m.atk,
+                          xp: m.xp, gold: m.gold, hp: m.hp, maxhp: m.hp };
+            uiState = 'battle';
+            log('A <b>' + m.name + '</b> ' + m.emoji + ' blocks your way!');
+            $('bEmoji').textContent = m.emoji;
+            $('bName').textContent = m.name;
+            $('battle').classList.add('open');
+            renderBattle();
+        }
+
+        function renderBattle() {
+            $('bMhp').style.width = Math.max(0, battleMon.hp / battleMon.maxhp * 100) + '%';
+            $('bMhpText').textContent = battleMon.name + ' ' + Math.max(0, battleMon.hp) + '/' + battleMon.maxhp;
+            $('bHhp').style.width = Math.max(0, hero.hp / hero.maxhp * 100) + '%';
+            $('bHhpText').textContent = 'You ' + Math.max(0, hero.hp) + '/' + hero.maxhp;
+            $('bPotion').disabled = hero.potions < 1;
+            $('bPotion').textContent = '🧪 Potion (' + hero.potions + ')';
+            updateHud();
+        }
+
+        function battleAttack() {
+            const crit = rand(100) < 15;
+            let dmg = WEAPONS[hero.weapon].power + hero.lv * 2 + rand(5);
+            if (crit) dmg *= 2;
+            battleMon.hp -= dmg;
+            log('You hit the ' + battleMon.name + ' for <b>' + dmg + '</b>' + (crit ? ' — crit! 💥' : '.'), 'good');
+            if (battleMon.hp <= 0) return winBattle();
+            monsterTurn();
+        }
+
+        function monsterTurn() {
+            const dmg = Math.max(1, battleMon.atk + rand(4) - ARMORS[hero.armor].def);
+            hero.hp -= dmg;
+            log('The ' + battleMon.name + ' hits you for <b>' + dmg + '</b>.', 'bad');
+            if (hero.hp <= 0) return die('The ' + battleMon.name + ' defeated you.');
+            renderBattle();
+        }
+
+        function battlePotion() {
+            if (hero.potions < 1) return;
+            hero.potions--;
+            const heal = Math.min(POTION_HEAL, hero.maxhp - hero.hp);
+            hero.hp += heal;
+            log('You drink a potion: +<b>' + heal + '</b> HP. 🧪', 'good');
+            monsterTurn();
+        }
+
+        function battleFlee() {
+            if (rand(100) < 70) {
+                log('You back away safely. 🏃');
+                endBattle(false);
+            } else {
+                log("You can't escape!", 'bad');
+                monsterTurn();
+            }
+        }
+
+        function winBattle() {
+            hero.kills++;
+            hero.xp += battleMon.xp;
+            hero.gold += battleMon.gold;
+            log('The <b>' + battleMon.name + '</b> is defeated! +' + battleMon.xp + ' XP, +' +
+                battleMon.gold + ' gold. 🎉', 'gold');
+            delete monsters[battleMon.posKey];
+            while (hero.xp >= xpNext()) {
+                hero.xp -= xpNext();
+                hero.lv++;
+                hero.maxhp += 15;
+                hero.hp = hero.maxhp;
+                log('⬆️ <b>Level up!</b> Now level ' + hero.lv + ' — max HP +15, fully healed.', 'good');
+            }
+            endBattle(true);
+        }
+
+        function endBattle() {
+            battleMon = null;
+            uiState = 'map';
+            $('battle').classList.remove('open');
+            save();
+            updateHud();
+            draw();
+        }
+
+        // ---- Shop ----
+        function openShop() {
+            uiState = 'shop';
+            $('shop').classList.add('open');
+            renderShop();
+        }
+        function renderShop() {
+            const el = $('shopItems');
+            el.innerHTML = '';
+            const add = (label, cost, fn, hide) => {
+                if (hide) return;
+                const b = document.createElement('button');
+                b.textContent = label + ' — ' + cost + 'g';
+                b.disabled = hero.gold < cost;
+                b.addEventListener('click', () => { hero.gold -= cost; fn(); save(); renderShop(); updateHud(); });
+                el.appendChild(b);
+            };
+            add('🧪 Potion', POTION_COST, () => { hero.potions++; log('Bought a potion. 🧪'); });
+            const w = WEAPONS[hero.weapon + 1];
+            if (w) add('⚔️ ' + w.name, w.cost, () => { hero.weapon++; log('You wield the <b>' + w.name + '</b>! ⚔️', 'good'); });
+            const a = ARMORS[hero.armor + 1];
+            if (a) add('🛡️ ' + a.name, a.cost, () => { hero.armor++; log('You wear <b>' + a.name + '</b>! 🛡️', 'good'); });
+            add('🥽 Flippers', GEAR_COST, () => { hero.flippers = true; log('You can swim now! 🥽', 'good'); }, hero.flippers);
+            add('🥾 Fire boots', GEAR_COST, () => { hero.boots = true; log('Fire-proof! 🥾', 'good'); }, hero.boots);
+        }
+        $('shopLeave').addEventListener('click', () => {
+            uiState = 'map';
+            $('shop').classList.remove('open');
+            draw();
+        });
+
+        // ---- Death / modal ----
+        function die(reason) {
+            uiState = 'modal';
+            $('battle').classList.remove('open');
+            battleMon = null;
+            showModal('💀', 'You have fallen...', reason,
+                [['✨ Revive (lose half gold, restart floor)', () => {
+                    hero.gold = Math.floor(hero.gold / 2);
+                    hero.hp = hero.maxhp;
+                    closeModal();
+                    loadFloor(hero.floor);
+                }],
+                ['🔄 New game', resetAll]]);
+        }
+
+        function showModal(emoji, title, html, buttons) {
+            uiState = 'modal';
+            $('mEmoji').textContent = emoji;
+            $('mTitle').textContent = title;
+            $('mText').innerHTML = html;
+            const wrap = $('mBtns');
+            wrap.innerHTML = '';
+            for (const [label, fn] of buttons) {
+                const b = document.createElement('button');
+                b.textContent = label;
+                b.addEventListener('click', fn);
+                wrap.appendChild(b);
+            }
+            $('modal').classList.add('open');
+        }
+        function closeModal() { $('modal').classList.remove('open'); uiState = 'map'; }
+
+        function resetAll() {
+            deleteCookie(SAVE_COOKIE);
+            hero = newHero();
+            closeModal();
+            $('log').innerHTML = '';
+            log('A new hero enters the dungeon. ⚔️');
+            loadFloor(0);
+        }
+
+        // ---- Rendering ----
+        function emoji(ch, x, y, size, alpha) {
+            ctx.save();
+            if (alpha !== undefined) ctx.globalAlpha = alpha;
+            ctx.font = (size || 22) + 'px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(ch, x * TILE + TILE / 2, y * TILE + TILE / 2 + 1);
+            ctx.restore();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    const t = grid[y][x];
+                    let bg = '#3d4f63';
+                    if (t === '#') bg = '#22303f';
+                    else if (t === 'w') bg = '#2471c9';
+                    else if (t === 'f') bg = '#8e2f24';
+                    else if (t === 'i') bg = '#a8d8ea';
+                    else if (t === 'd') bg = '#8d6e4b';
+                    else if (t === 'S') bg = '#7f8c8d';
+                    else if (t === 'E') bg = '#27ae60';
+                    else if (DOOR_COLORS[t]) bg = DOOR_COLORS[t];
+                    ctx.fillStyle = bg;
+                    ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+                    ctx.strokeRect(x * TILE + 0.5, y * TILE + 0.5, TILE - 1, TILE - 1);
+
+                    if (t === 'w') emoji('🌊', x, y, 16, 0.8);
+                    if (t === 'f') emoji('🔥', x, y, 18);
+                    if (t === 'E') emoji('🏁', x, y);
+                    if (t === 'S') emoji('💾', x, y, 18, 0.4);
+                    if (DOOR_COLORS[t]) emoji('🔒', x, y, 16);
+
+                    const item = items[x + ',' + y];
+                    if (item === 'c') emoji('💾', x, y, 18);
+                    else if (item === 'o') emoji('💰', x, y, 18);
+                    else if (item === 'p') emoji('🧪', x, y, 18);
+                    else if (item === 'A') emoji('🥽', x, y, 18);
+                    else if (item === 'H') emoji('🥾', x, y, 18);
+                    else if (item === '$') emoji('🏪', x, y, 20);
+                    else if (item && 'ry'.includes(item)) {
+                        ctx.fillStyle = DOOR_COLORS[item.toUpperCase()];
+                        ctx.beginPath();
+                        ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 10, 0, Math.PI * 2);
+                        ctx.fill();
+                        emoji('🔑', x, y, 14);
+                    }
+                }
+            }
+            for (const k in blocks) {
+                const [x, y] = k.split(',').map(Number);
+                emoji('📦', x, y, 24);
+            }
+            for (const k in monsters) {
+                const [x, y] = k.split(',').map(Number);
+                emoji(MONSTERS[monsters[k]].emoji, x, y, 22);
+            }
+            emoji('🧙', player.x, player.y, 24);
+        }
+
+        function updateHud() {
+            $('hFloor').textContent = hero.floor + 1;
+            $('hLv').textContent = hero.lv;
+            $('hXp').textContent = hero.xp + '/' + xpNext();
+            $('hGold').textContent = hero.gold;
+            $('hPotions').textContent = hero.potions;
+            $('hChips').textContent = chipsLeft;
+            $('hpFill').style.width = Math.max(0, hero.hp / hero.maxhp * 100) + '%';
+            $('hpText').textContent = hero.hp + ' / ' + hero.maxhp;
+            let inv = '⚔️' + WEAPONS[hero.weapon].name + ' 🛡️' + ARMORS[hero.armor].name + ' ';
+            inv += '🔑'.repeat(keys ? keys.r + keys.y : 0);
+            if (hero.flippers) inv += '🥽';
+            if (hero.boots) inv += '🥾';
+            $('hInv').textContent = inv;
+        }
+
+        function log(msg, cls) {
+            const div = document.createElement('div');
+            if (cls) div.className = cls;
+            div.innerHTML = msg;
+            $('log').appendChild(div);
+            $('log').scrollTop = $('log').scrollHeight;
+        }
+
+        // ---- Input ----
+        document.addEventListener('keydown', e => {
+            const dirs = {
+                ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
+                ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
+            };
+            if (dirs[e.key]) { e.preventDefault(); tryMove(...dirs[e.key]); }
+        });
+        let touchX = 0, touchY = 0;
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            touchX = e.touches[0].clientX;
+            touchY = e.touches[0].clientY;
+        });
+        canvas.addEventListener('touchend', e => {
+            e.preventDefault();
+            const dx = e.changedTouches[0].clientX - touchX;
+            const dy = e.changedTouches[0].clientY - touchY;
+            if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+            if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
+            else tryMove(0, dy > 0 ? 1 : -1);
+        });
+
+        $('bAttack').addEventListener('click', battleAttack);
+        $('bPotion').addEventListener('click', battlePotion);
+        $('bFlee').addEventListener('click', battleFlee);
+        $('restartFloor').addEventListener('click', () => { if (uiState === 'map') loadFloor(hero.floor); });
+        $('newGame').addEventListener('click', () => {
+            if (confirm('Start over? Your saved hero will be erased.')) resetAll();
+        });
+
+        // ---- Init ----
+        if (loadSave()) {
+            if (hero.hp <= 0) hero.hp = hero.maxhp;
+            log('Welcome back! Your quest resumes on floor ' + (hero.floor + 1) + '. 📜', 'gold');
+            loadFloor(Math.min(hero.floor, FLOORS.length - 1));
+        } else {
+            log('Collect chips, battle monsters, and reach the Dragon on floor 5. ⚔️');
+            loadFloor(0);
+        }
+    </script>
+</body>
+</html>
