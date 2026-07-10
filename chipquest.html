@@ -21,7 +21,7 @@
         #hud {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px 14px;
+            gap: 4px 12px;
             align-items: center;
             justify-content: center;
             background: #2c3e50;
@@ -35,7 +35,7 @@
         #hud b { color: #f1c40f; }
         #hpWrap {
             background: #10141f; border-radius: 4px;
-            width: 110px; height: 15px; overflow: hidden; position: relative;
+            width: 120px; height: 15px; overflow: hidden; position: relative;
         }
         #hpFill { background: #e74c3c; height: 100%; transition: width 0.25s; }
         #hpWrap span {
@@ -46,7 +46,7 @@
         canvas { background: #22303f; display: block; max-width: 96vw; }
         .overlay {
             position: absolute; inset: 0;
-            background: rgba(10, 14, 25, 0.88);
+            background: rgba(10, 14, 25, 0.9);
             display: none;
             flex-direction: column;
             align-items: center;
@@ -54,15 +54,24 @@
             color: #ecf0f1;
             text-align: center;
             padding: 12px;
+            overflow-y: auto;
         }
         .overlay.open { display: flex; }
-        .overlay .big { font-size: 52px; margin: 4px; }
-        .overlay h2 { margin: 4px 0 10px; }
-        .obar {
-            background: #10141f; border-radius: 4px; width: 200px; height: 16px;
-            overflow: hidden; position: relative; margin: 4px auto;
+        .overlay .big { font-size: 50px; margin: 4px; }
+        .overlay h2 { margin: 4px 0 8px; }
+        .statgrid {
+            display: grid; grid-template-columns: auto auto; gap: 3px 16px;
+            font-size: 15px; margin: 6px 0; text-align: left;
         }
-        .obar > div { height: 100%; transition: width 0.2s; }
+        .statgrid b { color: #f1c40f; }
+        #bPreview { font-size: 15px; margin: 8px 0; }
+        #bPreview.deadly { color: #e74c3c; font-weight: bold; }
+        #bPreview.safe { color: #2ecc71; }
+        .obar {
+            background: #10141f; border-radius: 4px; width: 210px; height: 16px;
+            overflow: hidden; position: relative; margin: 3px auto;
+        }
+        .obar > div { height: 100%; transition: width 0.12s; }
         .obar span {
             position: absolute; inset: 0; font-size: 11px; line-height: 16px;
             color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.8);
@@ -72,8 +81,16 @@
             padding: 9px 14px; font-size: 14px; border: none; border-radius: 6px;
             background: #3498db; color: #fff; cursor: pointer;
         }
-        .overlay button:disabled { background: #566573; }
+        .overlay button:disabled { background: #566573; cursor: default; }
         .overlay button.danger, #controls button.danger { background: #e74c3c; }
+        #bookList { width: 100%; max-width: 380px; }
+        .bookRow {
+            display: flex; align-items: center; gap: 10px;
+            background: rgba(255,255,255,0.06); border-radius: 8px;
+            padding: 6px 10px; margin: 5px 0; font-size: 13px; text-align: left;
+        }
+        .bookRow .be { font-size: 28px; }
+        .bookRow .dmg { margin-left: auto; font-weight: bold; font-size: 15px; }
         #log {
             background: #2c3e50; color: #bdc3c7;
             width: 100%; box-sizing: border-box;
@@ -82,21 +99,22 @@
             height: 76px; overflow-y: auto; padding: 6px 12px;
         }
         #log .good { color: #2ecc71; } #log .bad { color: #e74c3c; } #log .gold { color: #f1c40f; }
-        #controls { margin: 10px 0 4px; display: flex; gap: 8px; }
-        p.help { color: #7f8c8d; font-size: 13px; text-align: center; max-width: 480px; margin: 6px 12px; }
+        #controls { margin: 10px 0 4px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        p.help { color: #7f8c8d; font-size: 13px; text-align: center; max-width: 500px; margin: 6px 12px; }
         a.back { color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
     </style>
 </head>
 <body>
     <h1>🐲 Chip Quest</h1>
-    <p class="sub">Puzzle dungeons with RPG battles — Cookie Quest meets Micro Chips. Saved in a cookie.</p>
+    <p class="sub">A magic-tower (魔塔) dungeon: every battle is pure math — read the damage, plan your route.</p>
     <div id="hud">
-        <span>🏰 Floor <b id="hFloor">1</b></span>
-        <span>🧙 Lv <b id="hLv">1</b></span>
+        <span>🏰 F<b id="hFloor">1</b></span>
+        <span>Lv <b id="hLv">1</b></span>
         <div id="hpWrap"><div id="hpFill"></div><span id="hpText"></span></div>
+        <span>⚔️ <b id="hAtk">10</b></span>
+        <span>🛡️ <b id="hDef">5</b></span>
         <span>✨ <b id="hXp">0</b></span>
         <span>💰 <b id="hGold">0</b></span>
-        <span>🧪 <b id="hPotions">0</b></span>
         <span>💾 <b id="hChips">0</b></span>
         <span id="hInv"></span>
     </div>
@@ -106,20 +124,29 @@
         <div class="overlay" id="battle">
             <div class="big" id="bEmoji">🟢</div>
             <h2 id="bName">Slime</h2>
+            <div class="statgrid" id="bStats"></div>
+            <div id="bPreview"></div>
             <div class="obar"><div id="bMhp" style="background:#e67e22"></div><span id="bMhpText"></span></div>
             <div class="obar"><div id="bHhp" style="background:#e74c3c"></div><span id="bHhpText"></span></div>
-            <div class="btnrow">
-                <button id="bAttack">⚔️ Attack</button>
-                <button id="bPotion">🧪 Potion</button>
-                <button id="bFlee">🏃 Flee</button>
+            <div class="btnrow" id="bBtns">
+                <button id="bFight">⚔️ Fight</button>
+                <button id="bRetreat">🏃 Retreat</button>
             </div>
         </div>
 
         <div class="overlay" id="shop">
             <div class="big">🏪</div>
             <h2>Dungeon Shop</h2>
+            <div style="font-size:13px;color:#95a5a6">Gold is finite — spend it wisely.</div>
             <div class="btnrow" id="shopItems"></div>
             <div class="btnrow"><button id="shopLeave">↩️ Leave</button></div>
+        </div>
+
+        <div class="overlay" id="book">
+            <div class="big">📖</div>
+            <h2>Monster Handbook</h2>
+            <div id="bookList"></div>
+            <div class="btnrow"><button id="bookClose">↩️ Close</button></div>
         </div>
 
         <div class="overlay" id="modal">
@@ -131,23 +158,26 @@
     </div>
     <div id="log"></div>
     <div id="controls">
+        <button id="bookBtn">📖 Handbook</button>
+        <button id="soundBtn">🎵 Sound: On</button>
         <button id="restartFloor">↻ Restart floor</button>
         <button id="newGame" class="danger">🔄 New game</button>
     </div>
-    <p class="help">Arrows/WASD or swipe to move. Bump a monster to battle it. Collect every 💾 to open
-        the socket. 🔥 burns you without boots, 🌊 blocks you without flippers — the shop sells both.</p>
+    <p class="help">Arrows/WASD or swipe. Numbers on monsters show exactly how much HP that fight costs
+        (∞ = you can't hurt it). 🔺 red gems +3 ATK, 🔷 blue gems +3 DEF. Collect every 💾 to open the
+        socket. 🔥 burns 30 HP without boots; 🌊 needs flippers. Progress is saved in a cookie.</p>
     <a class="back" href="index.html">← All games</a>
     <script>
         // ---- Map legend: # wall · . floor · P start · c chip · * chip on ice
         // r/y keys · R/Y doors · O block · w water · f fire · i ice · o gold · p potion
-        // A flippers · H boots · $ shop · S socket · E exit · 1-7 monster of that tier
+        // x atk gem · z def gem · A flippers · H boots · $ shop · S socket · E exit · 1-7 monster
         const FLOORS = [
             { name: 'The Entrance', map: [
                 '##############',
                 '#P..1.....c..#',
                 '#....##.##...#',
-                '#.o..#...#.2.#',
-                '#....#.c.#...#',
+                '#.o..#..x#.2.#',
+                '#.z..#.c.#...#',
                 '#.1..#...##.##',
                 '#....#p$.#c.##',
                 '#.c..#...#.SE#',
@@ -157,79 +187,150 @@
                 '############',
                 '#P...#..c..#',
                 '#..r.#..3..#',
-                '#..2.R.....#',
+                '#..2.R....x#',
                 '#...p#o.b..#',
                 '######B#####',
-                '#..c...4..##',
+                '#z.c...4..##',
                 '#.o..c..$SE#',
                 '############',
             ]},
             { name: 'Flooded Depths', map: [
                 '############',
                 '#P...p..w.o#',
-                '#..O....w.c#',
-                '#...4...w..#',
+                '#z.O....w.c#',
+                '#...4...w.x#',
                 '#..O....w.c#',
                 '#..A....w.##',
-                '#o..5...wSE#',
+                '#o..5.x.wSE#',
                 '############',
             ]},
             { name: 'Fire & Ice', map: [
                 '##############',
-                '#P...5..c...H#',
+                '#P.z.4..c...H#',
                 '############.#',
-                '#op..fff..c..#',
+                '#op..fff.xc$.#',
                 '#.############',
                 '#.iii*iii.5..#',
                 '############.#',
-                '#ES......6.o.#',
+                '#ES......6zo.#',
                 '##############',
             ]},
             { name: "Dragon's Lair", map: [
                 '##############',
-                '#P.c.#...c...#',
+                '#P.cx#...c...#',
                 '#....6...5...#',
-                '#..o.#..r...p#',
+                '#..o.#..r.z.p#',
                 '#R############',
-                '#..$..6.o..y.#',
+                '#..$..6.o..yz#',
                 '############Y#',
-                '#....c....7..#',
+                '#....c....7x.#',
                 '#ES###########',
                 '##############',
             ]},
         ];
 
+        // ---- Mota-style deterministic stats ----
         const MONSTERS = [null,
-            { name: 'Slime', emoji: '🟢', hp: 15, atk: 4, xp: 20, gold: 8 },
-            { name: 'Goblin', emoji: '👺', hp: 25, atk: 6, xp: 35, gold: 15 },
-            { name: 'Wolf', emoji: '🐺', hp: 35, atk: 9, xp: 55, gold: 24 },
-            { name: 'Skeleton', emoji: '💀', hp: 50, atk: 13, xp: 80, gold: 38 },
-            { name: 'Orc', emoji: '👹', hp: 70, atk: 17, xp: 120, gold: 60 },
-            { name: 'Dark Knight', emoji: '🖤', hp: 95, atk: 22, xp: 180, gold: 95 },
-            { name: 'Dragon', emoji: '🐉', hp: 160, atk: 30, xp: 350, gold: 250 },
+            { name: 'Slime', emoji: '🟢', hp: 35, atk: 12, def: 2, xp: 20, gold: 15 },
+            { name: 'Goblin', emoji: '👺', hp: 55, atk: 20, def: 6, xp: 35, gold: 25 },
+            { name: 'Wolf', emoji: '🐺', hp: 85, atk: 30, def: 12, xp: 60, gold: 40 },
+            { name: 'Skeleton', emoji: '💀', hp: 130, atk: 45, def: 18, xp: 100, gold: 70 },
+            { name: 'Orc', emoji: '👹', hp: 200, atk: 58, def: 26, xp: 160, gold: 120 },
+            { name: 'Dark Knight', emoji: '🖤', hp: 260, atk: 64, def: 28, xp: 260, gold: 200 },
+            { name: 'Dragon', emoji: '🐉', hp: 500, atk: 85, def: 40, xp: 600, gold: 600 },
         ];
         const WEAPONS = [
-            { name: 'Stick', power: 2, cost: 0 }, { name: 'Dagger', power: 5, cost: 40 },
-            { name: 'Sword', power: 9, cost: 120 }, { name: 'War Axe', power: 14, cost: 300 },
-            { name: 'Flame Blade', power: 20, cost: 650 }, { name: 'Dragonslayer', power: 28, cost: 1200 },
+            { name: 'Stick', power: 0, cost: 0 }, { name: 'Dagger', power: 4, cost: 40 },
+            { name: 'Sword', power: 9, cost: 110 }, { name: 'War Axe', power: 15, cost: 260 },
+            { name: 'Flame Blade', power: 22, cost: 500 }, { name: 'Dragonslayer', power: 30, cost: 900 },
         ];
         const ARMORS = [
-            { name: 'Rags', def: 0, cost: 0 }, { name: 'Leather', def: 2, cost: 60 },
-            { name: 'Chainmail', def: 4, cost: 180 }, { name: 'Plate', def: 7, cost: 450 },
-            { name: 'Dragon Scale', def: 11, cost: 900 },
+            { name: 'Rags', def: 0, cost: 0 }, { name: 'Leather', def: 3, cost: 50 },
+            { name: 'Chainmail', def: 7, cost: 150 }, { name: 'Plate', def: 12, cost: 380 },
+            { name: 'Dragon Scale', def: 18, cost: 750 },
         ];
-        const POTION_COST = 15, POTION_HEAL = 40, GEAR_COST = 80;
-        const DOOR_COLORS = { R: '#e74c3c', Y: '#f1c40f' };
-        const KEY_OF_DOOR = { R: 'r', Y: 'y' };
+        const GEAR_COST = 80, FIRE_DMG = 30, POTION_HEAL = 80, GEM_BONUS = 3;
+        const DOOR_COLORS = { R: '#e74c3c', Y: '#f1c40f', B: '#3498db' };
+        const KEY_OF_DOOR = { R: 'r', Y: 'y', B: 'b' };
 
         const TILE = 34;
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const $ = id => document.getElementById(id);
-        const rand = n => Math.floor(Math.random() * n);
+
+        // ---- Audio: chiptune loop + SFX (all synthesized, no files) ----
+        let audio = null, master = null, soundOn = localStorage.getItem('cqSound') !== '0';
+        let musicStep = 0, nextNoteTime = 0, musicTimer = null;
+        const STEP = 0.15;
+        const MELODY = [ // 8 bars of 8 eighth-notes, A minor (midi, 0 = rest)
+            [69, 0, 72, 74, 76, 0, 74, 72], [67, 0, 71, 72, 74, 0, 72, 71],
+            [65, 0, 69, 71, 72, 0, 71, 69], [64, 0, 67, 69, 71, 0, 69, 67],
+            [69, 0, 72, 74, 76, 0, 79, 76], [67, 0, 71, 74, 77, 0, 74, 71],
+            [65, 0, 69, 72, 76, 0, 72, 69], [64, 67, 71, 74, 76, 74, 71, 64],
+        ];
+        const BASS = [45, 43, 41, 40, 45, 43, 41, 40];
+        const freq = m => 440 * Math.pow(2, (m - 69) / 12);
+
+        function ensureAudio() {
+            if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+            audio = new (window.AudioContext || window.webkitAudioContext)();
+            master = audio.createGain();
+            master.gain.value = soundOn ? 1 : 0;
+            master.connect(audio.destination);
+            nextNoteTime = audio.currentTime + 0.1;
+            musicTimer = setInterval(scheduleMusic, 60);
+        }
+        function tone(f, t, dur, type, gain) {
+            if (!audio) return;
+            const osc = audio.createOscillator();
+            const g = audio.createGain();
+            osc.type = type;
+            osc.frequency.value = f;
+            g.gain.setValueAtTime(gain, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            osc.connect(g).connect(master);
+            osc.start(t);
+            osc.stop(t + dur + 0.02);
+        }
+        function scheduleMusic() {
+            while (nextNoteTime < audio.currentTime + 0.2) {
+                const bar = Math.floor(musicStep / 8) % 8, pos = musicStep % 8;
+                const n = MELODY[bar][pos];
+                if (n) tone(freq(n), nextNoteTime, STEP * 0.9, 'square', 0.035);
+                if (pos === 0 || pos === 4) tone(freq(BASS[bar]), nextNoteTime, STEP * 3.6, 'triangle', 0.07);
+                musicStep++;
+                nextNoteTime += STEP;
+            }
+        }
+        function sfx(kind) {
+            if (!audio || !soundOn) return;
+            const t = audio.currentTime;
+            if (kind === 'pickup') { tone(660, t, 0.08, 'square', 0.08); tone(990, t + 0.07, 0.1, 'square', 0.08); }
+            else if (kind === 'gem') { tone(880, t, 0.07, 'sine', 0.09); tone(1320, t + 0.06, 0.09, 'sine', 0.09); tone(1760, t + 0.12, 0.12, 'sine', 0.07); }
+            else if (kind === 'door') { tone(220, t, 0.1, 'square', 0.09); tone(330, t + 0.09, 0.12, 'square', 0.09); }
+            else if (kind === 'hit') { tone(180 + Math.random() * 60, t, 0.07, 'sawtooth', 0.1); }
+            else if (kind === 'hurt') { tone(110, t, 0.14, 'square', 0.11); }
+            else if (kind === 'win') { [523, 659, 784, 1047].forEach((f, i) => tone(f, t + i * 0.1, 0.14, 'square', 0.09)); }
+            else if (kind === 'levelup') { [440, 554, 659, 880].forEach((f, i) => tone(f, t + i * 0.07, 0.12, 'triangle', 0.1)); }
+            else if (kind === 'stairs') { [330, 392, 494, 587].forEach((f, i) => tone(f, t + i * 0.06, 0.1, 'sine', 0.09)); }
+            else if (kind === 'death') { [330, 262, 196, 131].forEach((f, i) => tone(f, t + i * 0.14, 0.2, 'sawtooth', 0.1)); }
+            else if (kind === 'blocked') { tone(140, t, 0.09, 'square', 0.07); }
+        }
+        function toggleSound() {
+            soundOn = !soundOn;
+            localStorage.setItem('cqSound', soundOn ? '1' : '0');
+            if (master) master.gain.value = soundOn ? 1 : 0;
+            $('soundBtn').textContent = soundOn ? '🎵 Sound: On' : '🔇 Sound: Off';
+        }
+        $('soundBtn').addEventListener('click', () => { ensureAudio(); toggleSound(); });
+        $('soundBtn').textContent = soundOn ? '🎵 Sound: On' : '🔇 Sound: Off';
+        // Browsers require a user gesture before audio can start
+        for (const ev of ['keydown', 'pointerdown', 'touchstart']) {
+            document.addEventListener(ev, ensureAudio, { once: false });
+        }
 
         // ---- Persistent hero (cookie) ----
-        const SAVE_COOKIE = 'chipQuestSave';
+        const SAVE_COOKIE = 'chipQuestSave2';
         function setCookie(name, value) {
             document.cookie = name + '=' + encodeURIComponent(value) + '; max-age=31536000; path=/; SameSite=Lax';
         }
@@ -243,7 +344,7 @@
         function deleteCookie(name) { document.cookie = name + '=; max-age=0; path=/; SameSite=Lax'; }
 
         function newHero() {
-            return { lv: 1, xp: 0, maxhp: 50, hp: 50, gold: 20, potions: 1,
+            return { lv: 1, xp: 0, maxhp: 150, hp: 150, atk: 10, def: 5, gold: 20,
                      weapon: 0, armor: 0, kills: 0, flippers: false, boots: false, floor: 0 };
         }
         let hero = newHero();
@@ -253,17 +354,36 @@
                 const raw = getCookie(SAVE_COOKIE);
                 if (!raw) return false;
                 const h = JSON.parse(raw);
-                if (typeof h.lv !== 'number' || typeof h.floor !== 'number') return false;
+                if (typeof h.atk !== 'number' || typeof h.floor !== 'number') return false;
                 hero = Object.assign(newHero(), h);
                 return true;
             } catch { return false; }
         }
-        const xpNext = () => hero.lv * 50;
+        const xpNext = () => hero.lv * 40;
+        const heroAtk = () => hero.atk + WEAPONS[hero.weapon].power;
+        const heroDef = () => hero.def + ARMORS[hero.armor].def;
+
+        // ---- The Mota core: battles are pure arithmetic ----
+        function calcBattle(tier) {
+            const m = MONSTERS[tier];
+            const dealt = heroAtk() - m.def;
+            if (dealt <= 0) return null; // can't pierce its defense
+            const rounds = Math.ceil(m.hp / dealt);
+            const perRound = Math.max(0, m.atk - heroDef());
+            return { rounds, perRound, dmg: (rounds - 1) * perRound };
+        }
+        function dmgColor(c) {
+            if (!c) return '#e74c3c';
+            if (c.dmg === 0) return '#2ecc71';
+            if (c.dmg < hero.hp * 0.5) return '#f8f9fa';
+            if (c.dmg < hero.hp) return '#f1c40f';
+            return '#e74c3c';
+        }
 
         // ---- Floor state ----
         let grid, items, blocks, monsters, keys, player, chipsLeft, cols, rows, slideDir, slideId;
-        let uiState = 'map'; // map | battle | shop | modal
-        let battleMon = null;
+        let uiState = 'map';
+        let battleKey = null, battleAnim = null;
 
         function loadFloor(i) {
             hero.floor = i;
@@ -273,11 +393,13 @@
             canvas.width = cols * TILE;
             canvas.height = rows * TILE;
             grid = []; items = {}; blocks = {}; monsters = {};
-            keys = { r: 0, y: 0 };
+            keys = { r: 0, y: 0, b: 0 };
             chipsLeft = 0;
             slideDir = null;
             clearTimeout(slideId);
+            clearInterval(battleAnim);
             uiState = 'map';
+            for (const id of ['battle', 'shop', 'book', 'modal']) $(id).classList.remove('open');
 
             for (let y = 0; y < rows; y++) {
                 grid.push([]);
@@ -286,13 +408,13 @@
                     let tile = '.';
                     if ('#wfSE'.includes(ch)) tile = ch;
                     else if (ch === 'i' || ch === '*') tile = 'i';
-                    else if ('RY'.includes(ch)) tile = ch;
+                    else if (DOOR_COLORS[ch]) tile = ch;
                     grid[y].push(tile);
 
                     const k = x + ',' + y;
                     if (ch === 'P') player = { x, y };
                     else if (ch === 'c' || ch === '*') { items[k] = 'c'; chipsLeft++; }
-                    else if ('rypoAH$'.includes(ch)) items[k] = ch;
+                    else if ('rybpoxzAH$'.includes(ch)) items[k] = ch;
                     else if (ch === 'O') blocks[k] = true;
                     else if (ch >= '1' && ch <= '7') monsters[k] = Number(ch);
                 }
@@ -315,31 +437,33 @@
             const nx = player.x + dx, ny = player.y + dy;
             const k = nx + ',' + ny;
 
-            if (monsters[k]) { slideDir = null; return startBattle(k); }
+            if (monsters[k]) { slideDir = null; return openBattle(k); }
 
             if (blocks[k]) {
                 const bx = nx + dx, by = ny + dy;
                 const bk = bx + ',' + by;
                 const bt = tileAt(bx, by);
-                if (bt === '#' || 'RYSE'.includes(bt) || blocks[bk] || monsters[bk]) { slideDir = null; return; }
+                if (bt === '#' || 'RYBSE'.includes(bt) || blocks[bk] || monsters[bk]) { slideDir = null; return; }
                 delete blocks[k];
-                if (bt === 'w') { grid[by][bx] = 'd'; log('The crate sinks — a bridge! 📦', 'good'); }
+                if (bt === 'w') { grid[by][bx] = 'd'; log('The crate sinks — a bridge! 📦', 'good'); sfx('pickup'); }
                 else blocks[bk] = true;
             } else {
                 const t = tileAt(nx, ny);
                 if (t === '#') { slideDir = null; return; }
-                if ('RY'.includes(t)) {
-                    if (!keys[KEY_OF_DOOR[t]]) { log('Locked. You need a key. 🔒', 'bad'); slideDir = null; return; }
+                if (DOOR_COLORS[t]) {
+                    if (!keys[KEY_OF_DOOR[t]]) { log('Locked. You need a key. 🔒', 'bad'); sfx('blocked'); slideDir = null; return; }
                     keys[KEY_OF_DOOR[t]]--;
                     grid[ny][nx] = '.';
                     log('You unlock the door. 🔑', 'good');
+                    sfx('door');
                 }
                 if (t === 'S') {
-                    if (chipsLeft > 0) { log('The socket needs ' + chipsLeft + ' more 💾.', 'bad'); slideDir = null; return; }
+                    if (chipsLeft > 0) { log('The socket needs ' + chipsLeft + ' more 💾.', 'bad'); sfx('blocked'); slideDir = null; return; }
                     grid[ny][nx] = '.';
                     log('The socket opens!', 'good');
+                    sfx('door');
                 }
-                if (t === 'w' && !hero.flippers) { log("You can't swim! You need flippers. 🌊", 'bad'); slideDir = null; return; }
+                if (t === 'w' && !hero.flippers) { log("You can't swim! You need flippers. 🌊", 'bad'); sfx('blocked'); slideDir = null; return; }
             }
 
             player.x = nx; player.y = ny;
@@ -351,21 +475,23 @@
             const item = items[k];
             if (item) {
                 delete items[k];
-                if (item === 'c') { chipsLeft--; log('Chip collected. 💾 ' + chipsLeft + ' left.'); }
-                else if (item === 'o') { const g = 10 + rand(16) + hero.floor * 5; hero.gold += g; log('A pile of <b>' + g + '</b> gold! 💰', 'gold'); }
-                else if (item === 'p') { hero.potions++; log('Found a potion. 🧪', 'good'); }
-                else if (item === 'A') { hero.flippers = true; log('You got <b>flippers</b>! You can swim. 🥽', 'good'); }
-                else if (item === 'H') { hero.boots = true; log('You got <b>fire boots</b>! 🥾', 'good'); }
+                if (item === 'c') { chipsLeft--; log('Chip collected. 💾 ' + chipsLeft + ' left.'); sfx('pickup'); }
+                else if (item === 'o') { const g = 25 + hero.floor * 10; hero.gold += g; log('A pile of <b>' + g + '</b> gold! 💰', 'gold'); sfx('pickup'); }
+                else if (item === 'p') { const heal = Math.min(POTION_HEAL, hero.maxhp - hero.hp); hero.hp += heal; log('A potion restores <b>' + heal + '</b> HP. 🧪', 'good'); sfx('pickup'); }
+                else if (item === 'x') { hero.atk += GEM_BONUS; log('Red gem: <b>ATK +' + GEM_BONUS + '</b>! 🔺', 'good'); sfx('gem'); }
+                else if (item === 'z') { hero.def += GEM_BONUS; log('Blue gem: <b>DEF +' + GEM_BONUS + '</b>! 🔷', 'good'); sfx('gem'); }
+                else if (item === 'A') { hero.flippers = true; log('You got <b>flippers</b>! You can swim. 🥽', 'good'); sfx('gem'); }
+                else if (item === 'H') { hero.boots = true; log('You got <b>fire boots</b>! 🥾', 'good'); sfx('gem'); }
                 else if (item === '$') { items[k] = '$'; openShop(); }
-                else if ('ry'.includes(item)) { keys[item]++; log('Picked up a key. 🔑', 'good'); }
+                else if ('ryb'.includes(item)) { keys[item]++; log('Picked up a key. 🔑', 'good'); sfx('pickup'); }
                 save();
             }
 
             const t = tileAt(x, y);
             if (t === 'f' && !hero.boots) {
-                const dmg = 15 + hero.floor * 3;
-                hero.hp -= dmg;
-                log('The fire sears you for <b>' + dmg + '</b>! 🔥', 'bad');
+                hero.hp -= FIRE_DMG;
+                log('The fire sears you for <b>' + FIRE_DMG + '</b>! 🔥', 'bad');
+                sfx('hurt');
                 if (hero.hp <= 0) return die('You burned up in the flames.');
             }
             if (t === 'E') return floorClear();
@@ -384,9 +510,11 @@
         }
 
         function floorClear() {
+            sfx('stairs');
             if (hero.floor + 1 >= FLOORS.length) {
                 hero.hp = hero.maxhp;
                 save();
+                sfx('win');
                 return showModal('🏆', 'Dungeon conquered!',
                     'You cleared all ' + FLOORS.length + ' floors and slew the Dragon.<br>' +
                     'Level ' + hero.lv + ' · ' + hero.kills + ' monsters defeated.',
@@ -397,94 +525,101 @@
             loadFloor(hero.floor + 1);
         }
 
-        // ---- Battle (Cookie Quest rules) ----
-        function startBattle(posKey) {
+        // ---- Battle: preview first, then deterministic auto-resolve ----
+        function openBattle(posKey) {
             const tier = monsters[posKey];
             const m = MONSTERS[tier];
-            battleMon = { posKey, tier, name: m.name, emoji: m.emoji, atk: m.atk,
-                          xp: m.xp, gold: m.gold, hp: m.hp, maxhp: m.hp };
+            const c = calcBattle(tier);
+            battleKey = posKey;
             uiState = 'battle';
-            log('A <b>' + m.name + '</b> ' + m.emoji + ' blocks your way!');
             $('bEmoji').textContent = m.emoji;
             $('bName').textContent = m.name;
+            $('bStats').innerHTML =
+                '<span>❤️ HP</span><b>' + m.hp + '</b>' +
+                '<span>⚔️ ATK</span><b>' + m.atk + '</b>' +
+                '<span>🛡️ DEF</span><b>' + m.def + '</b>' +
+                '<span>Reward</span><b>' + m.xp + ' XP · ' + m.gold + 'g</b>';
+            const pv = $('bPreview');
+            if (!c) {
+                pv.textContent = '∞ — your attacks can\'t pierce its defense!';
+                pv.className = 'deadly';
+                $('bFight').disabled = true;
+            } else if (c.dmg >= hero.hp) {
+                pv.textContent = 'You would take ' + c.dmg + ' damage — you would NOT survive!';
+                pv.className = 'deadly';
+                $('bFight').disabled = true;
+            } else {
+                pv.textContent = 'Cost: ' + c.dmg + ' HP (' + c.rounds + ' rounds)';
+                pv.className = c.dmg === 0 ? 'safe' : '';
+                $('bFight').disabled = false;
+            }
+            drawBattleBars(m.hp, m.hp, m.name);
+            $('bBtns').style.visibility = 'visible';
             $('battle').classList.add('open');
-            renderBattle();
         }
 
-        function renderBattle() {
-            $('bMhp').style.width = Math.max(0, battleMon.hp / battleMon.maxhp * 100) + '%';
-            $('bMhpText').textContent = battleMon.name + ' ' + Math.max(0, battleMon.hp) + '/' + battleMon.maxhp;
+        function drawBattleBars(mhp, mmax, mname) {
+            $('bMhp').style.width = Math.max(0, mhp / mmax * 100) + '%';
+            $('bMhpText').textContent = mname + ' ' + Math.max(0, mhp) + '/' + mmax;
             $('bHhp').style.width = Math.max(0, hero.hp / hero.maxhp * 100) + '%';
             $('bHhpText').textContent = 'You ' + Math.max(0, hero.hp) + '/' + hero.maxhp;
-            $('bPotion').disabled = hero.potions < 1;
-            $('bPotion').textContent = '🧪 Potion (' + hero.potions + ')';
-            updateHud();
         }
 
-        function battleAttack() {
-            const crit = rand(100) < 15;
-            let dmg = WEAPONS[hero.weapon].power + hero.lv * 2 + rand(5);
-            if (crit) dmg *= 2;
-            battleMon.hp -= dmg;
-            log('You hit the ' + battleMon.name + ' for <b>' + dmg + '</b>' + (crit ? ' — crit! 💥' : '.'), 'good');
-            if (battleMon.hp <= 0) return winBattle();
-            monsterTurn();
+        function fight() {
+            const tier = monsters[battleKey];
+            const m = MONSTERS[tier];
+            const c = calcBattle(tier);
+            if (!c || c.dmg >= hero.hp) return;
+            $('bBtns').style.visibility = 'hidden';
+            let mhp = m.hp, round = 0;
+            const dealt = heroAtk() - m.def;
+            clearInterval(battleAnim);
+            battleAnim = setInterval(() => {
+                round++;
+                mhp -= dealt;
+                sfx('hit');
+                if (mhp > 0 && round < c.rounds) hero.hp -= c.perRound;
+                drawBattleBars(mhp, m.hp, m.name);
+                updateHud();
+                if (mhp <= 0) {
+                    clearInterval(battleAnim);
+                    setTimeout(() => winBattle(m), 250);
+                }
+            }, 140);
         }
 
-        function monsterTurn() {
-            const dmg = Math.max(1, battleMon.atk + rand(4) - ARMORS[hero.armor].def);
-            hero.hp -= dmg;
-            log('The ' + battleMon.name + ' hits you for <b>' + dmg + '</b>.', 'bad');
-            if (hero.hp <= 0) return die('The ' + battleMon.name + ' defeated you.');
-            renderBattle();
-        }
-
-        function battlePotion() {
-            if (hero.potions < 1) return;
-            hero.potions--;
-            const heal = Math.min(POTION_HEAL, hero.maxhp - hero.hp);
-            hero.hp += heal;
-            log('You drink a potion: +<b>' + heal + '</b> HP. 🧪', 'good');
-            monsterTurn();
-        }
-
-        function battleFlee() {
-            if (rand(100) < 70) {
-                log('You back away safely. 🏃');
-                endBattle(false);
-            } else {
-                log("You can't escape!", 'bad');
-                monsterTurn();
-            }
-        }
-
-        function winBattle() {
+        function winBattle(m) {
             hero.kills++;
-            hero.xp += battleMon.xp;
-            hero.gold += battleMon.gold;
-            log('The <b>' + battleMon.name + '</b> is defeated! +' + battleMon.xp + ' XP, +' +
-                battleMon.gold + ' gold. 🎉', 'gold');
-            delete monsters[battleMon.posKey];
+            hero.xp += m.xp;
+            hero.gold += m.gold;
+            log('The <b>' + m.name + '</b> is defeated! +' + m.xp + ' XP, +' + m.gold + ' gold. 🎉', 'gold');
+            sfx('win');
+            delete monsters[battleKey];
             while (hero.xp >= xpNext()) {
                 hero.xp -= xpNext();
                 hero.lv++;
-                hero.maxhp += 15;
+                hero.atk += 3;
+                hero.def += 3;
+                hero.maxhp += 40;
                 hero.hp = hero.maxhp;
-                log('⬆️ <b>Level up!</b> Now level ' + hero.lv + ' — max HP +15, fully healed.', 'good');
+                log('⬆️ <b>Level up!</b> Lv ' + hero.lv + ': ATK +3, DEF +3, max HP +40, fully healed.', 'good');
+                sfx('levelup');
             }
-            endBattle(true);
+            closeBattle();
         }
 
-        function endBattle() {
-            battleMon = null;
+        function closeBattle() {
+            battleKey = null;
             uiState = 'map';
             $('battle').classList.remove('open');
             save();
             updateHud();
             draw();
         }
+        $('bFight').addEventListener('click', fight);
+        $('bRetreat').addEventListener('click', closeBattle);
 
-        // ---- Shop ----
+        // ---- Shop: finite-gold stat market, Mota style ----
         function openShop() {
             uiState = 'shop';
             $('shop').classList.add('open');
@@ -498,14 +633,20 @@
                 const b = document.createElement('button');
                 b.textContent = label + ' — ' + cost + 'g';
                 b.disabled = hero.gold < cost;
-                b.addEventListener('click', () => { hero.gold -= cost; fn(); save(); renderShop(); updateHud(); });
+                b.addEventListener('click', () => {
+                    hero.gold -= cost; fn(); sfx('pickup'); save(); renderShop(); updateHud();
+                });
                 el.appendChild(b);
             };
-            add('🧪 Potion', POTION_COST, () => { hero.potions++; log('Bought a potion. 🧪'); });
+            add('⚔️ +1 ATK', 20, () => { hero.atk++; });
+            add('🛡️ +1 DEF', 20, () => { hero.def++; });
+            add('❤️ +50 HP', 20, () => { hero.hp = Math.min(hero.maxhp, hero.hp + 50); }, hero.hp >= hero.maxhp);
             const w = WEAPONS[hero.weapon + 1];
-            if (w) add('⚔️ ' + w.name, w.cost, () => { hero.weapon++; log('You wield the <b>' + w.name + '</b>! ⚔️', 'good'); });
+            if (w) add('⚔️ ' + w.name + ' (+' + (w.power - WEAPONS[hero.weapon].power) + ' ATK)', w.cost,
+                () => { hero.weapon++; log('You wield the <b>' + w.name + '</b>! ⚔️', 'good'); });
             const a = ARMORS[hero.armor + 1];
-            if (a) add('🛡️ ' + a.name, a.cost, () => { hero.armor++; log('You wear <b>' + a.name + '</b>! 🛡️', 'good'); });
+            if (a) add('🛡️ ' + a.name + ' (+' + (a.def - ARMORS[hero.armor].def) + ' DEF)', a.cost,
+                () => { hero.armor++; log('You wear <b>' + a.name + '</b>! 🛡️', 'good'); });
             add('🥽 Flippers', GEAR_COST, () => { hero.flippers = true; log('You can swim now! 🥽', 'good'); }, hero.flippers);
             add('🥾 Fire boots', GEAR_COST, () => { hero.boots = true; log('Fire-proof! 🥾', 'good'); }, hero.boots);
         }
@@ -515,11 +656,40 @@
             draw();
         });
 
+        // ---- Monster handbook ----
+        function openBook() {
+            if (uiState !== 'map') return;
+            uiState = 'book';
+            const tiers = [...new Set(Object.values(monsters))].sort((a, b) => a - b);
+            const el = $('bookList');
+            el.innerHTML = tiers.length ? '' : '<div style="color:#95a5a6">No monsters left on this floor.</div>';
+            for (const tier of tiers) {
+                const m = MONSTERS[tier];
+                const c = calcBattle(tier);
+                const row = document.createElement('div');
+                row.className = 'bookRow';
+                row.innerHTML = '<span class="be">' + m.emoji + '</span>' +
+                    '<span><b>' + m.name + '</b><br>❤️' + m.hp + ' ⚔️' + m.atk + ' 🛡️' + m.def +
+                    ' · ' + m.xp + 'xp ' + m.gold + 'g</span>' +
+                    '<span class="dmg" style="color:' + dmgColor(c) + '">' +
+                    (c ? (c.dmg === 0 ? 'FREE' : '-' + c.dmg + ' HP') : '∞') + '</span>';
+                el.appendChild(row);
+            }
+            $('book').classList.add('open');
+        }
+        $('bookBtn').addEventListener('click', openBook);
+        $('bookClose').addEventListener('click', () => {
+            uiState = 'map';
+            $('book').classList.remove('open');
+            draw();
+        });
+
         // ---- Death / modal ----
         function die(reason) {
             uiState = 'modal';
             $('battle').classList.remove('open');
-            battleMon = null;
+            battleKey = null;
+            sfx('death');
             showModal('💀', 'You have fallen...', reason,
                 [['✨ Revive (lose half gold, restart floor)', () => {
                     hero.gold = Math.floor(hero.gold / 2);
@@ -596,10 +766,12 @@
                     if (item === 'c') emoji('💾', x, y, 18);
                     else if (item === 'o') emoji('💰', x, y, 18);
                     else if (item === 'p') emoji('🧪', x, y, 18);
+                    else if (item === 'x') emoji('🔺', x, y, 16);
+                    else if (item === 'z') emoji('🔷', x, y, 16);
                     else if (item === 'A') emoji('🥽', x, y, 18);
                     else if (item === 'H') emoji('🥾', x, y, 18);
                     else if (item === '$') emoji('🏪', x, y, 20);
-                    else if (item && 'ry'.includes(item)) {
+                    else if (item && 'ryb'.includes(item)) {
                         ctx.fillStyle = DOOR_COLORS[item.toUpperCase()];
                         ctx.beginPath();
                         ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 10, 0, Math.PI * 2);
@@ -612,9 +784,20 @@
                 const [x, y] = k.split(',').map(Number);
                 emoji('📦', x, y, 24);
             }
+            // Monsters with Mota-style damage preview badges
             for (const k in monsters) {
                 const [x, y] = k.split(',').map(Number);
-                emoji(MONSTERS[monsters[k]].emoji, x, y, 22);
+                const c = calcBattle(monsters[k]);
+                emoji(MONSTERS[monsters[k]].emoji, x, y, 20);
+                const label = c ? (c.dmg === 0 ? '0' : String(c.dmg)) : '∞';
+                ctx.font = 'bold 10px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'alphabetic';
+                ctx.lineWidth = 2.5;
+                ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+                ctx.strokeText(label, x * TILE + TILE / 2, y * TILE + TILE - 3);
+                ctx.fillStyle = dmgColor(c);
+                ctx.fillText(label, x * TILE + TILE / 2, y * TILE + TILE - 3);
             }
             emoji('🧙', player.x, player.y, 24);
         }
@@ -622,14 +805,15 @@
         function updateHud() {
             $('hFloor').textContent = hero.floor + 1;
             $('hLv').textContent = hero.lv;
+            $('hAtk').textContent = heroAtk();
+            $('hDef').textContent = heroDef();
             $('hXp').textContent = hero.xp + '/' + xpNext();
             $('hGold').textContent = hero.gold;
-            $('hPotions').textContent = hero.potions;
             $('hChips').textContent = chipsLeft;
             $('hpFill').style.width = Math.max(0, hero.hp / hero.maxhp * 100) + '%';
             $('hpText').textContent = hero.hp + ' / ' + hero.maxhp;
-            let inv = '⚔️' + WEAPONS[hero.weapon].name + ' 🛡️' + ARMORS[hero.armor].name + ' ';
-            inv += '🔑'.repeat(keys ? keys.r + keys.y : 0);
+            let inv = WEAPONS[hero.weapon].name + ' · ' + ARMORS[hero.armor].name + ' ';
+            inv += '🔑'.repeat(keys ? keys.r + keys.y + keys.b : 0);
             if (hero.flippers) inv += '🥽';
             if (hero.boots) inv += '🥾';
             $('hInv').textContent = inv;
@@ -666,9 +850,6 @@
             else tryMove(0, dy > 0 ? 1 : -1);
         });
 
-        $('bAttack').addEventListener('click', battleAttack);
-        $('bPotion').addEventListener('click', battlePotion);
-        $('bFlee').addEventListener('click', battleFlee);
         $('restartFloor').addEventListener('click', () => { if (uiState === 'map') loadFloor(hero.floor); });
         $('newGame').addEventListener('click', () => {
             if (confirm('Start over? Your saved hero will be erased.')) resetAll();
@@ -680,7 +861,7 @@
             log('Welcome back! Your quest resumes on floor ' + (hero.floor + 1) + '. 📜', 'gold');
             loadFloor(Math.min(hero.floor, FLOORS.length - 1));
         } else {
-            log('Collect chips, battle monsters, and reach the Dragon on floor 5. ⚔️');
+            log('Every fight has a known price — check the numbers before you swing. ⚔️');
             loadFloor(0);
         }
     </script>
