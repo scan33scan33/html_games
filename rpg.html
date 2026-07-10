@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookie Quest RPG</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f9;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #2c3e50;
+        }
+        h1 { margin: 14px 0 2px; }
+        p.sub { color: #7f8c8d; margin: 0 0 12px; font-size: 13px; }
+        #game {
+            width: 95%;
+            max-width: 480px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border-radius: 10px;
+            padding: 14px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        #stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 14px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .bar {
+            background: #22303f;
+            border-radius: 4px;
+            height: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+        .bar > div { height: 100%; transition: width 0.25s; }
+        #hpFill { background: #e74c3c; }
+        #xpFill { background: #3498db; }
+        .bar span {
+            position: absolute; inset: 0;
+            font-size: 11px; line-height: 16px; text-align: center;
+            color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+        }
+        #scene {
+            text-align: center;
+            font-size: 48px;
+            margin: 8px 0;
+            min-height: 58px;
+        }
+        #monsterInfo { text-align: center; font-size: 14px; min-height: 18px; color: #f1c40f; }
+        #log {
+            background: #22303f;
+            border-radius: 6px;
+            height: 150px;
+            overflow-y: auto;
+            padding: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 10px 0;
+        }
+        #log .good { color: #2ecc71; }
+        #log .bad { color: #e74c3c; }
+        #log .gold { color: #f1c40f; }
+        #log .info { color: #95a5a6; }
+        #buttons { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        button {
+            padding: 10px 14px;
+            font-size: 14px;
+            border: none;
+            border-radius: 6px;
+            background: #3498db;
+            color: #fff;
+            cursor: pointer;
+            flex: 1 1 40%;
+            max-width: 48%;
+        }
+        button:hover { background: #2980b9; }
+        button.danger { background: #e74c3c; }
+        button.danger:hover { background: #c0392b; }
+        button:disabled { background: #566573; cursor: default; }
+        #cookieWarn {
+            display: none;
+            background: #e67e22; color: #fff;
+            border-radius: 6px; padding: 8px; font-size: 13px;
+            text-align: center; margin-bottom: 10px;
+        }
+        a.back { color: #7f8c8d; font-size: 13px; margin-bottom: 16px; }
+    </style>
+</head>
+<body>
+    <h1>🍪 Cookie Quest</h1>
+    <p class="sub">A tiny RPG — your progress is saved in a browser cookie.</p>
+    <div id="game">
+        <div id="cookieWarn">⚠️ Cookies are unavailable here, so progress won't be saved.
+            (Cookies don't work on file:// pages — serve over http instead.)</div>
+        <div id="stats">
+            <div>🧙 <b id="sName">Hero</b> · Lv <b id="sLv">1</b></div>
+            <div>💰 <b id="sGold">0</b> gold</div>
+            <div class="bar"><div id="hpFill"></div><span id="hpText"></span></div>
+            <div class="bar"><div id="xpFill"></div><span id="xpText"></span></div>
+            <div>⚔️ <b id="sWeapon"></b></div>
+            <div>🛡️ <b id="sArmor"></b></div>
+            <div>🧪 Potions: <b id="sPotions">0</b></div>
+            <div>☠️ Kills: <b id="sKills">0</b></div>
+        </div>
+        <div id="scene">🏕️</div>
+        <div id="monsterInfo"></div>
+        <div id="log"></div>
+        <div id="buttons"></div>
+    </div>
+    <a class="back" href="index.html">← All games</a>
+    <script>
+        // ---------- Cookie persistence ----------
+        const SAVE_COOKIE = 'cookieQuestSave';
+
+        function setCookie(name, value) {
+            document.cookie = name + '=' + encodeURIComponent(value) +
+                '; max-age=31536000; path=/; SameSite=Lax';
+        }
+        function getCookie(name) {
+            for (const part of document.cookie.split('; ')) {
+                const eq = part.indexOf('=');
+                if (part.slice(0, eq) === name) return decodeURIComponent(part.slice(eq + 1));
+            }
+            return null;
+        }
+        function deleteCookie(name) {
+            document.cookie = name + '=; max-age=0; path=/; SameSite=Lax';
+        }
+        function cookiesWork() {
+            setCookie('cookieQuestTest', '1');
+            const ok = getCookie('cookieQuestTest') === '1';
+            deleteCookie('cookieQuestTest');
+            return ok;
+        }
+
+        function save() { setCookie(SAVE_COOKIE, JSON.stringify(hero)); }
+        function load() {
+            try {
+                const raw = getCookie(SAVE_COOKIE);
+                if (!raw) return null;
+                const h = JSON.parse(raw);
+                return typeof h.lv === 'number' && typeof h.hp === 'number' ? h : null;
+            } catch { return null; }
+        }
+
+        // ---------- Game data ----------
+        const WEAPONS = [
+            { name: 'Stick', power: 2, cost: 0 },
+            { name: 'Dagger', power: 5, cost: 40 },
+            { name: 'Sword', power: 9, cost: 120 },
+            { name: 'War Axe', power: 14, cost: 300 },
+            { name: 'Flame Blade', power: 20, cost: 650 },
+            { name: 'Dragonslayer', power: 28, cost: 1200 },
+        ];
+        const ARMORS = [
+            { name: 'Rags', def: 0, cost: 0 },
+            { name: 'Leather', def: 2, cost: 60 },
+            { name: 'Chainmail', def: 4, cost: 180 },
+            { name: 'Plate', def: 7, cost: 450 },
+            { name: 'Dragon Scale', def: 11, cost: 900 },
+        ];
+        const MONSTERS = [
+            { name: 'Slime', emoji: '🟢', hp: 15, atk: 4, xp: 20, gold: 8 },
+            { name: 'Goblin', emoji: '👺', hp: 25, atk: 6, xp: 35, gold: 15 },
+            { name: 'Wolf', emoji: '🐺', hp: 35, atk: 9, xp: 55, gold: 24 },
+            { name: 'Skeleton', emoji: '💀', hp: 50, atk: 13, xp: 80, gold: 38 },
+            { name: 'Orc', emoji: '👹', hp: 70, atk: 17, xp: 120, gold: 60 },
+            { name: 'Dark Knight', emoji: '🖤', hp: 95, atk: 22, xp: 180, gold: 95 },
+            { name: 'Dragon', emoji: '🐉', hp: 160, atk: 30, xp: 350, gold: 250, boss: true },
+        ];
+        const POTION_COST = 15, POTION_HEAL = 40, REST_COST = 10;
+
+        let hero, monster = null, mode = 'idle';
+
+        function newHero() {
+            return {
+                name: 'Hero', lv: 1, xp: 0, maxhp: 50, hp: 50,
+                gold: 20, potions: 1, weapon: 0, armor: 0, kills: 0, slainDragon: false,
+            };
+        }
+        function xpNext() { return hero.lv * 50; }
+        const rand = n => Math.floor(Math.random() * n);
+
+        // ---------- UI ----------
+        const $ = id => document.getElementById(id);
+        function log(msg, cls) {
+            const div = document.createElement('div');
+            if (cls) div.className = cls;
+            div.innerHTML = msg;
+            $('log').appendChild(div);
+            $('log').scrollTop = $('log').scrollHeight;
+        }
+
+        function render() {
+            $('sName').textContent = hero.name;
+            $('sLv').textContent = hero.lv;
+            $('sGold').textContent = hero.gold;
+            $('sPotions').textContent = hero.potions;
+            $('sKills').textContent = hero.kills;
+            $('sWeapon').textContent = WEAPONS[hero.weapon].name;
+            $('sArmor').textContent = ARMORS[hero.armor].name;
+            $('hpFill').style.width = Math.max(0, hero.hp / hero.maxhp * 100) + '%';
+            $('hpText').textContent = 'HP ' + Math.max(0, hero.hp) + ' / ' + hero.maxhp;
+            $('xpFill').style.width = Math.min(100, hero.xp / xpNext() * 100) + '%';
+            $('xpText').textContent = 'XP ' + hero.xp + ' / ' + xpNext();
+
+            if (mode === 'battle' && monster) {
+                $('scene').textContent = monster.emoji;
+                $('monsterInfo').textContent =
+                    monster.name + ' — ' + Math.max(0, monster.hp) + ' / ' + monster.maxhp + ' HP';
+            } else {
+                $('scene').textContent = mode === 'dead' ? '🪦' : mode === 'shop' ? '🏪' : '🏕️';
+                $('monsterInfo').textContent = '';
+            }
+
+            const btns = $('buttons');
+            btns.innerHTML = '';
+            const add = (label, fn, cls, disabled) => {
+                const b = document.createElement('button');
+                b.textContent = label;
+                if (cls) b.className = cls;
+                b.disabled = !!disabled;
+                b.addEventListener('click', fn);
+                btns.appendChild(b);
+            };
+
+            if (mode === 'idle') {
+                add('🗺️ Explore', explore);
+                add('🏪 Shop', () => { mode = 'shop'; render(); });
+                add('🛏️ Rest (' + REST_COST + 'g)', rest, '', hero.gold < REST_COST || hero.hp >= hero.maxhp);
+                add('🔄 New game', confirmReset, 'danger');
+            } else if (mode === 'battle') {
+                add('⚔️ Attack', attack);
+                add('🧪 Potion (' + hero.potions + ')', usePotion, '', hero.potions < 1);
+                add('🏃 Flee', flee);
+            } else if (mode === 'shop') {
+                add('🧪 Potion — ' + POTION_COST + 'g', buyPotion, '', hero.gold < POTION_COST);
+                const w = WEAPONS[hero.weapon + 1];
+                if (w) add('⚔️ ' + w.name + ' — ' + w.cost + 'g', buyWeapon, '', hero.gold < w.cost);
+                const a = ARMORS[hero.armor + 1];
+                if (a) add('🛡️ ' + a.name + ' — ' + a.cost + 'g', buyArmor, '', hero.gold < a.cost);
+                add('↩️ Leave shop', () => { mode = 'idle'; render(); });
+            } else if (mode === 'dead') {
+                add('✨ Revive (lose half your gold)', revive);
+                add('🔄 New game', confirmReset, 'danger');
+            }
+        }
+
+        // ---------- Actions ----------
+        function explore() {
+            const roll = rand(100);
+            if (roll < 60) {
+                startBattle();
+            } else if (roll < 75) {
+                const g = 5 + rand(10) + hero.lv * 3;
+                hero.gold += g;
+                log('You find a chest with <b>' + g + ' gold</b>! 💰', 'gold');
+            } else if (roll < 85) {
+                hero.potions++;
+                log('You find a potion in the bushes. 🧪', 'good');
+            } else if (roll < 95) {
+                log('You wander for a while. Nothing but crickets. 🦗', 'info');
+            } else {
+                const dmg = 3 + rand(5) + hero.lv;
+                hero.hp -= dmg;
+                log('A hidden trap! You take <b>' + dmg + '</b> damage. 🕳️', 'bad');
+                if (hero.hp <= 0) return die();
+            }
+            save();
+            render();
+        }
+
+        function startBattle() {
+            let tier = Math.min(hero.lv - 1 + rand(3) - 1, MONSTERS.length - 1);
+            tier = Math.max(0, tier);
+            if (MONSTERS[tier].boss && hero.lv < 7) tier--;
+            const m = MONSTERS[tier];
+            monster = { ...m, maxhp: m.hp };
+            mode = 'battle';
+            log('A wild <b>' + m.name + '</b> ' + m.emoji + ' appears!');
+            save();
+            render();
+        }
+
+        function attack() {
+            const crit = rand(100) < 15;
+            let dmg = WEAPONS[hero.weapon].power + hero.lv * 2 + rand(5);
+            if (crit) dmg *= 2;
+            monster.hp -= dmg;
+            log('You hit the ' + monster.name + ' for <b>' + dmg + '</b>' +
+                (crit ? ' — critical hit! 💥' : '.'), 'good');
+            if (monster.hp <= 0) return winBattle();
+            monsterTurn();
+        }
+
+        function monsterTurn() {
+            const dmg = Math.max(1, monster.atk + rand(4) - ARMORS[hero.armor].def);
+            hero.hp -= dmg;
+            log('The ' + monster.name + ' hits you for <b>' + dmg + '</b>.', 'bad');
+            if (hero.hp <= 0) return die();
+            save();
+            render();
+        }
+
+        function usePotion() {
+            hero.potions--;
+            const heal = Math.min(POTION_HEAL, hero.maxhp - hero.hp);
+            hero.hp += heal;
+            log('You drink a potion and recover <b>' + heal + '</b> HP. 🧪', 'good');
+            monsterTurn();
+        }
+
+        function flee() {
+            if (rand(100) < 70) {
+                log('You slip away safely. 🏃', 'info');
+                monster = null;
+                mode = 'idle';
+                save();
+                render();
+            } else {
+                log('You can\'t escape!', 'bad');
+                monsterTurn();
+            }
+        }
+
+        function winBattle() {
+            hero.kills++;
+            hero.xp += monster.xp;
+            hero.gold += monster.gold;
+            log('You defeated the <b>' + monster.name + '</b>! +' + monster.xp +
+                ' XP, +' + monster.gold + ' gold. 🎉', 'gold');
+            if (monster.boss && !hero.slainDragon) {
+                hero.slainDragon = true;
+                log('🏆 <b>You slew the Dragon and saved the Cookie Realm!</b> ' +
+                    'The adventure continues for glory.', 'gold');
+            }
+            while (hero.xp >= xpNext()) {
+                hero.xp -= xpNext();
+                hero.lv++;
+                hero.maxhp += 15;
+                hero.hp = hero.maxhp;
+                log('⬆️ <b>Level up!</b> You are now level ' + hero.lv +
+                    '. Max HP +15, fully healed.', 'good');
+            }
+            monster = null;
+            mode = 'idle';
+            save();
+            render();
+        }
+
+        function die() {
+            log('💀 You have fallen in battle...', 'bad');
+            monster = null;
+            mode = 'dead';
+            save();
+            render();
+        }
+
+        function revive() {
+            const lost = Math.floor(hero.gold / 2);
+            hero.gold -= lost;
+            hero.hp = hero.maxhp;
+            mode = 'idle';
+            log('A wandering cleric revives you. You lost ' + lost + ' gold. ✨', 'info');
+            save();
+            render();
+        }
+
+        function rest() {
+            hero.gold -= REST_COST;
+            hero.hp = hero.maxhp;
+            log('You rest at the inn and wake up fully healed. 🛏️', 'good');
+            save();
+            render();
+        }
+
+        function buyPotion() {
+            hero.gold -= POTION_COST;
+            hero.potions++;
+            log('Bought a potion. 🧪', 'info');
+            save();
+            render();
+        }
+        function buyWeapon() {
+            hero.weapon++;
+            hero.gold -= WEAPONS[hero.weapon].cost;
+            log('You now wield the <b>' + WEAPONS[hero.weapon].name + '</b>! ⚔️', 'good');
+            save();
+            render();
+        }
+        function buyArmor() {
+            hero.armor++;
+            hero.gold -= ARMORS[hero.armor].cost;
+            log('You now wear <b>' + ARMORS[hero.armor].name + '</b>! 🛡️', 'good');
+            save();
+            render();
+        }
+
+        function confirmReset() {
+            if (!confirm('Start over? Your saved hero will be erased.')) return;
+            deleteCookie(SAVE_COOKIE);
+            startNew();
+        }
+
+        function startNew() {
+            hero = newHero();
+            const name = prompt('Name your hero:', 'Hero');
+            if (name && name.trim()) hero.name = name.trim().slice(0, 16);
+            monster = null;
+            mode = 'idle';
+            $('log').innerHTML = '';
+            log('Welcome, <b>' + hero.name + '</b>! Explore the wilds, grow strong, ' +
+                'and slay the Dragon. 🐉', 'info');
+            save();
+            render();
+        }
+
+        // ---------- Init ----------
+        if (!cookiesWork()) $('cookieWarn').style.display = 'block';
+        const saved = load();
+        if (saved) {
+            hero = Object.assign(newHero(), saved);
+            monster = null;
+            mode = hero.hp <= 0 ? 'dead' : 'idle';
+            log('Welcome back, <b>' + hero.name + '</b>! Your quest continues. 📜', 'info');
+            render();
+        } else {
+            startNew();
+        }
+    </script>
+</body>
+</html>
