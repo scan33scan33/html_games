@@ -102,8 +102,9 @@
         <div class="overlay" id="title">
             <div class="big">💎</div>
             <h2>Crystal Quest</h2>
-            <div style="font-size:13px;color:#95a5a6;max-width:340px">The three Crystals have been stolen by the
-                dark lord <b>Malachor</b>. The world dims. A lone warrior sets out from Brightvale…</div>
+            <div style="font-size:13px;color:#95a5a6;max-width:340px">One year ago, the three Crystals went dark
+                in a single night. The temple guard was slaughtered, the kingdom fell — and the last knight
+                left alive has finally been given somewhere to go.</div>
             <div class="btncol">
                 <button class="primary" id="btnNew">⚔️ New Game</button>
                 <button id="btnContinue">📜 Continue</button>
@@ -616,7 +617,11 @@
             const D = DUNGEONS[dungeonId];
             if (ch === 'S' && stepCount > 2) return exitDungeon('You step back into daylight.');
             if (ch === 'T') return openChest(x, y);
-            if (ch === 'B' && !bossDown(dungeonId)) return startBattle([D.boss], true);
+            if (ch === 'B' && !bossDown(dungeonId)) {
+                const intro = BOSS_INTROS[D.boss];
+                if (intro) return say(intro, () => startBattle([D.boss], true));
+                return startBattle([D.boss], true);
+            }
             maybeEncounter(D.tier, 0.13);
         }
     }
@@ -640,7 +645,10 @@
         if (id === 'castle') {
             const c = S.flags.crystals;
             if (!(c.earth && c.fire && c.water)) {
-                return say([['', 'A wall of dark energy seals Shadowkeep. The three Crystals could pierce it…']]);
+                return say([
+                    ['', 'A wall of starless dark seals Shadowkeep — not a barrier, but an <i>absence</i>, like the night the Crystals died.'],
+                    ['', 'Only the light of all three Crystals could part it.'],
+                ]);
             }
             if (S.flags.malachorDown) return say([['', 'The keep lies silent. Its master is gone.']]);
         }
@@ -684,6 +692,63 @@
     }
 
     // =========================================================================
+    //  STORY — boss confrontations & crystal visions
+    // =========================================================================
+    const BOSS_INTROS = {
+        golem: [
+            ['???', 'TRESPASSERS. THE MASTER TOOK THE LIGHT. I KEEP THE DARK.'],
+            ['Lyra', 'Auron — those runes on its shoulders. That\'s temple-forge work. This thing was <i>ours</i>. A guardian golem, still following its last order.'],
+            ['Auron', 'Then its last order ends here.'],
+        ],
+        ifrit: [
+            ['Ifrit', 'More sparks come climbing. The light he swallowed burns him, little sparks… as it burns me. Quench one flame and the other only grows.'],
+            ['Zephyr', 'It\'s raving. …It is raving, isn\'t it?'],
+            ['Lyra', '"The light he swallowed." Fire — WHO swallowed the light?'],
+            ['Ifrit', 'The one who wept while he did it. NOW BURN.'],
+        ],
+        leviathan: [
+            ['Leviathan', 'Children of the dry land. He drowned the light in his own heart to hide you from the Dusk — and you would haul it back into the sky?'],
+            ['Auron', 'The Dusk. The golem, the fire, now you. Say his name.'],
+            ['Leviathan', 'You already know it, knight. You mourned him. Come — the sea does not move aside.'],
+        ],
+        malachor: [
+            ['Malachor', 'Auron. My knight. You kneel to no one now, I see.'],
+            ['Auron', 'You slaughtered the temple guard. Sixty brothers. You taught half of them their sword grip.'],
+            ['Malachor', 'And I gave them quick deaths — the Dusk offers no such mercy. It hunts crystal-light across the void between stars. I felt its gaze the night it found us.'],
+            ['Malachor', 'So I took the light into myself. All of it. A world gone dark and crawling with monsters — but a world <b>unseen</b>. Alive.'],
+            ['Lyra', 'Master… look at your hands. The light is devouring you.'],
+            ['Malachor', 'Yes. And I would burn this way forever, gladly. Turn back, children. Do not make the world bright enough to be SEEN.'],
+            ['Auron', 'A world of ash and fangs isn\'t saved, Malachor — it\'s just dying slower, alone, in the dark. There has to be another way to hold the light. <i>Together.</i>'],
+            ['Malachor', 'Together. …You sound exactly like your father. Draw your blade, Auron. Prove it.'],
+        ],
+    };
+    const CRYSTAL_VISIONS = {
+        earth: [
+            ['', 'The guardian falls — and the Earth Crystal flares awake beneath your hands.'],
+            ['', '<i>A vision floods in: a robed figure kneels before three blazing crystals. He is whispering an apology. He draws their light into his chest like a man breathing in smoke, and the world behind him goes grey.</i>'],
+            ['Lyra', 'Those robes bore the temple sigil. A <b>guardian</b> did this. Why would a guardian ever—'],
+            ['Auron', 'Steady. Two crystals left. The stones will tell us the rest.'],
+            ['', '✨ You obtained the <b>Earth Crystal</b>! 🟤'],
+        ],
+        fire: [
+            ['', 'The flame gutters out — and the Fire Crystal reignites, warm and steady.'],
+            ['', '<i>Another vision: the same robed figure, younger, laughing in the temple gardens. Beside him, a small girl with silver hair fumbles a healing chant, and he corrects her hands so gently.</i>'],
+            ['Lyra', '…That\'s me. That\'s <b>me</b>, and that is High Guardian MALACHOR. My teacher. We burned an empty coffin for him!'],
+            ['Auron', 'Then the man we hunt is the man we mourned. Malachor dimmed the Crystals. Malachor broke the world.'],
+            ['Zephyr', 'A man doesn\'t burn his own life\'s work without a reason. I want to know what scared <i>him</i>.'],
+            ['', '✨ You obtained the <b>Fire Crystal</b>! 🔴'],
+        ],
+        water: [
+            ['', 'The sea-guardian dissolves into spray — and the Water Crystal, the oldest, opens like an eye.'],
+            ['', '<i>It shows you what Malachor saw: beyond the stars, a hunger with a thousand pale eyes, turning slowly toward every world that glows. The Dusk. It tasted Aetheria\'s crystal-light across the void — and began to swim.</i>'],
+            ['Zephyr', 'So he hid us. He swallowed the light and made the world invisible. He broke Aetheria to <i>save</i> it.'],
+            ['Lyra', 'And it\'s killing him. Alone, for a year, holding all three crystals\' fire inside a human heart…'],
+            ['Auron', 'Sixty of my brothers are still dead, Lyra. But — maybe both things are true. We end this at <b>Shadowkeep</b>. All of it.'],
+            ['', '✨ You obtained the <b>Water Crystal</b>! 🔵'],
+        ],
+    };
+
+    // =========================================================================
     //  TOWNS
     // =========================================================================
     let townId = null;
@@ -720,9 +785,22 @@
         if (S.gold < T.inn) return say([['Innkeeper', 'Sorry friend, no gold, no bed.']]);
         S.gold -= T.inn;
         S.party.forEach(fullHeal);
-        save();
         sfx('heal');
-        say([['Innkeeper', 'Rest well, hero. <i>(Party fully restored — game saved.)</i>']]);
+        const c = S.flags.crystals;
+        const crystalCount = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        if (crystalCount >= 2 && !S.flags.dream) {
+            S.flags.dream = true;
+            save();
+            say([
+                ['', '<i>That night, you dream of a throne room with no roof, open to a starless sky.</i>'],
+                ['???', '…you carry two suns in your pack, little knight. Did you think I wouldn\'t feel them coming home?'],
+                ['???', 'Every step you take toward me, the world gets brighter. Every step, IT swims closer. Hurry, then. One of us should get what they want.'],
+                ['', '<i>You wake with frost on your blanket — in a warm room. (Party restored — game saved.)</i>'],
+            ]);
+        } else {
+            save();
+            say([['Innkeeper', 'Rest well, hero. <i>(Party fully restored — game saved.)</i>']]);
+        }
         updateHud();
     }
     function townTalk(id) {
@@ -734,14 +812,22 @@
                 fullHeal(S.party[S.party.length - 1]);
                 save();
                 return say([
-                    ['Elder', 'Darkness seeps from the <b>Earth Cave</b> to the east. The Earth Crystal has dimmed…'],
-                    ['Lyra', 'I am Lyra, priestess of this temple. My prayers can mend wounds — take me with you!'],
+                    ['Elder', 'Auron. You have your father\'s face — and like him, you only come when the world is breaking.'],
+                    ['Elder', 'The Earth Crystal lies dark in its cave to the east. Whatever dimmed it left something behind. Something that <i>guards</i> the dark.'],
+                    ['Lyra', 'Then you\'ll need me. I am Lyra — I\'ve kept the temple\'s last flame since the guardians vanished.'],
+                    ['Lyra', 'High Guardian Malachor taught me the mending arts himself, before the night everything died. If any of his work remains in that cave… I want to see it.'],
+                    ['Auron', '…Malachor. There\'s a name I buried. Fine, priestess. Stay behind me.'],
                     ['', '<b class="good">Lyra joined the party!</b> 👩‍🦳'],
                 ]);
             }
-            if (!c.earth) return say([['Elder', 'The Earth Cave lies east across the plains. May the light guard you.']]);
-            if (!c.fire) return say([['Elder', 'One crystal shines again! I hear the northwest forest village of <b>Elderglen</b> needs aid.']]);
-            return say([['Elder', 'Three crystals… then only <b>Shadowkeep</b> remains, in the northern mountains. Its gate is at the pass.']]);
+            if (!c.earth) return say([['Elder', 'The Earth Cave lies east across the plains. Whatever waits at its heart, it was not born there — it was <i>stationed</i> there. May the light guard you.']]);
+            if (!c.fire) return say([
+                ['Elder', 'One crystal wakes, and the plains already breathe easier. But your vision troubles me, Lyra. A guardian, <i>taking</i> the light?'],
+                ['Lyra', 'The robes bore our sigil, Elder. I know what I saw.'],
+                ['Elder', 'Then seek Elderglen, northwest through the forest. If a guardian did this, the fire will remember his face.'],
+            ]);
+            if (!c.water) return say([['Elder', 'Two crystals burn again. The desert folk of Sandport whisper that the sea itself stood up and walked into the sands. Finish this, children.']]);
+            return say([['Elder', 'So it\'s true. Malachor lives, and the Dusk is real, and both wait at <b>Shadowkeep</b> in the northern pass. Auron — whatever he was to this temple, do not hesitate. He won\'t.']]);
         }
         if (id === 2) {
             if (!S.flags.recruited.zephyr) {
@@ -750,18 +836,23 @@
                 fullHeal(S.party[S.party.length - 1]);
                 save();
                 return say([
-                    ['Villager', 'The volcano <b>Flame Peak</b> rages south of our woods. The Fire Crystal burns wrong!'],
-                    ['Zephyr', 'You fight the dark lord? Ha! My spells will melt his servants. I\'m in.'],
+                    ['Villager', 'Flame Peak has burned for a year, strangers. Ash falls where orchards grew. And the mage there — he won\'t stop staring at it.'],
+                    ['Zephyr', 'Because I was <i>on</i> it. The night the Crystals died, the sky over the peak tore open, and my village was gone by morning.'],
+                    ['Zephyr', 'I\'ve read every scorched page I could steal since. Something didn\'t attack the crystals. Something <b>fled into</b> them. You\'re going up the mountain? I\'m not asking to come. I\'m telling you I am.'],
                     ['', '<b class="good">Zephyr joined the party!</b> 🧙'],
                 ]);
             }
-            if (!c.fire) return say([['Villager', 'Flame Peak is just south of the village, among the trees. Bring water. And courage.']]);
-            return say([['Villager', 'The southern desert hides the <b>Tide Temple</b>. Sailors in Sandport speak of it.']]);
+            if (!c.fire) return say([['Villager', 'Flame Peak is south of the village, among the trees. The fire that guards it… people say it <i>weeps</i> while it burns. Bring courage.']]);
+            if (!c.water) return say([['Zephyr\'s friend', 'He always said the eruption wasn\'t rage — it was <i>fever</i>. The mountain trying to burn something out of itself. Perhaps the sea knows more. Sandport lies far to the south.']]);
+            return say([['Villager', 'The orchards… there are green shoots in the ash. Whatever you three are doing — finish it at Shadowkeep.']]);
         }
         if (id === 3) {
-            if (!c.water) return say([['Sailor', 'The <b>Tide Temple</b> rose from the sands southeast of here. The Water Crystal calls, they say.']]);
-            if (!(c.earth && c.fire && c.water)) return say([['Sailor', 'Still missing a crystal, friend? Check the caves you\'ve passed.']]);
-            return say([['Sailor', 'All three crystals?! Then storm <b>Shadowkeep</b>! Its gate hides in the northern mountain pass.']]);
+            if (!c.water) return say([
+                ['Sailor', 'The <b>Tide Temple</b> rose from the sands southeast of here, dripping, like the sea spat it back.'],
+                ['Sailor', 'My grandmother served the guardians. She said the Water Crystal was the oldest — that it remembered why the temple was built at all. Not to <i>use</i> the light. To <b>hide</b> it.'],
+            ]);
+            if (!(c.earth && c.fire && c.water)) return say([['Sailor', 'Still missing a crystal, friend? Retrace your steps — the caves keep what they\'re given.']]);
+            return say([['Sailor', 'All three?! Then it\'s Shadowkeep for you — the gate hides in the northern mountain pass. Hey. If the old stories are right and the light draws that… <i>thing</i>… you\'d best be sure about this, hero.']]);
         }
     }
 
@@ -1228,16 +1319,18 @@
         if (D.crystal) {
             S.flags.crystals[D.crystal] = true;
             sfx('crystal');
-            const names = { earth: 'Earth Crystal 🟤', fire: 'Fire Crystal 🔴', water: 'Water Crystal 🔵' };
-            say([
-                ['', 'The guardian falls… and light floods the chamber!'],
-                ['', 'You obtained the <b>' + names[D.crystal] + '</b>!'],
-            ], () => exitDungeon('The crystal\'s power carries you back outside.'));
+            say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('The crystal\'s power carries you back outside.'));
             save();
         } else {
             S.flags.malachorDown = true;
             save();
-            showEnding();
+            say([
+                ['Malachor', '…so bright. It doesn\'t burn when you hold it… together…'],
+                ['', '<i>The stolen light streams out of him, homeward — three rivers of dawn pouring back into the Crystals. For one moment his face is the one from the temple gardens. Then he is gone.</i>'],
+                ['Malachor', '<i>Lyra. My student. The Dusk still swims between the stars. Hold the light TOGETHER, where I held it alone… and it will look like the sunrise of a world already burned.</i>'],
+                ['Lyra', 'Together, then. As it was always meant to be held.'],
+                ['Auron', '…Rest, old man. We have the watch.'],
+            ], showEnding);
         }
     }
     function defeat() {
@@ -1278,10 +1371,16 @@
         $('battle').classList.remove('open');
         startTrack('town');
         const lead = S.party[0];
+        const epilogue = {
+            auron: 'rebuilt the temple guard. Its first oath is sworn to a fallen guardian — all sixty-one of them.',
+            lyra: 'became High Guardian, the youngest ever raised. Three crystals, held together, held lightly.',
+            zephyr: 'replanted the orchards on Flame Peak\'s slopes. Fire-resistant seeds. Obviously.',
+        };
         $('endText').innerHTML =
-            'Malachor\'s shadow dissolves. The three Crystals blaze in the sky, and dawn breaks over Aetheria ' +
-            'for the first time in a year.<br><br>' +
-            S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> — Lv ' + h.lv).join('<br>') +
+            'The three Crystals blaze <b>as one</b>, weaving a veil of dawn across the sky — light braided so tightly ' +
+            'it reads, from the void between stars, like the sunrise of a world already burned. The Dusk turns its ' +
+            'thousand eyes elsewhere.<br><br>Malachor\'s vigil is over. Theirs begins.<br><br>' +
+            S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> (Lv ' + h.lv + ') ' + epilogue[h.id]).join('<br><br>') +
             '<br><br>💰 ' + S.gold + ' gold · Thank you for playing!';
         $('ending').classList.add('open');
     }
@@ -1322,9 +1421,10 @@
         startTrack('overworld');
         draw();
         say([
-            ['Auron', 'The crystals dimmed a year ago. Monsters own the roads now.'],
-            ['Auron', 'The elder of Brightvale asked for me. The village is just north of here.'],
-            ['', '<i>Visit the town ahead. Talk to people. Check the Menu to use items and save.</i>'],
+            ['Auron', 'One night. That\'s all it took. The Crystals went dark, the monsters came, and the temple guard — my brothers — died holding a door that didn\'t matter.'],
+            ['Auron', 'I lived. I\'ve spent a year wishing I knew why.'],
+            ['Auron', 'Now the elder of Brightvale sends for me by name. It\'s not forgiveness. But it\'s a direction.'],
+            ['', '<i>Visit the town just north. Talk to people. Check the Menu to use items and save.</i>'],
         ]);
         S.flags.intro = true;
         save();
