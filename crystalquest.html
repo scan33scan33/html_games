@@ -48,7 +48,7 @@
         /* Battle */
         #battle { justify-content: flex-start; }
         #enemyRow { display: flex; gap: 18px; justify-content: center; margin: 18px 0 6px; flex-wrap: wrap; }
-        .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; }
+        .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; position: relative; }
         .enemy:hover { transform: scale(1.1); }
         .enemy .sprite { font-size: 46px; }
         .enemy .ehp { font-size: 10px; color: #bdc3c7; }
@@ -59,7 +59,21 @@
         .heroCard {
             background: #1a2230; border: 1px solid #2c3e50; border-radius: 8px;
             padding: 6px 10px; font-size: 12px; min-width: 118px; text-align: left;
+            position: relative;
         }
+        .dmgFloat {
+            position: absolute; top: 2px; font-weight: bold; font-size: 17px;
+            pointer-events: none; text-shadow: 0 1px 3px #000; z-index: 5;
+            animation: floatUp 0.9s forwards;
+        }
+        @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-34px); } }
+        @keyframes shakeX { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shakeX 0.28s; }
+        @keyframes lungeA { 0%, 100% { transform: none; } 40% { transform: translateY(9px) scale(1.12); } }
+        .lunge { animation: lungeA 0.32s; }
+        #flashFx { position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: 8px; z-index: 40; }
+        @keyframes flashA { from { opacity: 0.6; } to { opacity: 0; } }
+        #flashFx.flashAnim { animation: flashA 0.4s; }
         .heroCard.active { border-color: #f1c40f; }
         .heroCard.ko { opacity: 0.4; }
         .heroCard .nm { font-weight: bold; font-size: 13px; }
@@ -152,6 +166,7 @@
             <div id="endText" style="font-size:14px;color:#bdc3c7;max-width:340px;line-height:1.6"></div>
             <div class="btncol"><button class="primary" id="btnEndTitle">✨ Title screen</button></div>
         </div>
+        <div id="flashFx"></div>
     </div>
     <div id="hud">
         <span class="chip">💰 <b id="hGold">0</b></span>
@@ -279,22 +294,22 @@
 
     // hp, atk, def, spd, xp, gold [, spell]
     const MON = {
-        slime:    { name: 'Slime', e: '🟢', hp: 20, atk: 8, def: 2, spd: 4, xp: 9, gold: 7 },
+        slime:    { name: 'Slime', e: '🟢', hp: 20, atk: 8, def: 2, spd: 4, xp: 9, gold: 7, weak: 'fire' },
         bat:      { name: 'Bat', e: '🦇', hp: 16, atk: 9, def: 1, spd: 10, xp: 9, gold: 7 },
         goblin:   { name: 'Goblin', e: '👺', hp: 30, atk: 11, def: 3, spd: 6, xp: 14, gold: 12 },
-        wolf:     { name: 'Wolf', e: '🐺', hp: 38, atk: 13, def: 3, spd: 9, xp: 18, gold: 14 },
-        ghost:    { name: 'Ghost', e: '👻', hp: 45, atk: 17, def: 6, spd: 10, xp: 30, gold: 24 },
-        skeleton: { name: 'Skeleton', e: '💀', hp: 60, atk: 20, def: 8, spd: 7, xp: 38, gold: 30 },
-        spider:   { name: 'Spider', e: '🕷️', hp: 50, atk: 18, def: 6, spd: 12, xp: 34, gold: 26 },
+        wolf:     { name: 'Wolf', e: '🐺', hp: 38, atk: 13, def: 3, spd: 9, xp: 18, gold: 14, weak: 'fire' },
+        ghost:    { name: 'Ghost', e: '👻', hp: 45, atk: 17, def: 6, spd: 10, xp: 30, gold: 24, weak: 'fire', inflict: 'sleep' },
+        skeleton: { name: 'Skeleton', e: '💀', hp: 60, atk: 20, def: 8, spd: 7, xp: 38, gold: 30, weak: 'fire' },
+        spider:   { name: 'Spider', e: '🕷️', hp: 50, atk: 18, def: 6, spd: 12, xp: 34, gold: 26, weak: 'ice', inflict: 'poison' },
         ogre:     { name: 'Ogre', e: '👹', hp: 90, atk: 25, def: 9, spd: 5, xp: 55, gold: 45 },
-        scorpion: { name: 'Scorpion', e: '🦂', hp: 80, atk: 28, def: 13, spd: 11, xp: 70, gold: 55 },
-        mummy:    { name: 'Mummy', e: '🧟', hp: 100, atk: 30, def: 15, spd: 6, xp: 85, gold: 65 },
-        naga:     { name: 'Naga', e: '🐍', hp: 95, atk: 32, def: 13, spd: 13, xp: 95, gold: 75 },
-        djinn:    { name: 'Djinn', e: '🧞', hp: 85, atk: 30, def: 11, spd: 15, xp: 105, gold: 85, spell: 'flameAll' },
-        gargoyle: { name: 'Gargoyle', e: '🗿', hp: 140, atk: 40, def: 19, spd: 12, xp: 150, gold: 110 },
-        dknight:  { name: 'Dark Knight', e: '🖤', hp: 170, atk: 46, def: 23, spd: 11, xp: 190, gold: 150 },
-        demon:    { name: 'Demon', e: '😈', hp: 160, atk: 50, def: 19, spd: 15, xp: 210, gold: 170, spell: 'flameAll' },
-        wraith:   { name: 'Wraith', e: '🌫️', hp: 130, atk: 44, def: 17, spd: 17, xp: 175, gold: 140 },
+        scorpion: { name: 'Scorpion', e: '🦂', hp: 80, atk: 28, def: 13, spd: 11, xp: 70, gold: 55, weak: 'ice', inflict: 'poison' },
+        mummy:    { name: 'Mummy', e: '🧟', hp: 100, atk: 30, def: 15, spd: 6, xp: 85, gold: 65, weak: 'fire', inflict: 'poison' },
+        naga:     { name: 'Naga', e: '🐍', hp: 95, atk: 32, def: 13, spd: 13, xp: 95, gold: 75, weak: 'bolt', inflict: 'poison' },
+        djinn:    { name: 'Djinn', e: '🧞', hp: 85, atk: 30, def: 11, spd: 15, xp: 105, gold: 85, spell: 'flameAll', weak: 'ice', resist: 'fire' },
+        gargoyle: { name: 'Gargoyle', e: '🗿', hp: 140, atk: 40, def: 19, spd: 12, xp: 150, gold: 110, weak: 'bolt' },
+        dknight:  { name: 'Dark Knight', e: '🖤', hp: 170, atk: 46, def: 23, spd: 11, xp: 190, gold: 150, resist: 'fire' },
+        demon:    { name: 'Demon', e: '😈', hp: 160, atk: 50, def: 19, spd: 15, xp: 210, gold: 170, spell: 'flameAll', weak: 'ice', resist: 'fire' },
+        wraith:   { name: 'Wraith', e: '🌫️', hp: 130, atk: 44, def: 17, spd: 17, xp: 175, gold: 140, weak: 'fire', inflict: 'sleep' },
     };
     const TIERS = {
         1: ['slime', 'bat', 'goblin', 'wolf'],
@@ -304,8 +319,8 @@
     };
     const BOSSES = {
         golem:     { name: 'Golem King', e: '🗿', hp: 320, atk: 24, def: 10, spd: 4, xp: 160, gold: 200, spell: 'quake', boss: true },
-        ifrit:     { name: 'Ifrit', e: '🔥', hp: 600, atk: 36, def: 14, spd: 11, xp: 420, gold: 500, spell: 'flameAll', boss: true },
-        leviathan: { name: 'Leviathan', e: '🌊', hp: 900, atk: 46, def: 18, spd: 13, xp: 850, gold: 1000, spell: 'tidalWave', boss: true },
+        ifrit:     { name: 'Ifrit', e: '🔥', hp: 600, atk: 36, def: 14, spd: 11, xp: 420, gold: 500, spell: 'flameAll', boss: true, weak: 'ice', resist: 'fire' },
+        leviathan: { name: 'Leviathan', e: '🌊', hp: 900, atk: 46, def: 18, spd: 13, xp: 850, gold: 1000, spell: 'tidalWave', boss: true, weak: 'bolt', resist: 'ice' },
         malachor:  { name: 'Malachor', e: '🌑', hp: 1500, atk: 58, def: 24, spd: 15, xp: 0, gold: 0, spell: 'darkStorm', boss: true },
     };
     const ENEMY_SPELLS = {
@@ -322,20 +337,22 @@
                  spells: [{ lv: 6, id: 'cleave' }] },
         lyra:  { name: 'Lyra', e: '👩‍🦳', cls: 'White Mage',
                  hp: [30, 9], mp: [14, 4], atk: [5, 1.2], def: [5, 1.2], mag: [9, 2.2], spd: [7, 1.0],
-                 spells: [{ lv: 1, id: 'cure' }, { lv: 9, id: 'cura' }, { lv: 11, id: 'revive' }, { lv: 13, id: 'sanctus' }] },
+                 spells: [{ lv: 1, id: 'cure' }, { lv: 5, id: 'protect' }, { lv: 9, id: 'cura' }, { lv: 11, id: 'revive' }, { lv: 13, id: 'sanctus' }] },
         zephyr:{ name: 'Zephyr', e: '🧙', cls: 'Black Mage',
                  hp: [28, 8], mp: [16, 4], atk: [5, 1.0], def: [4, 1.1], mag: [10, 2.4], spd: [8, 1.1],
-                 spells: [{ lv: 1, id: 'fire' }, { lv: 1, id: 'spark' }, { lv: 9, id: 'fira' }, { lv: 14, id: 'meteor' }] },
+                 spells: [{ lv: 1, id: 'fire' }, { lv: 1, id: 'spark' }, { lv: 5, id: 'frost' }, { lv: 9, id: 'fira' }, { lv: 14, id: 'meteor' }] },
     };
     const SPELLS = {
         cleave:  { name: 'Cleave', mp: 6, kind: 'physAll', mult: 1.1, desc: 'hits all foes' },
-        fire:    { name: 'Fire', mp: 4, kind: 'dmg', power: 14, desc: 'one foe' },
-        spark:   { name: 'Spark', mp: 7, kind: 'dmg', power: 24, desc: 'one foe, strong' },
-        fira:    { name: 'Fira', mp: 12, kind: 'dmgAll', power: 16, desc: 'all foes' },
+        fire:    { name: 'Fire', mp: 4, kind: 'dmg', power: 14, elem: 'fire', desc: 'one foe 🔥' },
+        frost:   { name: 'Frost', mp: 6, kind: 'dmg', power: 18, elem: 'ice', desc: 'one foe ❄️' },
+        spark:   { name: 'Spark', mp: 7, kind: 'dmg', power: 24, elem: 'bolt', desc: 'one foe ⚡' },
+        fira:    { name: 'Fira', mp: 12, kind: 'dmgAll', power: 16, elem: 'fire', desc: 'all foes 🔥' },
         meteor:  { name: 'Meteor', mp: 22, kind: 'dmgAll', power: 42, desc: 'all foes, huge' },
-        cure:    { name: 'Cure', mp: 4, kind: 'heal', power: 16, desc: 'heal one ally' },
-        cura:    { name: 'Cura', mp: 10, kind: 'heal', power: 45, desc: 'big heal' },
-        sanctus: { name: 'Sanctus', mp: 16, kind: 'healAll', power: 30, desc: 'heal party' },
+        cure:    { name: 'Cure', mp: 4, kind: 'heal', power: 16, desc: 'heal + cure poison' },
+        protect: { name: 'Protect', mp: 6, kind: 'protect', desc: 'ally takes less damage' },
+        cura:    { name: 'Cura', mp: 10, kind: 'heal', power: 45, desc: 'big heal + cure poison' },
+        sanctus: { name: 'Sanctus', mp: 16, kind: 'healAll', power: 30, desc: 'heal party, cure poison' },
         revive:  { name: 'Revive', mp: 14, kind: 'revive', desc: 'raise a fallen ally' },
     };
     const ITEMS = {
@@ -409,28 +426,58 @@
     // =========================================================================
     //  AUDIO — three chiptune tracks + sfx
     // =========================================================================
-    let audio = null, master = null, soundOn = localStorage.getItem('cqstSound') !== '0';
+    let audio = null, master = null, leadBus = null, noiseBuf = null;
+    let soundOn = localStorage.getItem('cqstSound') !== '0';
     let seqTimer = null, seqStep = 0, seqTime = 0, track = null;
     const fq = m => 440 * Math.pow(2, (m - 69) / 12);
+    // 8 bars x 8 steps per track. Malachor's motif (A-F-E-C descending) hides in the
+    // town theme's last bar and drives the boss theme.
     const TRACKS = {
-        overworld: { step: 0.17, lead: [
-            [72, 0, 76, 0, 79, 0, 76, 72], [74, 0, 77, 0, 81, 0, 77, 74],
-            [76, 0, 79, 0, 84, 0, 79, 76], [77, 76, 74, 0, 72, 0, 74, 76],
-            [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 77, 0, 74, 0, 77, 81],
-            [79, 0, 76, 0, 72, 0, 76, 79], [74, 72, 71, 0, 72, 0, 0, 0],
-        ], bass: [48, 50, 52, 53, 48, 50, 43, 48] },
-        town: { step: 0.22, lead: [
-            [76, 0, 0, 74, 0, 0, 72, 0], [74, 0, 0, 72, 0, 0, 69, 0],
-            [72, 0, 0, 71, 0, 0, 69, 0], [71, 0, 69, 0, 67, 0, 0, 0],
-            [76, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 77, 0, 0, 74, 0],
-            [72, 0, 0, 76, 0, 0, 72, 0], [71, 0, 72, 0, 74, 0, 0, 0],
-        ], bass: [45, 43, 41, 40, 45, 43, 41, 43] },
-        battle: { step: 0.115, lead: [
-            [69, 69, 0, 72, 74, 0, 76, 74], [67, 67, 0, 71, 72, 0, 74, 72],
-            [65, 65, 0, 69, 71, 0, 72, 71], [64, 64, 67, 71, 76, 71, 67, 64],
-            [69, 69, 0, 72, 74, 0, 77, 76], [67, 67, 0, 74, 72, 0, 71, 72],
-            [65, 69, 72, 76, 77, 76, 72, 69], [64, 0, 64, 64, 76, 0, 64, 0],
-        ], bass: [45, 43, 41, 40, 45, 43, 41, 40] },
+        overworld: { step: 0.16, bassEvery: 4, arpEvery: 1, drums: 'k--h--h-',
+            lead: [
+                [72, 0, 76, 0, 79, 0, 76, 72], [74, 0, 77, 0, 81, 0, 77, 74],
+                [76, 0, 79, 0, 84, 0, 79, 76], [77, 76, 74, 0, 72, 0, 74, 76],
+                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 77, 0, 74, 0, 77, 81],
+                [79, 0, 76, 0, 72, 0, 76, 79], [74, 72, 71, 0, 72, 0, 0, 0]],
+            bass: [48, 50, 52, 53, 48, 50, 43, 48],
+            chords: [[60, 64, 67], [62, 65, 69], [64, 67, 71], [65, 69, 72],
+                     [60, 64, 67], [62, 65, 69], [59, 62, 67], [60, 64, 67]] },
+        town: { step: 0.2, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [76, 0, 0, 74, 0, 0, 72, 0], [74, 0, 0, 72, 0, 0, 69, 0],
+                [72, 0, 0, 71, 0, 0, 69, 0], [71, 0, 69, 0, 67, 0, 0, 0],
+                [76, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 77, 0, 0, 74, 0],
+                [72, 0, 0, 76, 0, 0, 72, 0], [69, 0, 65, 0, 64, 0, 60, 0]],
+            bass: [45, 43, 41, 40, 45, 43, 41, 43],
+            chords: [[57, 60, 64], [55, 59, 62], [53, 57, 60], [52, 56, 59],
+                     [57, 60, 64], [55, 59, 62], [53, 57, 60], [55, 59, 62]] },
+        battle: { step: 0.11, bassEvery: 2, arpEvery: 1, drums: 'k-hk-h-h',
+            lead: [
+                [69, 69, 0, 72, 74, 0, 76, 74], [67, 67, 0, 71, 72, 0, 74, 72],
+                [65, 65, 0, 69, 71, 0, 72, 71], [64, 64, 67, 71, 76, 71, 67, 64],
+                [69, 69, 0, 72, 74, 0, 77, 76], [67, 67, 0, 74, 72, 0, 71, 72],
+                [65, 69, 72, 76, 77, 76, 72, 69], [64, 0, 64, 64, 76, 0, 64, 0]],
+            bass: [45, 43, 41, 40, 45, 43, 41, 40],
+            chords: [[57, 60, 64], [55, 59, 62], [53, 57, 60], [52, 56, 59],
+                     [57, 60, 64], [55, 59, 62], [53, 57, 60], [52, 56, 59]] },
+        dungeon: { step: 0.19, bassEvery: 4, arpEvery: 2, drums: 'k-------',
+            lead: [
+                [62, 0, 0, 63, 0, 0, 62, 0], [65, 0, 0, 63, 0, 0, 62, 0],
+                [61, 0, 0, 62, 0, 0, 58, 0], [57, 0, 0, 0, 0, 0, 0, 0],
+                [62, 0, 0, 63, 0, 0, 65, 0], [68, 0, 0, 67, 0, 0, 65, 0],
+                [63, 0, 0, 62, 0, 0, 61, 0], [62, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [38, 36, 34, 33, 38, 36, 34, 38],
+            chords: [[50, 53, 57], [48, 51, 55], [46, 50, 53], [45, 48, 52],
+                     [50, 53, 57], [48, 51, 55], [46, 50, 53], [50, 53, 57]] },
+        boss: { step: 0.105, bassEvery: 2, arpEvery: 1, drums: 'kkh-k-h-',
+            lead: [
+                [69, 0, 65, 0, 64, 0, 60, 0], [69, 69, 65, 65, 64, 64, 62, 60],
+                [70, 0, 65, 0, 64, 0, 58, 0], [64, 63, 64, 63, 64, 0, 52, 0],
+                [69, 0, 72, 0, 76, 0, 72, 0], [77, 76, 77, 76, 77, 0, 65, 0],
+                [70, 69, 70, 69, 70, 0, 58, 0], [64, 64, 64, 64, 63, 63, 63, 63]],
+            bass: [45, 45, 46, 40, 45, 45, 46, 45],
+            chords: [[57, 60, 64], [57, 60, 64], [58, 62, 65], [52, 56, 59],
+                     [57, 60, 64], [53, 57, 60], [58, 62, 65], [52, 56, 59]] },
     };
     function ensureAudio() {
         if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
@@ -438,16 +485,63 @@
         master = audio.createGain();
         master.gain.value = soundOn ? 1 : 0;
         master.connect(audio.destination);
+        // lead bus with an echo send for a fatter, less beepy melody
+        leadBus = audio.createGain();
+        leadBus.connect(master);
+        const delay = audio.createDelay(0.5);
+        delay.delayTime.value = 0.26;
+        const fb = audio.createGain(); fb.gain.value = 0.25;
+        const wet = audio.createGain(); wet.gain.value = 0.18;
+        leadBus.connect(delay); delay.connect(fb); fb.connect(delay);
+        delay.connect(wet); wet.connect(master);
+        // shared white-noise buffer for percussion
+        noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
         if (track) startTrack(track);
     }
-    function tone(f, t, dur, type, gain) {
+    function tone(f, t, dur, type, gain, dest) {
         if (!audio) return;
         const o = audio.createOscillator(), g = audio.createGain();
         o.type = type; o.frequency.value = f;
         g.gain.setValueAtTime(gain, t);
         g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-        o.connect(g).connect(master);
+        o.connect(g).connect(dest || master);
         o.start(t); o.stop(t + dur + 0.02);
+    }
+    function leadNote(m, t, dur) {
+        if (!audio) return;
+        for (const det of [-5, 5]) { // two detuned oscillators = chorus width
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.type = 'square'; o.frequency.value = fq(m); o.detune.value = det;
+            g.gain.setValueAtTime(0.02, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            o.connect(g).connect(leadBus);
+            o.start(t); o.stop(t + dur + 0.02);
+        }
+    }
+    function drum(ch, t) {
+        if (!audio) return;
+        if (ch === 'k') {
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(130, t);
+            o.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+            g.gain.setValueAtTime(0.22, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+            o.connect(g).connect(master);
+            o.start(t); o.stop(t + 0.14);
+        } else if (ch === 'h') {
+            const src = audio.createBufferSource();
+            src.buffer = noiseBuf;
+            const hp = audio.createBiquadFilter();
+            hp.type = 'highpass'; hp.frequency.value = 6500;
+            const g = audio.createGain();
+            g.gain.setValueAtTime(0.05, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+            src.connect(hp); hp.connect(g); g.connect(master);
+            src.start(t); src.stop(t + 0.06);
+        }
     }
     function startTrack(name) {
         track = name;
@@ -459,11 +553,16 @@
         seqTimer = setInterval(() => {
             const T = TRACKS[track];
             if (!T) return;
-            while (seqTime < audio.currentTime + 0.25) {
+            while (seqTime < audio.currentTime + 0.28) {
                 const bar = Math.floor(seqStep / 8) % 8, pos = seqStep % 8;
                 const n = T.lead[bar][pos];
-                if (n) tone(fq(n), seqTime, T.step * 0.95, 'square', 0.03);
-                if (pos % 4 === 0) tone(fq(T.bass[bar]), seqTime, T.step * 3.4, 'triangle', 0.06);
+                if (n) leadNote(n, seqTime, T.step * 1.1);
+                if (pos % T.bassEvery === 0) tone(fq(T.bass[bar]), seqTime, T.step * T.bassEvery * 0.9, 'triangle', 0.065);
+                if (pos % T.arpEvery === 0) {
+                    const chord = T.chords[bar];
+                    tone(fq(chord[(pos / T.arpEvery) % 3]), seqTime, T.step * 0.9, 'sine', 0.022);
+                }
+                drum(T.drums[pos], seqTime);
                 seqStep++;
                 seqTime += T.step;
             }
@@ -664,7 +763,7 @@
             for (let xx = 0; xx < m[0].length; xx++)
                 if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
         say([['', 'You enter <b>' + D.name + '</b>…' + (D.boss === 'malachor' ? ' A cold voice laughs in the dark.' : '')]]);
-        startTrack(id === 'castle' ? 'battle' : 'overworld');
+        startTrack('dungeon');
         draw();
     }
     function exitDungeon(msg) {
@@ -977,7 +1076,7 @@
     // =========================================================================
     function startBattle(troopIds, isBoss) {
         mode = 'battle';
-        startTrack('battle');
+        startTrack(isBoss ? 'boss' : 'battle');
         B = {
             enemies: troopIds.map((id, i) => {
                 const M = BOSSES[id] || MON[id];
@@ -988,6 +1087,8 @@
             actions: [],
             phase: 'command',
             defending: {},
+            status: {},   // heroIdx -> { poison, sleep, protect }
+            fxq: [],
         };
         $('battle').classList.add('open');
         bMsg(isBoss ? '☠️ ' + B.enemies[0].name + ' blocks your path!' : 'Enemies attack!');
@@ -1004,6 +1105,7 @@
         B.enemies.forEach(e => {
             const d = document.createElement('div');
             d.className = 'enemy' + (e.hp <= 0 ? ' dead' : '');
+            d.id = 'en-' + e.idx;
             d.dataset.idx = e.idx;
             d.innerHTML = '<div class="sprite">' + e.e + '</div><div class="ehp">' + e.name +
                 (e.boss ? '<br>' + Math.max(0, e.hp) + '/' + e.maxhp : '') + '</div>';
@@ -1015,9 +1117,12 @@
         S.party.forEach((h, i) => {
             const st = heroStats(h);
             const H = HEROES[h.id];
+            const stt = B.status[i] || {};
+            const icons = (stt.poison ? '☠️' : '') + (stt.sleep ? '💤' : '') + (stt.protect ? '🛡️' : '');
             const d = document.createElement('div');
+            d.id = 'hc-' + i;
             d.className = 'heroCard' + (h.hp <= 0 ? ' ko' : '') + (B.phase === 'command' && i === B.heroIdx ? ' active' : '');
-            d.innerHTML = '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv' + h.lv + '</small></div>' +
+            d.innerHTML = '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv' + h.lv + '</small> ' + icons + '</div>' +
                 '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
                 '<div class="mini"><div class="mpf" style="width:' + Math.max(0, h.mp / st.maxmp * 100) + '%"></div></div>' +
                 'HP ' + Math.max(0, h.hp) + ' · MP ' + h.mp;
@@ -1025,11 +1130,55 @@
         });
     }
 
+    // Deferred visual effects: applied after renderBattle rebuilds the DOM
+    function queueFx(sel, cls, text, color) {
+        if (B) B.fxq.push({ sel, cls, text, color });
+    }
+    function flushFx() {
+        if (!B) return;
+        for (const f of B.fxq) {
+            const el = document.querySelector(f.sel);
+            if (!el) continue;
+            if (f.cls) { el.classList.remove(f.cls); void el.offsetWidth; el.classList.add(f.cls); }
+            if (f.text) {
+                const s = document.createElement('span');
+                s.className = 'dmgFloat';
+                s.textContent = f.text;
+                s.style.color = f.color || '#fff';
+                s.style.left = (25 + Math.random() * 35) + '%';
+                el.appendChild(s);
+                setTimeout(() => s.remove(), 950);
+            }
+        }
+        B.fxq = [];
+    }
+    function flash(color) {
+        const f = $('flashFx');
+        f.style.background = color;
+        f.classList.remove('flashAnim'); void f.offsetWidth; f.classList.add('flashAnim');
+    }
+    const ELEM_FLASH = { fire: 'rgba(230,80,30,0.4)', ice: 'rgba(120,200,255,0.4)',
+                         bolt: 'rgba(255,240,120,0.45)', none: 'rgba(200,160,255,0.4)' };
+
     let pendingAction = null;
     function promptHero() {
         // skip dead heroes
         while (B.heroIdx < S.party.length && S.party[B.heroIdx].hp <= 0) B.heroIdx++;
         if (B.heroIdx >= S.party.length) return resolveRound();
+        // sleeping heroes lose their turn (40% chance to wake each round)
+        const stt = B.status[B.heroIdx] || {};
+        if (stt.sleep) {
+            if (Math.random() < 0.4) {
+                stt.sleep = false;
+                bMsg(HEROES[S.party[B.heroIdx].id].name + ' wakes up!');
+            } else {
+                bMsg(HEROES[S.party[B.heroIdx].id].name + ' is fast asleep… 💤');
+                renderBattle();
+                $('cmds').innerHTML = '';
+                B.heroIdx++;
+                return setTimeout(promptHero, 700);
+            }
+        }
         B.phase = 'command';
         const h = S.party[B.heroIdx];
         const H = HEROES[h.id];
@@ -1065,7 +1214,7 @@
                 pendingAction = { kind: 'spell', hero: B.heroIdx, spell: sid };
                 const k = sp.kind;
                 if (k === 'dmg') targetMode();
-                else if (k === 'heal') allyTargetMode(false);
+                else if (k === 'heal' || k === 'protect') allyTargetMode(false);
                 else if (k === 'revive') allyTargetMode(true);
                 else queueAction(pendingAction);
             });
@@ -1159,12 +1308,30 @@
         if (!B) return;
         if (checkBattleEnd()) return;
         if (i >= acts.length) {
+            // end of round: poison ticks
+            let anyPoison = false;
+            S.party.forEach((h, idx) => {
+                if (h.hp > 0 && B.status[idx] && B.status[idx].poison) {
+                    const dmg = Math.max(1, Math.ceil(heroStats(h).maxhp * 0.06));
+                    h.hp -= dmg;
+                    queueFx('#hc-' + idx, 'shake', '-' + dmg, '#9b59b6');
+                    anyPoison = true;
+                }
+            });
             B.heroIdx = 0;
+            if (anyPoison) {
+                bMsg('The poison seeps deeper… ☠️');
+                renderBattle();
+                flushFx();
+                if (checkBattleEnd()) return;
+                return setTimeout(promptHero, 750);
+            }
             return promptHero();
         }
         const a = acts[i];
         const delay = performAction(a);
         renderBattle();
+        flushFx();
         if (checkBattleEnd()) return;
         setTimeout(() => runActions(acts, i + 1), delay);
     }
@@ -1183,6 +1350,7 @@
                 const dmg = Math.max(1, rnd(st.atk * 2 - t.def));
                 t.hp -= dmg;
                 sfx('hit');
+                queueFx('#en-' + t.idx, 'shake', '-' + dmg, '#f1c40f');
                 bMsg(H.name + ' attacks ' + t.name + ' — <b>' + dmg + '</b> damage!' + (t.hp <= 0 ? ' 💥 Defeated!' : ''));
                 return 750;
             }
@@ -1207,6 +1375,7 @@
                 const it = ITEMS[a.item];
                 applyItem(it, S.party[a.target]);
                 sfx(it.use === 'heal' ? 'heal' : 'item');
+                if (it.use === 'heal') queueFx('#hc-' + a.target, null, '+' + it.power, '#2ecc71');
                 bMsg(H.name + ' uses ' + it.name + ' on ' + HEROES[S.party[a.target].id].name + '. ' + it.e);
                 return 700;
             }
@@ -1216,40 +1385,60 @@
                 h.mp -= sp.mp;
                 if (sp.kind === 'dmg' || sp.kind === 'dmgAll' || sp.kind === 'physAll') {
                     sfx('spell');
+                    flash(ELEM_FLASH[sp.elem] || ELEM_FLASH.none);
                     const power = sp.kind === 'physAll' ? st.atk * sp.mult : sp.power + st.mag * 1.6;
                     const targets = (sp.kind === 'dmg')
                         ? [B.enemies[a.target] && B.enemies[a.target].hp > 0 ? B.enemies[a.target] : aliveEnemies()[0]]
                         : aliveEnemies();
-                    let total = 0;
+                    let total = 0, note = '';
                     for (const t of targets.filter(Boolean)) {
-                        const dmg = Math.max(1, rnd(power - t.def * 0.5));
+                        let mult = 1;
+                        if (sp.elem && t.weak === sp.elem) { mult = 1.75; note = ' <i class="good">Strikes the weakness!</i>'; }
+                        else if (sp.elem && t.resist === sp.elem) { mult = 0.5; note = ' <i style="color:#95a5a6">…resisted.</i>'; }
+                        const dmg = Math.max(1, rnd((power - t.def * 0.5) * mult));
                         t.hp -= dmg;
                         total += dmg;
+                        queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : mult < 1 ? '#95a5a6' : '#f1c40f');
                     }
-                    bMsg(H.name + ' casts <b>' + sp.name + '</b>! ' + total + ' total damage! ✨');
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b>! ' + total + ' total damage! ✨' + note);
                     return 800;
                 }
                 if (sp.kind === 'heal') {
                     const t = S.party[a.target];
                     const heal = rnd(sp.power + st.mag * 1.6);
                     t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                    if (B.status[a.target]) B.status[a.target].poison = false;
                     sfx('heal');
+                    queueFx('#hc-' + a.target, null, '+' + heal, '#2ecc71');
                     bMsg(H.name + ' casts <b>' + sp.name + '</b> — ' + HEROES[t.id].name + ' recovers ' + heal + ' HP! 💚');
                     return 750;
                 }
                 if (sp.kind === 'healAll') {
                     sfx('heal');
+                    flash('rgba(120,255,160,0.3)');
                     for (const t of aliveHeroes()) {
-                        t.hp = Math.min(heroStats(t).maxhp, t.hp + rnd(sp.power + st.mag * 1.2));
+                        const idx = S.party.indexOf(t);
+                        const heal = rnd(sp.power + st.mag * 1.2);
+                        t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                        if (B.status[idx]) B.status[idx].poison = false;
+                        queueFx('#hc-' + idx, null, '+' + heal, '#2ecc71');
                     }
                     bMsg(H.name + ' casts <b>' + sp.name + '</b> — the party is bathed in light! 💚');
                     return 800;
+                }
+                if (sp.kind === 'protect') {
+                    B.status[a.target] = { ...(B.status[a.target] || {}), protect: true };
+                    sfx('heal');
+                    queueFx('#hc-' + a.target, null, '🛡️', '#3498db');
+                    bMsg(H.name + ' casts <b>Protect</b> — ' + HEROES[S.party[a.target].id].name + ' is shielded!');
+                    return 750;
                 }
                 if (sp.kind === 'revive') {
                     const t = S.party[a.target];
                     if (t.hp <= 0) {
                         t.hp = Math.floor(heroStats(t).maxhp / 2);
                         sfx('heal');
+                        queueFx('#hc-' + a.target, null, '🌟', '#f1c40f');
                         bMsg(H.name + ' casts <b>Revive</b> — ' + HEROES[t.id].name + ' rises again! 🌟');
                     }
                     return 800;
@@ -1263,25 +1452,41 @@
         e.turn++;
         const heroes = aliveHeroes();
         if (!heroes.length) return 80;
+        queueFx('#en-' + e.idx, 'lunge');
         if (e.spell && e.turn % 3 === 0) {
             const sp = ENEMY_SPELLS[e.spell];
             sfx('spell');
+            flash('rgba(160,40,60,0.45)');
             for (const h of heroes) {
+                const idx = S.party.indexOf(h);
                 const st = heroStats(h);
                 let dmg = Math.max(1, rnd(sp.power + e.atk * 0.6 - st.def * 0.4));
-                if (B.defending[S.party.indexOf(h)]) dmg = Math.ceil(dmg / 2);
+                if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
+                if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
                 h.hp -= dmg;
+                if (B.status[idx]) B.status[idx].sleep = false;
+                queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
             }
             bMsg(e.name + ' unleashes <b>' + sp.name + '</b> on the whole party! 🔥');
             return 900;
         }
         const h = heroes[Math.floor(Math.random() * heroes.length)];
+        const idx = S.party.indexOf(h);
         const st = heroStats(h);
         let dmg = Math.max(1, rnd(e.atk * 2 - st.def));
-        if (B.defending[S.party.indexOf(h)]) dmg = Math.ceil(dmg / 2);
+        if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
+        if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
         h.hp -= dmg;
         sfx('hurt');
-        bMsg(e.name + ' attacks ' + HEROES[h.id].name + ' — <b>' + dmg + '</b> damage!' + (h.hp <= 0 ? ' 😵' : ''));
+        queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
+        let suffix = h.hp <= 0 ? ' 😵' : '';
+        const stt = B.status[idx] = B.status[idx] || {};
+        if (stt.sleep) { stt.sleep = false; suffix += ' (woke up!)'; }
+        else if (h.hp > 0 && e.inflict && !stt[e.inflict] && Math.random() < 0.28) {
+            stt[e.inflict] = true;
+            suffix += e.inflict === 'poison' ? ' <b style="color:#9b59b6">☠️ Poisoned!</b>' : ' <b style="color:#8ea6c9">💤 Fell asleep!</b>';
+        }
+        bMsg(e.name + ' attacks ' + HEROES[h.id].name + ' — <b>' + dmg + '</b> damage!' + suffix);
         return 750;
     }
 
@@ -1360,7 +1565,7 @@
         B = null;
         if (!silent) {
             mode = dungeonId ? 'dungeon' : 'world';
-            startTrack(dungeonId ? (dungeonId === 'castle' ? 'battle' : 'overworld') : 'overworld');
+            startTrack(dungeonId ? 'dungeon' : 'overworld');
         }
         updateHud();
         draw();
@@ -1477,6 +1682,7 @@
         crystals() { S.flags.crystals = { earth: true, fire: true, water: true }; updateHud(); },
         noEnc() { stepCount = -1e9; },
         boss(id) { dungeonId = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id) || dungeonId; startBattle([id], true); },
+        troop(ids) { startBattle(ids, false); },
         maps: { WORLD, DMAPS },
     };
 
