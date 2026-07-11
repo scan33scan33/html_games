@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crystal Quest</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #10141f;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #ecf0f1;
+            touch-action: none;
+        }
+        h1 { margin: 10px 0 2px; font-size: 24px; }
+        p.sub { color: #7f8c8d; margin: 0 0 8px; font-size: 12px; text-align: center; }
+        #frame { position: relative; }
+        canvas { display: block; border-radius: 8px; background: #0a0d15; max-width: 96vw; }
+        .overlay {
+            position: absolute; inset: 0;
+            background: rgba(8, 10, 18, 0.93);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 14px;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+        .overlay.open { display: flex; }
+        .overlay h2 { margin: 6px 0; }
+        .overlay .big { font-size: 46px; margin: 2px; }
+        button {
+            padding: 9px 16px; font-size: 14px; border-radius: 7px;
+            background: #2c3e50; color: #ecf0f1; cursor: pointer; border: 1px solid #3d4f63;
+        }
+        button:hover:not(:disabled) { background: #3d4f63; }
+        button:disabled { opacity: 0.45; cursor: default; }
+        button.primary { background: #2980b9; border-color: #3498db; }
+        button.danger { background: #922b21; border-color: #c0392b; }
+        .btncol { display: flex; flex-direction: column; gap: 8px; min-width: 230px; margin-top: 10px; }
+        .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+        /* Battle */
+        #battle { justify-content: flex-start; }
+        #enemyRow { display: flex; gap: 18px; justify-content: center; margin: 18px 0 6px; flex-wrap: wrap; }
+        .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; }
+        .enemy:hover { transform: scale(1.1); }
+        .enemy .sprite { font-size: 46px; }
+        .enemy .ehp { font-size: 10px; color: #bdc3c7; }
+        .enemy.target .sprite { filter: drop-shadow(0 0 6px #f1c40f); }
+        .enemy.dead { opacity: 0.15; pointer-events: none; }
+        #bMsg { min-height: 40px; font-size: 14px; color: #f8f9fa; padding: 4px 10px; line-height: 1.5; }
+        #partyPanel { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+        .heroCard {
+            background: #1a2230; border: 1px solid #2c3e50; border-radius: 8px;
+            padding: 6px 10px; font-size: 12px; min-width: 118px; text-align: left;
+        }
+        .heroCard.active { border-color: #f1c40f; }
+        .heroCard.ko { opacity: 0.4; }
+        .heroCard .nm { font-weight: bold; font-size: 13px; }
+        .mini { height: 7px; border-radius: 3px; background: #0a0d15; overflow: hidden; margin: 3px 0; }
+        .mini > div { height: 100%; }
+        .mini .hpf { background: #e74c3c; }
+        .mini .mpf { background: #3498db; }
+        #cmds { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; min-height: 40px; }
+        /* dialog */
+        #dialog { justify-content: flex-end; background: transparent; pointer-events: none; }
+        #dialogBox {
+            pointer-events: auto;
+            background: rgba(10, 13, 21, 0.95); border: 2px solid #3d4f63; border-radius: 10px;
+            padding: 12px 16px; margin-bottom: 12px; width: 92%; box-sizing: border-box;
+            text-align: left; font-size: 14px; line-height: 1.55; cursor: pointer;
+        }
+        #dialogBox .speaker { color: #f1c40f; font-weight: bold; }
+        #dialogBox .cont { color: #7f8c8d; font-size: 11px; text-align: right; }
+        #hud {
+            display: flex; gap: 10px; align-items: center; justify-content: center;
+            font-size: 13px; margin: 8px 0 4px; flex-wrap: wrap;
+        }
+        #hud .chip { background: #1a2230; border-radius: 6px; padding: 4px 10px; }
+        #hud b { color: #f1c40f; }
+        #controls { display: flex; gap: 8px; margin: 6px 0; }
+        .shopItem { display: flex; justify-content: space-between; gap: 14px; width: 100%; }
+        #screenList { width: 100%; max-width: 360px; }
+        a.back { color: #7f8c8d; font-size: 12px; margin: 8px 0 14px; }
+        .gold { color: #f1c40f; }
+        .good { color: #2ecc71; }
+        .bad { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>💎 Crystal Quest</h1>
+    <p class="sub">A tiny Final Fantasy. Three crystals. One dark lord. Save often.</p>
+    <div id="frame">
+        <canvas id="gameCanvas" width="480" height="352"></canvas>
+
+        <div class="overlay" id="title">
+            <div class="big">💎</div>
+            <h2>Crystal Quest</h2>
+            <div style="font-size:13px;color:#95a5a6;max-width:340px">The three Crystals have been stolen by the
+                dark lord <b>Malachor</b>. The world dims. A lone warrior sets out from Brightvale…</div>
+            <div class="btncol">
+                <button class="primary" id="btnNew">⚔️ New Game</button>
+                <button id="btnContinue">📜 Continue</button>
+            </div>
+        </div>
+
+        <div class="overlay" id="battle">
+            <div id="enemyRow"></div>
+            <div id="bMsg"></div>
+            <div id="cmds"></div>
+            <div id="partyPanel"></div>
+        </div>
+
+        <div class="overlay" id="town">
+            <div class="big" id="townEmoji">🏘️</div>
+            <h2 id="townName"></h2>
+            <div id="townText" style="font-size:13px;color:#95a5a6"></div>
+            <div class="btncol" id="townBtns"></div>
+        </div>
+
+        <div class="overlay" id="shop">
+            <h2 id="shopTitle">🛒 Shop</h2>
+            <div style="font-size:13px" class="gold" id="shopGold"></div>
+            <div class="btncol" id="shopItems" style="min-width:280px"></div>
+            <div class="btnrow"><button id="shopLeave">↩️ Leave</button></div>
+        </div>
+
+        <div class="overlay" id="menu">
+            <h2>📜 Menu</h2>
+            <div id="menuBody" style="width:100%;max-width:380px"></div>
+            <div class="btnrow" id="menuBtns"></div>
+        </div>
+
+        <div class="overlay" id="dialog">
+            <div id="dialogBox">
+                <div><span class="speaker" id="dSpeaker"></span></div>
+                <div id="dText"></div>
+                <div class="cont">▼ tap / press Enter</div>
+            </div>
+        </div>
+
+        <div class="overlay" id="ending">
+            <div class="big">🌅</div>
+            <h2>The Dawn Returns</h2>
+            <div id="endText" style="font-size:14px;color:#bdc3c7;max-width:340px;line-height:1.6"></div>
+            <div class="btncol"><button class="primary" id="btnEndTitle">✨ Title screen</button></div>
+        </div>
+    </div>
+    <div id="hud">
+        <span class="chip">💰 <b id="hGold">0</b></span>
+        <span class="chip" id="hCrystals">Crystals: —</span>
+        <span class="chip" id="hParty"></span>
+    </div>
+    <div id="controls">
+        <button id="btnMenu">📜 Menu</button>
+        <button id="btnSound">🎵 On</button>
+    </div>
+    <p class="sub">Move: arrows / WASD / swipe · Step on towns & caves to enter · Battles: tap commands</p>
+    <a class="back" href="index.html">← All games</a>
+
+    <script>
+    'use strict';
+    // =========================================================================
+    //  DATA
+    // =========================================================================
+    const WORLD = [
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~ffffffffffff^^^^^^^^^^^^^^^^..ff....~~',
+        '~~f2ffffffffff^^^^^^^^^^^^^^^^.ff.....~~',
+        '~~ffffffffffff^^....K......^^........~~',
+        '~~ffffffffffff^^........^^.....ff.~~'.padEnd(38, '.') + '~~',
+        '~~fffBffffffff^^........^^....fff.~~'.padEnd(38, '.') + '~~',
+        '~~ffffffffffff^^........^^........~~'.padEnd(38, '.') + '~~',
+        '~~ffffffffffff^^^^^^^.^^^^^^^^........~~',
+        '~~ffffffffffff^^^^^^^.^^^^^^^^......ff~~',
+        '~~..ffff..............................~~',
+        '~~....................................~~',
+        '~~...ff......ff................ff.....~~',
+        '~~........1..........................~~'.slice(0, 38) + '~~',
+        '~~....................................~~',
+        '~~..f.....S...............f...........~~'.slice(0, 38) + '~~',
+        '~~..ff..............A.....ff..........~~'.slice(0, 38) + '~~',
+        '~~..........................ff........~~'.slice(0, 38) + '~~',
+        '~~....^^......................^^......~~'.slice(0, 38) + '~~',
+        '~~....^^......................^^......~~'.slice(0, 38) + '~~',
+        '~~..............ff....................~~'.slice(0, 38) + '~~',
+        '~~..............ff....................~~'.slice(0, 38) + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^ssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^ssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssss3sssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssCsssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^^sssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    ].map(r => (r + '~'.repeat(40)).slice(0, 40));
+
+    const DMAPS = {
+        earth: [
+            '################',
+            '#S.....##....T.#',
+            '#..##..##..##..#',
+            '#..##......##..#',
+            '#......##......#',
+            '#.####.##.####.#',
+            '#......##......#',
+            '#..##..##..##..#',
+            '#T.##......##.B#',
+            '#......##......#',
+            '################',
+        ],
+        fire: [
+            '################',
+            '#S....ll.....T.#',
+            '#.....ll.......#',
+            '#..lll....lll..#',
+            '#..lll....lll..#',
+            '#......ll......#',
+            '#.....llll.....#',
+            '#..T..llll.....#',
+            '#......ll....B.#',
+            '#..............#',
+            '################',
+        ],
+        water: [
+            '################',
+            '#S...w....w..T.#',
+            '#....w....w....#',
+            '#..www....www..#',
+            '#..............#',
+            '#....wwwwww....#',
+            '#....w....w....#',
+            '#.T..w....w....#',
+            '#....w....w..B.#',
+            '#..............#',
+            '################',
+        ],
+        castle: [
+            '##################',
+            '#S..##......##.T.#',
+            '#...##..##..##...#',
+            '#.......##.......#',
+            '#.####......####.#',
+            '#.#..T.####......#',
+            '#.....####...##..#',
+            '#.##......##.##..#',
+            '#.##..##..##.....#',
+            '#.....##......#T.#',
+            '#..##....##..##..#',
+            '#..##...B##..##..#',
+            '##################',
+        ],
+    };
+
+    const DUNGEONS = {
+        earth: { name: 'Earth Cave', tier: 1, boss: 'golem', crystal: 'earth', worldChar: 'A',
+                 chests: { '13,1': { gold: 120 }, '1,8': { item: 'potion', n: 3 } } },
+        fire: { name: 'Flame Peak', tier: 2, boss: 'ifrit', crystal: 'fire', worldChar: 'B',
+                chests: { '13,1': { gold: 350 }, '3,7': { item: 'ether', n: 2 } } },
+        water: { name: 'Tide Temple', tier: 3, boss: 'leviathan', crystal: 'water', worldChar: 'C',
+                 chests: { '13,1': { gold: 700 }, '2,7': { item: 'phoenix', n: 2 } } },
+        castle: { name: 'Shadowkeep', tier: 4, boss: 'malachor', crystal: null, worldChar: 'K',
+                  chests: { '15,1': { gold: 1500 }, '5,5': { item: 'hipotion', n: 4 }, '15,9': { item: 'ether', n: 3 } } },
+    };
+
+    // hp, atk, def, spd, xp, gold [, spell]
+    const MON = {
+        slime:    { name: 'Slime', e: '🟢', hp: 20, atk: 8, def: 2, spd: 4, xp: 9, gold: 7 },
+        bat:      { name: 'Bat', e: '🦇', hp: 16, atk: 9, def: 1, spd: 10, xp: 9, gold: 7 },
+        goblin:   { name: 'Goblin', e: '👺', hp: 30, atk: 11, def: 3, spd: 6, xp: 14, gold: 12 },
+        wolf:     { name: 'Wolf', e: '🐺', hp: 38, atk: 13, def: 3, spd: 9, xp: 18, gold: 14 },
+        ghost:    { name: 'Ghost', e: '👻', hp: 45, atk: 17, def: 6, spd: 10, xp: 30, gold: 24 },
+        skeleton: { name: 'Skeleton', e: '💀', hp: 60, atk: 20, def: 8, spd: 7, xp: 38, gold: 30 },
+        spider:   { name: 'Spider', e: '🕷️', hp: 50, atk: 18, def: 6, spd: 12, xp: 34, gold: 26 },
+        ogre:     { name: 'Ogre', e: '👹', hp: 90, atk: 25, def: 9, spd: 5, xp: 55, gold: 45 },
+        scorpion: { name: 'Scorpion', e: '🦂', hp: 80, atk: 28, def: 13, spd: 11, xp: 70, gold: 55 },
+        mummy:    { name: 'Mummy', e: '🧟', hp: 100, atk: 30, def: 15, spd: 6, xp: 85, gold: 65 },
+        naga:     { name: 'Naga', e: '🐍', hp: 95, atk: 32, def: 13, spd: 13, xp: 95, gold: 75 },
+        djinn:    { name: 'Djinn', e: '🧞', hp: 85, atk: 30, def: 11, spd: 15, xp: 105, gold: 85, spell: 'flameAll' },
+        gargoyle: { name: 'Gargoyle', e: '🗿', hp: 140, atk: 40, def: 19, spd: 12, xp: 150, gold: 110 },
+        dknight:  { name: 'Dark Knight', e: '🖤', hp: 170, atk: 46, def: 23, spd: 11, xp: 190, gold: 150 },
+        demon:    { name: 'Demon', e: '😈', hp: 160, atk: 50, def: 19, spd: 15, xp: 210, gold: 170, spell: 'flameAll' },
+        wraith:   { name: 'Wraith', e: '🌫️', hp: 130, atk: 44, def: 17, spd: 17, xp: 175, gold: 140 },
+    };
+    const TIERS = {
+        1: ['slime', 'bat', 'goblin', 'wolf'],
+        2: ['ghost', 'skeleton', 'spider', 'ogre'],
+        3: ['scorpion', 'mummy', 'naga', 'djinn'],
+        4: ['gargoyle', 'dknight', 'demon', 'wraith'],
+    };
+    const BOSSES = {
+        golem:     { name: 'Golem King', e: '🗿', hp: 320, atk: 24, def: 10, spd: 4, xp: 160, gold: 200, spell: 'quake', boss: true },
+        ifrit:     { name: 'Ifrit', e: '🔥', hp: 600, atk: 36, def: 14, spd: 11, xp: 420, gold: 500, spell: 'flameAll', boss: true },
+        leviathan: { name: 'Leviathan', e: '🌊', hp: 900, atk: 46, def: 18, spd: 13, xp: 850, gold: 1000, spell: 'tidalWave', boss: true },
+        malachor:  { name: 'Malachor', e: '🌑', hp: 1500, atk: 58, def: 24, spd: 15, xp: 0, gold: 0, spell: 'darkStorm', boss: true },
+    };
+    const ENEMY_SPELLS = {
+        flameAll:  { name: 'Flame Wave', power: 18, all: true },
+        quake:     { name: 'Quake', power: 14, all: true },
+        tidalWave: { name: 'Tidal Wave', power: 26, all: true },
+        darkStorm: { name: 'Dark Storm', power: 34, all: true },
+    };
+
+    // Heroes: base + growth per level; spells learned at levels
+    const HEROES = {
+        auron: { name: 'Auron', e: '🧑‍🦰', cls: 'Warrior',
+                 hp: [40, 13], mp: [6, 2], atk: [10, 2.2], def: [6, 1.6], mag: [2, 0.5], spd: [6, 0.9],
+                 spells: [{ lv: 6, id: 'cleave' }] },
+        lyra:  { name: 'Lyra', e: '👩‍🦳', cls: 'White Mage',
+                 hp: [30, 9], mp: [14, 4], atk: [5, 1.2], def: [5, 1.2], mag: [9, 2.2], spd: [7, 1.0],
+                 spells: [{ lv: 1, id: 'cure' }, { lv: 9, id: 'cura' }, { lv: 11, id: 'revive' }, { lv: 13, id: 'sanctus' }] },
+        zephyr:{ name: 'Zephyr', e: '🧙', cls: 'Black Mage',
+                 hp: [28, 8], mp: [16, 4], atk: [5, 1.0], def: [4, 1.1], mag: [10, 2.4], spd: [8, 1.1],
+                 spells: [{ lv: 1, id: 'fire' }, { lv: 1, id: 'spark' }, { lv: 9, id: 'fira' }, { lv: 14, id: 'meteor' }] },
+    };
+    const SPELLS = {
+        cleave:  { name: 'Cleave', mp: 6, kind: 'physAll', mult: 1.1, desc: 'hits all foes' },
+        fire:    { name: 'Fire', mp: 4, kind: 'dmg', power: 14, desc: 'one foe' },
+        spark:   { name: 'Spark', mp: 7, kind: 'dmg', power: 24, desc: 'one foe, strong' },
+        fira:    { name: 'Fira', mp: 12, kind: 'dmgAll', power: 16, desc: 'all foes' },
+        meteor:  { name: 'Meteor', mp: 22, kind: 'dmgAll', power: 42, desc: 'all foes, huge' },
+        cure:    { name: 'Cure', mp: 4, kind: 'heal', power: 16, desc: 'heal one ally' },
+        cura:    { name: 'Cura', mp: 10, kind: 'heal', power: 45, desc: 'big heal' },
+        sanctus: { name: 'Sanctus', mp: 16, kind: 'healAll', power: 30, desc: 'heal party' },
+        revive:  { name: 'Revive', mp: 14, kind: 'revive', desc: 'raise a fallen ally' },
+    };
+    const ITEMS = {
+        potion:   { name: 'Potion', e: '🧪', cost: 30, desc: '+50 HP', use: 'heal', power: 50 },
+        hipotion: { name: 'Hi-Potion', e: '⚗️', cost: 120, desc: '+150 HP', use: 'heal', power: 150 },
+        ether:    { name: 'Ether', e: '💧', cost: 150, desc: '+30 MP', use: 'mp', power: 30 },
+        phoenix:  { name: 'Phoenix Down', e: '🪶', cost: 300, desc: 'revive ally', use: 'revive' },
+    };
+    const WEAPONS = {
+        auron:  [{ name: 'Rusty Sword', atk: 2, cost: 0 }, { name: 'Bronze Sword', atk: 7, cost: 90 },
+                 { name: 'Steel Sword', atk: 16, cost: 380 }, { name: 'Flame Brand', atk: 30, cost: 1300 }],
+        lyra:   [{ name: 'Worn Staff', mag: 1, cost: 0 }, { name: 'Oak Staff', mag: 4, cost: 80 },
+                 { name: 'Sage Staff', mag: 10, cost: 330 }, { name: 'Seraph Rod', mag: 18, cost: 1100 }],
+        zephyr: [{ name: 'Cracked Wand', mag: 1, cost: 0 }, { name: 'Ember Wand', mag: 5, cost: 90 },
+                 { name: 'Storm Wand', mag: 11, cost: 350 }, { name: 'Void Wand', mag: 20, cost: 1200 }],
+    };
+    const ARMORS = [{ name: 'Cloth', def: 2, cost: 0 }, { name: 'Leather', def: 6, cost: 70 },
+                    { name: 'Chainmail', def: 12, cost: 320 }, { name: 'Mythril Plate', def: 20, cost: 1000 }];
+
+    const TOWNS = {
+        1: { name: 'Brightvale', emoji: '🏘️', inn: 15, tier: 1,
+             flavor: 'A quiet farming town at the edge of the plains.' },
+        2: { name: 'Elderglen', emoji: '🌲', inn: 40, tier: 2,
+             flavor: 'A village woven between ancient trees.' },
+        3: { name: 'Sandport', emoji: '🏜️', inn: 80, tier: 3,
+             flavor: 'A trade port scoured by desert winds.' },
+    };
+
+    // =========================================================================
+    //  STATE
+    // =========================================================================
+    const SAVE_KEY = 'crystalQuestSave';
+    const MAXLV = 20;
+    let S = null;            // save state
+    let mode = 'title';      // title world dungeon battle town shop menu dialog ending
+    let dungeonId = null;
+    let stepCount = 0;
+    let B = null;            // battle state
+
+    function newState() {
+        return {
+            x: 0, y: 0, gold: 150,
+            party: [{ id: 'auron', lv: 1, xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 }],
+            inv: { potion: 3, hipotion: 0, ether: 0, phoenix: 0 },
+            flags: { intro: false, crystals: {}, recruited: {}, chests: {}, elder1: false },
+            dpos: null,
+        };
+    }
+    const xpNext = lv => 12 * lv * lv;
+    function heroStats(h) {
+        const H = HEROES[h.id];
+        const w = WEAPONS[h.id][h.weapon], a = ARMORS[h.armor];
+        const st = {};
+        for (const k of ['hp', 'mp', 'atk', 'def', 'mag', 'spd'])
+            st[k] = Math.round(H[k][0] + H[k][1] * (h.lv - 1));
+        st.atk += w.atk || 0;
+        st.mag += w.mag || 0;
+        st.def += a.def;
+        st.maxhp = st.hp; st.maxmp = st.mp;
+        return st;
+    }
+    function knownSpells(h) {
+        return HEROES[h.id].spells.filter(s => h.lv >= s.lv).map(s => s.id);
+    }
+    function fullHeal(h) {
+        const st = heroStats(h);
+        h.hp = st.maxhp;
+        h.mp = st.maxmp;
+    }
+
+    // =========================================================================
+    //  AUDIO — three chiptune tracks + sfx
+    // =========================================================================
+    let audio = null, master = null, soundOn = localStorage.getItem('cqstSound') !== '0';
+    let seqTimer = null, seqStep = 0, seqTime = 0, track = null;
+    const fq = m => 440 * Math.pow(2, (m - 69) / 12);
+    const TRACKS = {
+        overworld: { step: 0.17, lead: [
+            [72, 0, 76, 0, 79, 0, 76, 72], [74, 0, 77, 0, 81, 0, 77, 74],
+            [76, 0, 79, 0, 84, 0, 79, 76], [77, 76, 74, 0, 72, 0, 74, 76],
+            [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 77, 0, 74, 0, 77, 81],
+            [79, 0, 76, 0, 72, 0, 76, 79], [74, 72, 71, 0, 72, 0, 0, 0],
+        ], bass: [48, 50, 52, 53, 48, 50, 43, 48] },
+        town: { step: 0.22, lead: [
+            [76, 0, 0, 74, 0, 0, 72, 0], [74, 0, 0, 72, 0, 0, 69, 0],
+            [72, 0, 0, 71, 0, 0, 69, 0], [71, 0, 69, 0, 67, 0, 0, 0],
+            [76, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 77, 0, 0, 74, 0],
+            [72, 0, 0, 76, 0, 0, 72, 0], [71, 0, 72, 0, 74, 0, 0, 0],
+        ], bass: [45, 43, 41, 40, 45, 43, 41, 43] },
+        battle: { step: 0.115, lead: [
+            [69, 69, 0, 72, 74, 0, 76, 74], [67, 67, 0, 71, 72, 0, 74, 72],
+            [65, 65, 0, 69, 71, 0, 72, 71], [64, 64, 67, 71, 76, 71, 67, 64],
+            [69, 69, 0, 72, 74, 0, 77, 76], [67, 67, 0, 74, 72, 0, 71, 72],
+            [65, 69, 72, 76, 77, 76, 72, 69], [64, 0, 64, 64, 76, 0, 64, 0],
+        ], bass: [45, 43, 41, 40, 45, 43, 41, 40] },
+    };
+    function ensureAudio() {
+        if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        master = audio.createGain();
+        master.gain.value = soundOn ? 1 : 0;
+        master.connect(audio.destination);
+        if (track) startTrack(track);
+    }
+    function tone(f, t, dur, type, gain) {
+        if (!audio) return;
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(master);
+        o.start(t); o.stop(t + dur + 0.02);
+    }
+    function startTrack(name) {
+        track = name;
+        if (!audio) return;
+        clearInterval(seqTimer);
+        if (!name) return;
+        seqStep = 0;
+        seqTime = audio.currentTime + 0.08;
+        seqTimer = setInterval(() => {
+            const T = TRACKS[track];
+            if (!T) return;
+            while (seqTime < audio.currentTime + 0.25) {
+                const bar = Math.floor(seqStep / 8) % 8, pos = seqStep % 8;
+                const n = T.lead[bar][pos];
+                if (n) tone(fq(n), seqTime, T.step * 0.95, 'square', 0.03);
+                if (pos % 4 === 0) tone(fq(T.bass[bar]), seqTime, T.step * 3.4, 'triangle', 0.06);
+                seqStep++;
+                seqTime += T.step;
+            }
+        }, 70);
+    }
+    function sfx(kind) {
+        if (!audio || !soundOn) return;
+        const t = audio.currentTime;
+        const seqs = {
+            hit: [[160, 'sawtooth', 0.1]], hurt: [[110, 'square', 0.12]],
+            spell: [[440, 'sine', 0.08], [660, 'sine', 0.08], [880, 'sine', 0.1]],
+            heal: [[523, 'sine', 0.09], [784, 'sine', 0.12]],
+            item: [[660, 'square', 0.07], [880, 'square', 0.08]],
+            chest: [[523, 'square', 0.08], [659, 'square', 0.08], [784, 'square', 0.12]],
+            fanfare: [[523, 'square', 0.09], [523, 'square', 0.06], [523, 'square', 0.06], [659, 'square', 0.14], [784, 'square', 0.2]],
+            crystal: [[880, 'sine', 0.12], [1109, 'sine', 0.12], [1319, 'sine', 0.2], [1760, 'sine', 0.28]],
+            gameover: [[330, 'sawtooth', 0.2], [262, 'sawtooth', 0.2], [196, 'sawtooth', 0.3], [131, 'sawtooth', 0.45]],
+            step: [], blip: [[520, 'square', 0.05]],
+        };
+        (seqs[kind] || []).forEach((s, i) => tone(s[0], t + i * 0.1, s[2], s[1], 0.08));
+    }
+    document.getElementById('btnSound').addEventListener('click', () => {
+        ensureAudio();
+        soundOn = !soundOn;
+        localStorage.setItem('cqstSound', soundOn ? '1' : '0');
+        master.gain.value = soundOn ? 1 : 0;
+        document.getElementById('btnSound').textContent = soundOn ? '🎵 On' : '🔇 Off';
+    });
+    document.getElementById('btnSound').textContent = soundOn ? '🎵 On' : '🔇 Off';
+    for (const ev of ['keydown', 'pointerdown', 'touchstart']) document.addEventListener(ev, ensureAudio);
+
+    // =========================================================================
+    //  RENDERING
+    // =========================================================================
+    const TILE = 32, VW = 15, VH = 11;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const $ = id => document.getElementById(id);
+    const TCOLORS = { '.': '#3a6b35', f: '#2c5428', '^': '#6b6255', '~': '#1f5b8c', s: '#c9a35f',
+                      '#': '#22303f', l: '#8e2f24', w: '#1f5b8c', S: '#3a6b35', T: '#3a2d1e', B: '#241a2e',
+                      1: '#3a6b35', 2: '#2c5428', 3: '#c9a35f', A: '#3a6b35', K: '#6b6255', C: '#c9a35f' };
+    const TEMOJI = { f: '🌲', '^': '⛰️', 1: '🏘️', 2: '🏘️', 3: '🏘️', A: '🕳️', B: '🌋', C: '🏛️', K: '🏰',
+                     l: '🔥', w: '🌊', T: '📦', '~': null };
+
+    function mapAt(x, y) {
+        const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
+        if (y < 0 || y >= m.length || x < 0 || x >= m[0].length) return mode === 'dungeon' ? '#' : '~';
+        return m[y][x];
+    }
+    function curPos() { return mode === 'dungeon' ? S.dpos : S; }
+
+    function draw() {
+        if (!S || (mode !== 'world' && mode !== 'dungeon')) return;
+        const p = curPos();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const camX = p.x - Math.floor(VW / 2), camY = p.y - Math.floor(VH / 2);
+        ctx.font = '20px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let vy = 0; vy < VH; vy++) {
+            for (let vx = 0; vx < VW; vx++) {
+                const x = camX + vx, y = camY + vy;
+                let ch = mapAt(x, y);
+                if (mode === 'dungeon' && ch === 'T' && S.flags.chests[dungeonId + ':' + x + ',' + y]) ch = '.';
+                if (mode === 'dungeon' && ch === 'B' && bossDown(dungeonId)) ch = '.';
+                ctx.fillStyle = TCOLORS[ch] || '#3a6b35';
+                ctx.fillRect(vx * TILE, vy * TILE, TILE, TILE);
+                if (ch === '~' || ch === 'w') { // water shimmer
+                    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+                    if ((x + y) % 3 === 0) ctx.fillRect(vx * TILE + 6, vy * TILE + 14, 12, 2);
+                }
+                const em = TEMOJI[ch];
+                if (em) ctx.fillText(em, vx * TILE + TILE / 2, vy * TILE + TILE / 2 + 1);
+                if (ch === 'B' && mode === 'dungeon') ctx.fillText(BOSSES[DUNGEONS[dungeonId].boss].e, vx * TILE + TILE / 2, vy * TILE + TILE / 2);
+                if (ch === 'S' && mode === 'dungeon') ctx.fillText('🚪', vx * TILE + TILE / 2, vy * TILE + TILE / 2);
+            }
+        }
+        // player
+        const px = (p.x - camX) * TILE + TILE / 2, py = (p.y - camY) * TILE + TILE / 2;
+        ctx.font = '22px serif';
+        ctx.fillText('🧑‍🦰', px, py);
+        updateHud();
+    }
+    function bossDown(id) {
+        return id === 'castle' ? S.flags.malachorDown : !!S.flags.crystals[DUNGEONS[id].crystal];
+    }
+    function updateHud() {
+        if (!S) return;
+        $('hGold').innerHTML = S.gold;
+        const c = S.flags.crystals;
+        $('hCrystals').innerHTML = 'Crystals: ' + (['earth', 'fire', 'water'].map(k => c[k] ? '💎' : '▫️').join(''));
+        $('hParty').innerHTML = S.party.map(h => {
+            const st = heroStats(h);
+            return HEROES[h.id].e + ' ' + h.hp + '/' + st.maxhp;
+        }).join(' · ');
+    }
+
+    // =========================================================================
+    //  DIALOG SYSTEM
+    // =========================================================================
+    let dialogQueue = [], dialogDone = null, prevMode = 'world';
+    function say(lines, done) {
+        dialogQueue = lines.slice();
+        dialogDone = done || null;
+        if (mode !== 'dialog') prevMode = mode;
+        mode = 'dialog';
+        $('dialog').classList.add('open');
+        nextDialog(false);
+    }
+    function nextDialog(advance = true) {
+        if (advance) dialogQueue.shift();
+        if (!dialogQueue.length) {
+            $('dialog').classList.remove('open');
+            mode = prevMode;
+            const cb = dialogDone;
+            dialogDone = null;
+            if (cb) cb();
+            draw();
+            return;
+        }
+        const [speaker, text] = dialogQueue[0];
+        $('dSpeaker').textContent = speaker ? speaker + ':' : '';
+        $('dText').innerHTML = text;
+    }
+    $('dialogBox').addEventListener('click', () => nextDialog());
+
+    // =========================================================================
+    //  MOVEMENT & WORLD EVENTS
+    // =========================================================================
+    const BLOCKED = { '~': 1, '^': 1, '#': 1, l: 1, w: 1 };
+    function tryMove(dx, dy) {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        const p = curPos();
+        const nx = p.x + dx, ny = p.y + dy;
+        const ch = mapAt(nx, ny);
+        if (BLOCKED[ch]) return;
+        p.x = nx; p.y = ny;
+        stepCount++;
+        enterTile(ch, nx, ny);
+        draw();
+    }
+
+    function enterTile(ch, x, y) {
+        if (mode === 'world') {
+            if ('123'.includes(ch)) return openTown(Number(ch));
+            for (const [id, D] of Object.entries(DUNGEONS)) {
+                if (D.worldChar === ch) return tryEnterDungeon(id);
+            }
+            maybeEncounter(regionTier(x, y), ch === 'f' ? 0.16 : ch === 's' ? 0.12 : 0.1);
+        } else {
+            const D = DUNGEONS[dungeonId];
+            if (ch === 'S' && stepCount > 2) return exitDungeon('You step back into daylight.');
+            if (ch === 'T') return openChest(x, y);
+            if (ch === 'B' && !bossDown(dungeonId)) return startBattle([D.boss], true);
+            maybeEncounter(D.tier, 0.13);
+        }
+    }
+    function regionTier(x, y) {
+        if (y >= 22) return 3;
+        if (y < 10 && x < 14) return 2;
+        return 1;
+    }
+    function maybeEncounter(tier, rate) {
+        if (stepCount < 4) return;
+        if (Math.random() < rate) {
+            stepCount = 0;
+            const pool = TIERS[tier];
+            const n = 1 + Math.floor(Math.random() * Math.min(3, S.party.length + 1));
+            const troop = Array.from({ length: n }, () => pool[Math.floor(Math.random() * pool.length)]);
+            startBattle(troop, false);
+        }
+    }
+    function tryEnterDungeon(id) {
+        const D = DUNGEONS[id];
+        if (id === 'castle') {
+            const c = S.flags.crystals;
+            if (!(c.earth && c.fire && c.water)) {
+                return say([['', 'A wall of dark energy seals Shadowkeep. The three Crystals could pierce it…']]);
+            }
+            if (S.flags.malachorDown) return say([['', 'The keep lies silent. Its master is gone.']]);
+        }
+        if (bossDown(id) && id !== 'castle') {
+            return say([['', D.name + ' is quiet now. Its crystal shines in your pack.']]);
+        }
+        dungeonId = id;
+        mode = 'dungeon';
+        stepCount = 0;
+        // find S tile
+        const m = DMAPS[id];
+        for (let yy = 0; yy < m.length; yy++)
+            for (let xx = 0; xx < m[0].length; xx++)
+                if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
+        say([['', 'You enter <b>' + D.name + '</b>…' + (D.boss === 'malachor' ? ' A cold voice laughs in the dark.' : '')]]);
+        startTrack(id === 'castle' ? 'battle' : 'overworld');
+        draw();
+    }
+    function exitDungeon(msg) {
+        mode = 'world';
+        dungeonId = null;
+        stepCount = 0;
+        startTrack('overworld');
+        if (msg) say([['', msg]]);
+        draw();
+    }
+    function openChest(x, y) {
+        const key = dungeonId + ':' + x + ',' + y;
+        if (S.flags.chests[key]) return;
+        S.flags.chests[key] = true;
+        const loot = DUNGEONS[dungeonId].chests[x + ',' + y] || { gold: 50 };
+        sfx('chest');
+        if (loot.gold) {
+            S.gold += loot.gold;
+            say([['', 'You found a chest: <b class="gold">' + loot.gold + ' gold</b>! 💰']]);
+        } else {
+            S.inv[loot.item] = (S.inv[loot.item] || 0) + loot.n;
+            say([['', 'You found a chest: <b>' + ITEMS[loot.item].name + ' ×' + loot.n + '</b>! ' + ITEMS[loot.item].e]]);
+        }
+        save();
+    }
+
+    // =========================================================================
+    //  TOWNS
+    // =========================================================================
+    let townId = null;
+    function openTown(id) {
+        townId = id;
+        mode = 'town';
+        startTrack('town');
+        const T = TOWNS[id];
+        $('townEmoji').textContent = T.emoji;
+        $('townName').textContent = T.name;
+        $('townText').textContent = T.flavor;
+        const box = $('townBtns');
+        box.innerHTML = '';
+        const add = (label, fn, cls) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', fn);
+            box.appendChild(b);
+        };
+        add('🛏️ Inn — rest & save (' + T.inn + 'g)', () => innRest(T));
+        add('🛒 Shop', () => openShop(T.tier));
+        add('💬 Talk to townsfolk', () => townTalk(id));
+        add('🚪 Leave town', leaveTown, 'primary');
+        $('town').classList.add('open');
+    }
+    function leaveTown() {
+        $('town').classList.remove('open');
+        mode = 'world';
+        startTrack('overworld');
+        draw();
+    }
+    function innRest(T) {
+        if (S.gold < T.inn) return say([['Innkeeper', 'Sorry friend, no gold, no bed.']]);
+        S.gold -= T.inn;
+        S.party.forEach(fullHeal);
+        save();
+        sfx('heal');
+        say([['Innkeeper', 'Rest well, hero. <i>(Party fully restored — game saved.)</i>']]);
+        updateHud();
+    }
+    function townTalk(id) {
+        const c = S.flags.crystals;
+        if (id === 1) {
+            if (!S.flags.recruited.lyra) {
+                S.flags.recruited.lyra = true;
+                S.party.push({ id: 'lyra', lv: Math.max(1, S.party[0].lv), xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
+                fullHeal(S.party[S.party.length - 1]);
+                save();
+                return say([
+                    ['Elder', 'Darkness seeps from the <b>Earth Cave</b> to the east. The Earth Crystal has dimmed…'],
+                    ['Lyra', 'I am Lyra, priestess of this temple. My prayers can mend wounds — take me with you!'],
+                    ['', '<b class="good">Lyra joined the party!</b> 👩‍🦳'],
+                ]);
+            }
+            if (!c.earth) return say([['Elder', 'The Earth Cave lies east across the plains. May the light guard you.']]);
+            if (!c.fire) return say([['Elder', 'One crystal shines again! I hear the northwest forest village of <b>Elderglen</b> needs aid.']]);
+            return say([['Elder', 'Three crystals… then only <b>Shadowkeep</b> remains, in the northern mountains. Its gate is at the pass.']]);
+        }
+        if (id === 2) {
+            if (!S.flags.recruited.zephyr) {
+                S.flags.recruited.zephyr = true;
+                S.party.push({ id: 'zephyr', lv: Math.max(1, S.party[0].lv), xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
+                fullHeal(S.party[S.party.length - 1]);
+                save();
+                return say([
+                    ['Villager', 'The volcano <b>Flame Peak</b> rages south of our woods. The Fire Crystal burns wrong!'],
+                    ['Zephyr', 'You fight the dark lord? Ha! My spells will melt his servants. I\'m in.'],
+                    ['', '<b class="good">Zephyr joined the party!</b> 🧙'],
+                ]);
+            }
+            if (!c.fire) return say([['Villager', 'Flame Peak is just south of the village, among the trees. Bring water. And courage.']]);
+            return say([['Villager', 'The southern desert hides the <b>Tide Temple</b>. Sailors in Sandport speak of it.']]);
+        }
+        if (id === 3) {
+            if (!c.water) return say([['Sailor', 'The <b>Tide Temple</b> rose from the sands southeast of here. The Water Crystal calls, they say.']]);
+            if (!(c.earth && c.fire && c.water)) return say([['Sailor', 'Still missing a crystal, friend? Check the caves you\'ve passed.']]);
+            return say([['Sailor', 'All three crystals?! Then storm <b>Shadowkeep</b>! Its gate hides in the northern mountain pass.']]);
+        }
+    }
+
+    // =========================================================================
+    //  SHOP
+    // =========================================================================
+    function openShop(tier) {
+        mode = 'shop';
+        $('town').classList.remove('open');
+        $('shop').classList.add('open');
+        renderShop(tier);
+    }
+    let shopTier = 1;
+    function renderShop(tier) {
+        shopTier = tier;
+        $('shopGold').textContent = '💰 ' + S.gold + ' gold';
+        const box = $('shopItems');
+        box.innerHTML = '';
+        const add = (label, cost, fn, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = '<span class="shopItem"><span>' + label + '</span><span class="gold">' + cost + 'g</span></span>';
+            b.disabled = disabled || S.gold < cost;
+            b.addEventListener('click', () => { S.gold -= cost; fn(); sfx('item'); save(); renderShop(shopTier); updateHud(); });
+            box.appendChild(b);
+        };
+        for (const key of ['potion', 'hipotion', 'ether', 'phoenix']) {
+            const it = ITEMS[key];
+            const minTier = { potion: 1, hipotion: 2, ether: 2, phoenix: 3 }[key];
+            if (tier >= minTier) add(it.e + ' ' + it.name + ' <small>(' + it.desc + ')</small>', it.cost,
+                () => { S.inv[key] = (S.inv[key] || 0) + 1; });
+        }
+        for (const h of S.party) {
+            const wlist = WEAPONS[h.id];
+            const next = h.weapon + 1;
+            if (next < wlist.length && next <= tier) {
+                const w = wlist[next];
+                add('⚔️ ' + w.name + ' <small>for ' + HEROES[h.id].name + '</small>', w.cost, () => { h.weapon = next; });
+            }
+            const anext = h.armor + 1;
+            if (anext < ARMORS.length && anext <= tier) {
+                const a = ARMORS[anext];
+                add('🛡️ ' + a.name + ' <small>for ' + HEROES[h.id].name + '</small>', a.cost, () => { h.armor = anext; });
+            }
+        }
+    }
+    $('shopLeave').addEventListener('click', () => {
+        $('shop').classList.remove('open');
+        if (townId) { mode = 'town'; $('town').classList.add('open'); }
+        else { mode = 'world'; draw(); }
+    });
+
+    // =========================================================================
+    //  MENU (items / status / save)
+    // =========================================================================
+    function openMenu() {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        prevMode = mode;
+        mode = 'menu';
+        $('menu').classList.add('open');
+        renderMenu();
+    }
+    function renderMenu() {
+        const body = $('menuBody');
+        let html = '';
+        for (const h of S.party) {
+            const st = heroStats(h);
+            const H = HEROES[h.id];
+            html += '<div class="heroCard' + (h.hp <= 0 ? ' ko' : '') + '" style="margin:5px auto;max-width:300px">' +
+                '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv ' + h.lv + ' ' + H.cls + '</small></div>' +
+                '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
+                'HP ' + h.hp + '/' + st.maxhp + ' · MP ' + h.mp + '/' + st.maxmp +
+                '<div style="color:#95a5a6">⚔️' + st.atk + ' 🛡️' + st.def + ' ✨' + st.mag +
+                ' · ' + WEAPONS[h.id][h.weapon].name + ', ' + ARMORS[h.armor].name +
+                '<br>XP ' + h.xp + '/' + xpNext(h.lv) + '</div></div>';
+        }
+        body.innerHTML = html;
+        const btns = $('menuBtns');
+        btns.innerHTML = '';
+        const add = (label, fn, cls) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', fn);
+            btns.appendChild(b);
+        };
+        for (const key of ['potion', 'hipotion', 'ether', 'phoenix']) {
+            if ((S.inv[key] || 0) > 0) add(ITEMS[key].e + ' ' + ITEMS[key].name + ' ×' + S.inv[key], () => useItemMenu(key));
+        }
+        if (prevMode === 'world') add('💾 Save', () => { save(); say([['', 'Game saved. ✅']]); closeMenu(); });
+        add('↩️ Close', closeMenu, 'primary');
+    }
+    function useItemMenu(key) {
+        // apply to first hero who benefits
+        const it = ITEMS[key];
+        let target = null;
+        if (it.use === 'heal') target = S.party.find(h => h.hp > 0 && h.hp < heroStats(h).maxhp);
+        else if (it.use === 'mp') target = S.party.find(h => h.hp > 0 && h.mp < heroStats(h).maxmp);
+        else if (it.use === 'revive') target = S.party.find(h => h.hp <= 0);
+        if (!target) return;
+        S.inv[key]--;
+        applyItem(it, target);
+        sfx(it.use === 'heal' ? 'heal' : 'item');
+        save();
+        renderMenu();
+        updateHud();
+    }
+    function applyItem(it, h) {
+        const st = heroStats(h);
+        if (it.use === 'heal') h.hp = Math.min(st.maxhp, h.hp + it.power);
+        else if (it.use === 'mp') h.mp = Math.min(st.maxmp, h.mp + it.power);
+        else if (it.use === 'revive') h.hp = Math.floor(st.maxhp / 2);
+    }
+    function closeMenu() {
+        $('menu').classList.remove('open');
+        mode = prevMode;
+        draw();
+    }
+    $('btnMenu').addEventListener('click', openMenu);
+
+    // =========================================================================
+    //  BATTLE SYSTEM
+    // =========================================================================
+    function startBattle(troopIds, isBoss) {
+        mode = 'battle';
+        startTrack('battle');
+        B = {
+            enemies: troopIds.map((id, i) => {
+                const M = BOSSES[id] || MON[id];
+                return { ...M, id, hp: M.hp, maxhp: M.hp, idx: i, turn: 0 };
+            }),
+            isBoss,
+            heroIdx: 0,
+            actions: [],
+            phase: 'command',
+            defending: {},
+        };
+        $('battle').classList.add('open');
+        bMsg(isBoss ? '☠️ ' + B.enemies[0].name + ' blocks your path!' : 'Enemies attack!');
+        renderBattle();
+        promptHero();
+    }
+    function bMsg(t) { $('bMsg').innerHTML = t; }
+    function aliveHeroes() { return S.party.filter(h => h.hp > 0); }
+    function aliveEnemies() { return B.enemies.filter(e => e.hp > 0); }
+
+    function renderBattle() {
+        const row = $('enemyRow');
+        row.innerHTML = '';
+        B.enemies.forEach(e => {
+            const d = document.createElement('div');
+            d.className = 'enemy' + (e.hp <= 0 ? ' dead' : '');
+            d.dataset.idx = e.idx;
+            d.innerHTML = '<div class="sprite">' + e.e + '</div><div class="ehp">' + e.name +
+                (e.boss ? '<br>' + Math.max(0, e.hp) + '/' + e.maxhp : '') + '</div>';
+            d.addEventListener('click', () => enemyClicked(e.idx));
+            row.appendChild(d);
+        });
+        const pp = $('partyPanel');
+        pp.innerHTML = '';
+        S.party.forEach((h, i) => {
+            const st = heroStats(h);
+            const H = HEROES[h.id];
+            const d = document.createElement('div');
+            d.className = 'heroCard' + (h.hp <= 0 ? ' ko' : '') + (B.phase === 'command' && i === B.heroIdx ? ' active' : '');
+            d.innerHTML = '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv' + h.lv + '</small></div>' +
+                '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
+                '<div class="mini"><div class="mpf" style="width:' + Math.max(0, h.mp / st.maxmp * 100) + '%"></div></div>' +
+                'HP ' + Math.max(0, h.hp) + ' · MP ' + h.mp;
+            pp.appendChild(d);
+        });
+    }
+
+    let pendingAction = null;
+    function promptHero() {
+        // skip dead heroes
+        while (B.heroIdx < S.party.length && S.party[B.heroIdx].hp <= 0) B.heroIdx++;
+        if (B.heroIdx >= S.party.length) return resolveRound();
+        B.phase = 'command';
+        const h = S.party[B.heroIdx];
+        const H = HEROES[h.id];
+        renderBattle();
+        bMsg('<b>' + H.name + '</b> — choose a command.');
+        const c = $('cmds');
+        c.innerHTML = '';
+        const add = (label, fn, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            b.disabled = !!disabled;
+            b.addEventListener('click', fn);
+            c.appendChild(b);
+        };
+        add('⚔️ Attack', () => { pendingAction = { kind: 'attack', hero: B.heroIdx }; targetMode(); });
+        const spells = knownSpells(h);
+        if (spells.length) {
+            add('✨ Magic', () => showSpellMenu(h, spells));
+        }
+        add('🎒 Item', () => showItemMenu());
+        add('🛡️ Defend', () => queueAction({ kind: 'defend', hero: B.heroIdx }));
+        if (!B.isBoss) add('🏃 Flee', () => queueAction({ kind: 'flee', hero: B.heroIdx }));
+    }
+    function showSpellMenu(h, spells) {
+        const c = $('cmds');
+        c.innerHTML = '';
+        for (const sid of spells) {
+            const sp = SPELLS[sid];
+            const b = document.createElement('button');
+            b.innerHTML = sp.name + ' <small>' + sp.mp + 'MP · ' + sp.desc + '</small>';
+            b.disabled = h.mp < sp.mp;
+            b.addEventListener('click', () => {
+                pendingAction = { kind: 'spell', hero: B.heroIdx, spell: sid };
+                const k = sp.kind;
+                if (k === 'dmg') targetMode();
+                else if (k === 'heal') allyTargetMode(false);
+                else if (k === 'revive') allyTargetMode(true);
+                else queueAction(pendingAction);
+            });
+            c.appendChild(b);
+        }
+        backBtn(c);
+    }
+    function showItemMenu() {
+        const c = $('cmds');
+        c.innerHTML = '';
+        let any = false;
+        for (const key of ['potion', 'hipotion', 'ether', 'phoenix']) {
+            if ((S.inv[key] || 0) <= 0) continue;
+            any = true;
+            const it = ITEMS[key];
+            const b = document.createElement('button');
+            b.innerHTML = it.e + ' ' + it.name + ' ×' + S.inv[key] + ' <small>' + it.desc + '</small>';
+            b.addEventListener('click', () => {
+                pendingAction = { kind: 'item', hero: B.heroIdx, item: key };
+                allyTargetMode(it.use === 'revive');
+            });
+            c.appendChild(b);
+        }
+        if (!any) {
+            const d = document.createElement('div');
+            d.style.cssText = 'font-size:13px;color:#95a5a6;align-self:center';
+            d.textContent = 'No items!';
+            c.appendChild(d);
+        }
+        backBtn(c);
+    }
+    function backBtn(c) {
+        const b = document.createElement('button');
+        b.textContent = '↩️ Back';
+        b.className = 'danger';
+        b.addEventListener('click', promptHero);
+        c.appendChild(b);
+    }
+    function targetMode() {
+        bMsg('Choose a target! 🎯');
+        $('cmds').innerHTML = '';
+        backBtn($('cmds'));
+        document.querySelectorAll('.enemy:not(.dead)').forEach(d => d.classList.add('target'));
+    }
+    function enemyClicked(idx) {
+        if (!pendingAction || B.phase !== 'command') return;
+        if (B.enemies[idx].hp <= 0) return;
+        pendingAction.target = idx;
+        document.querySelectorAll('.enemy').forEach(d => d.classList.remove('target'));
+        queueAction(pendingAction);
+    }
+    function allyTargetMode(wantDead) {
+        const c = $('cmds');
+        c.innerHTML = '';
+        S.party.forEach((h, i) => {
+            const ok = wantDead ? h.hp <= 0 : h.hp > 0;
+            if (!ok) return;
+            const b = document.createElement('button');
+            b.textContent = HEROES[h.id].e + ' ' + HEROES[h.id].name;
+            b.addEventListener('click', () => { pendingAction.target = i; queueAction(pendingAction); });
+            c.appendChild(b);
+        });
+        backBtn(c);
+    }
+    function queueAction(a) {
+        B.actions.push(a);
+        pendingAction = null;
+        B.heroIdx++;
+        promptHero();
+    }
+
+    function resolveRound() {
+        B.phase = 'resolve';
+        $('cmds').innerHTML = '';
+        B.defending = {};
+        // build full action list: heroes + enemies, sort by speed
+        const acts = [];
+        for (const a of B.actions) {
+            const h = S.party[a.hero];
+            acts.push({ ...a, spd: heroStats(h).spd + Math.random() * 3, side: 'hero' });
+        }
+        for (const e of aliveEnemies()) {
+            acts.push({ kind: 'enemyAct', enemy: e.idx, spd: e.spd + Math.random() * 3, side: 'enemy' });
+        }
+        acts.sort((a, b2) => b2.spd - a.spd);
+        B.actions = [];
+        runActions(acts, 0);
+    }
+
+    function runActions(acts, i) {
+        if (!B) return;
+        if (checkBattleEnd()) return;
+        if (i >= acts.length) {
+            B.heroIdx = 0;
+            return promptHero();
+        }
+        const a = acts[i];
+        const delay = performAction(a);
+        renderBattle();
+        if (checkBattleEnd()) return;
+        setTimeout(() => runActions(acts, i + 1), delay);
+    }
+
+    const rnd = v => Math.round(v * (0.85 + Math.random() * 0.3));
+    function performAction(a) {
+        if (a.side === 'hero') {
+            const h = S.party[a.hero];
+            if (h.hp <= 0) return 80;
+            const H = HEROES[h.id];
+            const st = heroStats(h);
+            if (a.kind === 'attack') {
+                let t = B.enemies[a.target];
+                if (t.hp <= 0) t = aliveEnemies()[0];
+                if (!t) return 80;
+                const dmg = Math.max(1, rnd(st.atk * 2 - t.def));
+                t.hp -= dmg;
+                sfx('hit');
+                bMsg(H.name + ' attacks ' + t.name + ' — <b>' + dmg + '</b> damage!' + (t.hp <= 0 ? ' 💥 Defeated!' : ''));
+                return 750;
+            }
+            if (a.kind === 'defend') {
+                B.defending[a.hero] = true;
+                h.mp = Math.min(st.maxmp, h.mp + 2);
+                bMsg(H.name + ' defends. 🛡️ (+2 MP)');
+                return 550;
+            }
+            if (a.kind === 'flee') {
+                if (Math.random() < 0.6) {
+                    bMsg('You fled the battle! 🏃');
+                    setTimeout(endBattle, 600);
+                    return 9999;
+                }
+                bMsg(H.name + ' tries to flee… but fails!');
+                return 700;
+            }
+            if (a.kind === 'item') {
+                if ((S.inv[a.item] || 0) <= 0) return 80;
+                S.inv[a.item]--;
+                const it = ITEMS[a.item];
+                applyItem(it, S.party[a.target]);
+                sfx(it.use === 'heal' ? 'heal' : 'item');
+                bMsg(H.name + ' uses ' + it.name + ' on ' + HEROES[S.party[a.target].id].name + '. ' + it.e);
+                return 700;
+            }
+            if (a.kind === 'spell') {
+                const sp = SPELLS[a.spell];
+                if (h.mp < sp.mp) return 80;
+                h.mp -= sp.mp;
+                if (sp.kind === 'dmg' || sp.kind === 'dmgAll' || sp.kind === 'physAll') {
+                    sfx('spell');
+                    const power = sp.kind === 'physAll' ? st.atk * sp.mult : sp.power + st.mag * 1.6;
+                    const targets = (sp.kind === 'dmg')
+                        ? [B.enemies[a.target] && B.enemies[a.target].hp > 0 ? B.enemies[a.target] : aliveEnemies()[0]]
+                        : aliveEnemies();
+                    let total = 0;
+                    for (const t of targets.filter(Boolean)) {
+                        const dmg = Math.max(1, rnd(power - t.def * 0.5));
+                        t.hp -= dmg;
+                        total += dmg;
+                    }
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b>! ' + total + ' total damage! ✨');
+                    return 800;
+                }
+                if (sp.kind === 'heal') {
+                    const t = S.party[a.target];
+                    const heal = rnd(sp.power + st.mag * 1.6);
+                    t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                    sfx('heal');
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b> — ' + HEROES[t.id].name + ' recovers ' + heal + ' HP! 💚');
+                    return 750;
+                }
+                if (sp.kind === 'healAll') {
+                    sfx('heal');
+                    for (const t of aliveHeroes()) {
+                        t.hp = Math.min(heroStats(t).maxhp, t.hp + rnd(sp.power + st.mag * 1.2));
+                    }
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b> — the party is bathed in light! 💚');
+                    return 800;
+                }
+                if (sp.kind === 'revive') {
+                    const t = S.party[a.target];
+                    if (t.hp <= 0) {
+                        t.hp = Math.floor(heroStats(t).maxhp / 2);
+                        sfx('heal');
+                        bMsg(H.name + ' casts <b>Revive</b> — ' + HEROES[t.id].name + ' rises again! 🌟');
+                    }
+                    return 800;
+                }
+            }
+            return 80;
+        }
+        // enemy action
+        const e = B.enemies[a.enemy];
+        if (!e || e.hp <= 0) return 80;
+        e.turn++;
+        const heroes = aliveHeroes();
+        if (!heroes.length) return 80;
+        if (e.spell && e.turn % 3 === 0) {
+            const sp = ENEMY_SPELLS[e.spell];
+            sfx('spell');
+            for (const h of heroes) {
+                const st = heroStats(h);
+                let dmg = Math.max(1, rnd(sp.power + e.atk * 0.6 - st.def * 0.4));
+                if (B.defending[S.party.indexOf(h)]) dmg = Math.ceil(dmg / 2);
+                h.hp -= dmg;
+            }
+            bMsg(e.name + ' unleashes <b>' + sp.name + '</b> on the whole party! 🔥');
+            return 900;
+        }
+        const h = heroes[Math.floor(Math.random() * heroes.length)];
+        const st = heroStats(h);
+        let dmg = Math.max(1, rnd(e.atk * 2 - st.def));
+        if (B.defending[S.party.indexOf(h)]) dmg = Math.ceil(dmg / 2);
+        h.hp -= dmg;
+        sfx('hurt');
+        bMsg(e.name + ' attacks ' + HEROES[h.id].name + ' — <b>' + dmg + '</b> damage!' + (h.hp <= 0 ? ' 😵' : ''));
+        return 750;
+    }
+
+    function checkBattleEnd() {
+        if (!aliveEnemies().length) { setTimeout(victory, 700); return true; }
+        if (!aliveHeroes().length) { setTimeout(defeat, 700); return true; }
+        return false;
+    }
+
+    function victory() {
+        const xp = B.enemies.reduce((s, e) => s + e.xp, 0);
+        const gold = B.enemies.reduce((s, e) => s + e.gold, 0);
+        S.gold += gold;
+        sfx('fanfare');
+        const msgs = ['<b class="good">Victory!</b> +' + xp + ' XP · <span class="gold">+' + gold + ' gold</span>'];
+        for (const h of aliveHeroes()) {
+            h.xp += xp;
+            while (h.lv < MAXLV && h.xp >= xpNext(h.lv)) {
+                h.xp -= xpNext(h.lv);
+                h.lv++;
+                const st = heroStats(h);
+                h.hp = st.maxhp; h.mp = st.maxmp;
+                const newSpell = HEROES[h.id].spells.find(s => s.lv === h.lv);
+                msgs.push('⬆️ <b>' + HEROES[h.id].name + '</b> reached Lv ' + h.lv + '!' +
+                    (newSpell ? ' Learned <b>' + SPELLS[newSpell.id].name + '</b>! ✨' : ''));
+            }
+        }
+        const wasBoss = B.isBoss;
+        endBattle();
+        say(msgs.map(m => ['', m]), wasBoss ? () => bossVictory() : null);
+        save();
+    }
+    function bossVictory() {
+        const D = DUNGEONS[dungeonId];
+        if (D.crystal) {
+            S.flags.crystals[D.crystal] = true;
+            sfx('crystal');
+            const names = { earth: 'Earth Crystal 🟤', fire: 'Fire Crystal 🔴', water: 'Water Crystal 🔵' };
+            say([
+                ['', 'The guardian falls… and light floods the chamber!'],
+                ['', 'You obtained the <b>' + names[D.crystal] + '</b>!'],
+            ], () => exitDungeon('The crystal\'s power carries you back outside.'));
+            save();
+        } else {
+            S.flags.malachorDown = true;
+            save();
+            showEnding();
+        }
+    }
+    function defeat() {
+        sfx('gameover');
+        startTrack(null);
+        // Respawn: revive party at 1hp -> Brightvale, lose half gold
+        say([
+            ['', '<b class="bad">The party has fallen…</b>'],
+            ['', 'You awaken in Brightvale\'s temple. Half your gold paid for the healers.'],
+        ], () => {
+            S.gold = Math.floor(S.gold / 2);
+            S.party.forEach(fullHeal);
+            // move to town1 position
+            outer: for (let y = 0; y < WORLD.length; y++)
+                for (let x = 0; x < WORLD[0].length; x++)
+                    if (WORLD[y][x] === '1') { S.x = x; S.y = y + 1; break outer; }
+            endBattle(true);
+            mode = 'world';
+            dungeonId = null;
+            startTrack('overworld');
+            save();
+            draw();
+        });
+    }
+    function endBattle(silent) {
+        $('battle').classList.remove('open');
+        B = null;
+        if (!silent) {
+            mode = dungeonId ? 'dungeon' : 'world';
+            startTrack(dungeonId ? (dungeonId === 'castle' ? 'battle' : 'overworld') : 'overworld');
+        }
+        updateHud();
+        draw();
+    }
+
+    function showEnding() {
+        mode = 'ending';
+        $('battle').classList.remove('open');
+        startTrack('town');
+        const lead = S.party[0];
+        $('endText').innerHTML =
+            'Malachor\'s shadow dissolves. The three Crystals blaze in the sky, and dawn breaks over Aetheria ' +
+            'for the first time in a year.<br><br>' +
+            S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> — Lv ' + h.lv).join('<br>') +
+            '<br><br>💰 ' + S.gold + ' gold · Thank you for playing!';
+        $('ending').classList.add('open');
+    }
+    $('btnEndTitle').addEventListener('click', () => {
+        $('ending').classList.remove('open');
+        showTitle();
+    });
+
+    // =========================================================================
+    //  SAVE / LOAD / TITLE
+    // =========================================================================
+    function save() {
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch {}
+    }
+    function load() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            const s = JSON.parse(raw);
+            return (s && s.party && s.party.length) ? s : null;
+        } catch { return null; }
+    }
+    function showTitle() {
+        mode = 'title';
+        startTrack('town');
+        $('btnContinue').disabled = !load();
+        $('title').classList.add('open');
+    }
+    function startNew() {
+        S = newState();
+        // find start
+        for (let y = 0; y < WORLD.length; y++)
+            for (let x = 0; x < WORLD[0].length; x++)
+                if (WORLD[y][x] === 'S') { S.x = x; S.y = y; }
+        S.party.forEach(fullHeal);
+        $('title').classList.remove('open');
+        mode = 'world';
+        startTrack('overworld');
+        draw();
+        say([
+            ['Auron', 'The crystals dimmed a year ago. Monsters own the roads now.'],
+            ['Auron', 'The elder of Brightvale asked for me. The village is just north of here.'],
+            ['', '<i>Visit the town ahead. Talk to people. Check the Menu to use items and save.</i>'],
+        ]);
+        S.flags.intro = true;
+        save();
+    }
+    $('btnNew').addEventListener('click', startNew);
+    $('btnContinue').addEventListener('click', () => {
+        const s = load();
+        if (!s) return;
+        S = s;
+        $('title').classList.remove('open');
+        mode = 'world';
+        dungeonId = null;
+        startTrack('overworld');
+        draw();
+    });
+
+    // =========================================================================
+    //  INPUT
+    // =========================================================================
+    document.addEventListener('keydown', e => {
+        if (mode === 'dialog' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return nextDialog(); }
+        const dirs = {
+            ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
+            ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
+        };
+        if (dirs[e.key]) { e.preventDefault(); tryMove(...dirs[e.key]); }
+        else if (e.key === 'm' || e.key === 'Escape') openMenu();
+    });
+    let tX = 0, tY = 0;
+    canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        tX = e.touches[0].clientX; tY = e.touches[0].clientY;
+    });
+    canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        const dx = e.changedTouches[0].clientX - tX, dy = e.changedTouches[0].clientY - tY;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+        if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
+        else tryMove(0, dy > 0 ? 1 : -1);
+    });
+
+    // =========================================================================
+    //  DEBUG HOOKS (used by automated tests)
+    // =========================================================================
+    window.DBG = {
+        state: () => ({ mode, dungeonId, S, B }),
+        tp(x, y) { const p = curPos(); p.x = x; p.y = y; draw(); },
+        buff(lv) { S.party.forEach(h => { h.lv = lv; fullHeal(h); }); updateHud(); },
+        gold(g) { S.gold = g; updateHud(); },
+        crystals() { S.flags.crystals = { earth: true, fire: true, water: true }; updateHud(); },
+        noEnc() { stepCount = -1e9; },
+        boss(id) { dungeonId = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id) || dungeonId; startBattle([id], true); },
+        maps: { WORLD, DMAPS },
+    };
+
+    // Boot
+    showTitle();
+    </script>
+</body>
+</html>
