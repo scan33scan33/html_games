@@ -548,6 +548,18 @@
             bass: [45, 45, 43, 40, 45, 45, 43, 45],
             chords: [[57, 60, 64], [57, 60, 64], [55, 62, 67], [52, 57, 64],
                      [57, 60, 64], [50, 57, 62], [55, 62, 67], [52, 57, 64]] },
+        // 憶 — a tender 《魯冰花》-style ballad (original melody in that gentle
+        // major-pentatonic idiom): slow, flute-forward, lots of breathing space.
+        // Used for remembrance visions, the master's memory, and the ending.
+        memory: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
+                [69, 0, 72, 0, 74, 0, 0, 0], [72, 0, 69, 0, 67, 0, 0, 0],
+                [72, 0, 74, 0, 76, 0, 0, 0], [79, 0, 76, 0, 74, 0, 72, 0],
+                [69, 0, 67, 0, 69, 0, 72, 0], [69, 0, 67, 0, 64, 0, 0, 0]],
+            bass: [48, 45, 41, 43, 48, 45, 40, 43],
+            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
+                     [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]] },
     };
     function ensureAudio() {
         if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
@@ -1216,6 +1228,7 @@
         if (crystalCount >= 2 && !S.flags.dream) {
             S.flags.dream = true;
             save();
+            startTrack('memory');
             say([
                 ['', '<i>當夜，你夢見師門祠堂——屋頂已失，頭上是無星的天。</i>'],
                 ['？？？', '……我心頭的兩片碎片，正在你行囊裡嗡鳴，買酒的。你以為，我聽不見它們喚我嗎？'],
@@ -1945,6 +1958,7 @@
         if (D.crystal) {
             S.flags.crystals[D.crystal] = true;
             sfx('crystal');
+            startTrack('memory');
             say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('劍魄之力，載著你回到了洞外。'));
             save();
         } else if (dungeonId === 'tomb') {
@@ -2109,7 +2123,7 @@
     function showEnding() {
         mode = 'ending';
         $('battle').classList.remove('open');
-        startTrack('town');
+        startTrack('memory');
         const lead = S.party[0];
         const epilogue = {
             auron: '重建了劍派。開派石碑上刻著六十一個名字——最後一個，是他親手刻上的。',
@@ -2300,6 +2314,7 @@
         noEnc() { stepCount = -1e9; },
         boss(id) { dungeonId = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id) || dungeonId; startBattle([id], true); },
         troop(ids) { startBattle(ids, false); },
+        track: () => track,
         weaken() { if (B) for (const e of B.enemies) if (e.hp > 0) e.hp = 1; },
         give(id, n) { S.hu[id] = (S.hu[id] || 0) + (n || 1); },
         troop(ids) { startBattle(ids, false); },
