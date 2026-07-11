@@ -190,7 +190,7 @@
         <button id="btnMenu">📜 選單</button>
         <button id="btnSound">🎵 音效：開</button>
     </div>
-    <p class="sub">方向鍵 / WASD / 滑動移動 · 先削弱妖怪再「收妖」 · 在煉妖壺中依五行合成</p>
+    <p class="sub">方向鍵長按可行走・<b>點擊地圖可自動尋路</b> · 先削弱妖怪再「收妖」 · 煉妖壺中依五行合成</p>
     <a class="back" href="index.html">← 全部遊戲</a>
 
     <script>
@@ -236,6 +236,11 @@
         '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
         '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
     ].map(r => (r + '~'.repeat(40)).slice(0, 40));
+    // Act-2 and side-quest locations carved into the world:
+    // J 劍塚 (sword tomb, eastern woods) · n 蛛網 (spider nest) · x 商隊 (caravan)
+    WORLD[6] = WORLD[6].slice(0, 31) + 'J' + WORLD[6].slice(32);
+    WORLD[20] = WORLD[20].slice(0, 16) + 'n' + WORLD[20].slice(17);
+    WORLD[26] = WORLD[26].slice(0, 25) + 'x' + WORLD[26].slice(26);
 
     const DMAPS = {
         earth: [
@@ -294,6 +299,19 @@
         ],
     };
 
+    DMAPS.tomb = [
+        '################',
+        '#S.....##..T...#',
+        '#..##..##..##..#',
+        '#..##......##..#',
+        '#......##......#',
+        '#.####.##.####.#',
+        '#......##......#',
+        '#..##..##..##..#',
+        '#T.##......##.B#',
+        '#......##......#',
+        '################',
+    ];
     const DUNGEONS = {
         earth: { name: '神農洞', tier: 1, boss: 'tubo', crystal: 'earth', worldChar: 'A',
                  chests: { '13,1': { gold: 120 }, '1,8': { item: 'jinchuang', n: 3 } } },
@@ -301,6 +319,8 @@
                 chests: { '13,1': { gold: 350 }, '3,7': { item: 'juqi', n: 2 } } },
         water: { name: '河伯水府', tier: 3, boss: 'gonggong', crystal: 'water', worldChar: 'C',
                  chests: { '13,1': { gold: 700 }, '2,7': { item: 'huanhun', n: 2 } } },
+        tomb: { name: '劍塚', tier: 4, boss: 'jianling', crystal: null, worldChar: 'J',
+                chests: { '11,1': { item: 'dahuan', n: 3 }, '1,8': { gold: 1200 } } },
         castle: { name: '幽都之門', tier: 4, boss: 'xuanyuan_w', crystal: null, worldChar: 'K',
                   chests: { '15,1': { gold: 1500 }, '5,5': { item: 'dahuan', n: 4 }, '15,9': { item: 'juqi', n: 3 } } },
     };
@@ -340,13 +360,17 @@
         tubo:       { name: '土伯', e: '🗿', elem: '土', hp: 320, atk: 24, def: 10, spd: 4, xp: 160, gold: 200, spell: 'quake', boss: true },
         bifang:     { name: '畢方', e: '🦩', elem: '火', hp: 600, atk: 36, def: 14, spd: 11, xp: 420, gold: 500, spell: 'flameAll', boss: true },
         gonggong:   { name: '共工', e: '🌊', elem: '水', hp: 900, atk: 46, def: 18, spd: 13, xp: 850, gold: 1000, spell: 'tidalWave', boss: true },
-        xuanyuan_w: { name: '玄淵', e: '🌑', elem: null, hp: 1500, atk: 58, def: 24, spd: 15, xp: 0, gold: 0, spell: 'darkStorm', boss: true },
+        jianling:   { name: '師尊殘影', e: '⚔️', elem: '金', hp: 1100, atk: 52, def: 22, spd: 14, xp: 700, gold: 800, spell: 'swordRain', boss: true },
+        xuanyuan_w: { name: '玄淵', e: '🌑', elem: null, hp: 1300, atk: 58, def: 24, spd: 15, xp: 500, gold: 500, spell: 'darkStorm', boss: true },
+        shihun:     { name: '噬魂・借體', e: '👁️', elem: null, hp: 1800, atk: 66, def: 26, spd: 16, xp: 0, gold: 0, spell: 'devour', boss: true },
     };
     const ENEMY_SPELLS = {
         flameAll:  { name: '烈焰漫天', power: 18, all: true },
         quake:     { name: '崩山裂地', power: 14, all: true },
         tidalWave: { name: '怒濤覆舟', power: 26, all: true },
         darkStorm: { name: '幽都噬光', power: 34, all: true },
+        swordRain: { name: '萬劍歸宗', power: 30, all: true },
+        devour:    { name: '噬光蝕魂', power: 42, all: true },
     };
 
     // Heroes: base + growth per level; spells learned at levels
@@ -395,7 +419,8 @@
     const ALL_ITEM_IDS = Object.keys(ITEMS);
     const WEAPONS = {
         auron:  [{ name: '鏽劍', atk: 2, cost: 0 }, { name: '青銅劍', atk: 7, cost: 90 },
-                 { name: '百煉劍', atk: 16, cost: 380 }, { name: '湛盧', atk: 30, cost: 1300 }],
+                 { name: '百煉劍', atk: 16, cost: 380 }, { name: '湛盧', atk: 30, cost: 1300 },
+                 { name: '軒轅・殘鋒', atk: 45, cost: 0 }],
         lyra:   [{ name: '舊機匣', mag: 1, cost: 0 }, { name: '木鳶機', mag: 4, cost: 80 },
                  { name: '雲梯弩', mag: 10, cost: 330 }, { name: '非攻・墨核', mag: 18, cost: 1100 }],
         zephyr: [{ name: '狐尾墜', mag: 1, cost: 0 }, { name: '靈狐珠', mag: 5, cost: 90 },
@@ -417,7 +442,7 @@
     //  STATE
     // =========================================================================
     const SAVE_KEY = 'xuanyuanSave';
-    const MAXLV = 20;
+    const MAXLV = 22;
     let S = null;            // save state
     let mode = 'title';      // title world dungeon battle town shop menu dialog ending
     let dungeonId = null;
@@ -430,7 +455,7 @@
             party: [{ id: 'auron', lv: 1, xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 }],
             inv: { jinchuang: 3 },
             hu: {},
-            flags: { intro: false, crystals: {}, recruited: {}, chests: {}, elder1: false },
+            flags: { intro: false, crystals: {}, recruited: {}, chests: {}, quests: { nest: 0, caravan: 0 }, reforged: false },
             dpos: null,
         };
     }
@@ -661,8 +686,9 @@
     const TCOLORS = { '.': '#4f7249', f: '#33582f', '^': '#7a7469', '~': '#2e5d7d', s: '#c9b077',
                       '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#241a2e',
                       1: '#4f7249', 2: '#33582f', 3: '#c9b077', A: '#4f7249', K: '#7a7469', C: '#c9b077',
+                      J: '#33582f', n: '#33582f', x: '#c9b077',
                       d: '#8d6e4b' };
-    const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑',
+    const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑', J: '🛕', n: '🕸️', x: '🏕️',
                      l: '🔥', w: '🌊', T: '📦', '~': null };
 
     function mapAt(x, y) {
@@ -680,6 +706,7 @@
     }
     // ambient particles per area
     let particles = [], pKind = null;
+    var walkTarget = null;
     function particleKind() {
         if (mode === 'dungeon') return { earth: 'dust', fire: 'ember', water: 'bubble', castle: 'mist' }[dungeonId] || 'dust';
         return 'petal';
@@ -805,6 +832,18 @@
             }
         }
         drawParticles(t);
+        // click-to-walk destination marker
+        if (walkTarget) {
+            const mx = (walkTarget.x - camX) * TILE + TILE / 2;
+            const my = (walkTarget.y - camY) * TILE + TILE / 2;
+            if (mx > -TILE && my > -TILE && mx < canvas.width + TILE && my < canvas.height + TILE) {
+                ctx.strokeStyle = 'rgba(241,196,15,' + (0.5 + 0.35 * Math.sin(t / 180)) + ')';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(mx, my, 8 + 2.5 * Math.sin(t / 180), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
         // player: soft shadow + gentle bob
         const px = (p.x - camX) * TILE + TILE / 2;
         const py = (p.y - camY) * TILE + TILE / 2 + Math.sin(t / 320) * 1.6;
@@ -830,7 +869,9 @@
     }
     requestAnimationFrame(renderLoop);
     function bossDown(id) {
-        return id === 'castle' ? S.flags.malachorDown : !!S.flags.crystals[DUNGEONS[id].crystal];
+        if (id === 'castle') return S.flags.malachorDown;
+        if (id === 'tomb') return !!S.flags.reforged;
+        return !!S.flags.crystals[DUNGEONS[id].crystal];
     }
     function updateHud() {
         if (!S) return;
@@ -891,6 +932,8 @@
     function enterTile(ch, x, y) {
         if (mode === 'world') {
             if ('123'.includes(ch)) return openTown(Number(ch));
+            if (ch === 'n') return nestEvent();
+            if (ch === 'x') return caravanEvent();
             for (const [id, D] of Object.entries(DUNGEONS)) {
                 if (D.worldChar === ch) return tryEnterDungeon(id);
             }
@@ -924,6 +967,18 @@
     }
     function tryEnterDungeon(id) {
         const D = DUNGEONS[id];
+        if (id === 'tomb') {
+            const c = S.flags.crystals;
+            if (!(c.earth && c.fire && c.water)) {
+                return say([
+                    ['', '斷壁殘垣之間，師門的劍爐沉寂如墓。'],
+                    ['雲越', '殘劍無魂，爐火不應……先尋齊三片劍魄吧。'],
+                ]);
+            }
+            if (S.flags.reforged) {
+                return say([['', '劍爐餘溫尚存。爐前的灰燼裡，再無殘影徘徊。']]);
+            }
+        }
         if (id === 'castle') {
             const c = S.flags.crystals;
             if (!(c.earth && c.fire && c.water)) {
@@ -933,6 +988,12 @@
                 ]);
             }
             if (S.flags.malachorDown) return say([['', '大門沉寂無聲。它的守望者，已換了一種方式守夜。']]);
+            if (!S.flags.reforged) {
+                return say([
+                    ['', '三片劍魄在你行囊中共鳴——卻仍是三段斷鐵，劈不開這片黑暗。'],
+                    ['墨璃', '東邊樹林裡的<b>劍塚 🛕</b>……你們師門的劍爐就在那裡。只有它，能將三片劍魄重鑄為一。'],
+                ]);
+            }
         }
         if (bossDown(id) && id !== 'castle') {
             return say([['', D.name + '已歸於寂靜。它的劍魄，正在你的行囊中低鳴。']]);
@@ -993,6 +1054,13 @@
             ['雲越', '噬魂。石靈、火鳥，如今是你。說出他的名字。'],
             ['共工', '你早已知道，劍客。你為他燒過空棺。來吧——大河，從不讓路。'],
         ],
+        jianling: [
+            ['？？？', '……回來了？買酒回來了嗎，小越。爐火……爐火怎麼熄了……'],
+            ['雲越', '師父？！不——你死在祠堂那夜。你不在這裡。你<b>不該</b>在這裡。'],
+            ['墨璃', '雲越，穩住！那是外洩的劍靈聚成的殘影——它借了你最深的記憶成形！'],
+            ['殘影', '劍呢……劍在哪裡？！把劍……還給山門——'],
+            ['青璇', '它不會聽的，小劍客。斬斷它。有時候，放下，就是一劍。'],
+        ],
         xuanyuan_w: [
             ['玄淵', '雲越。買酒的那個。天意果然愛開小玩笑——劍派最不成器的弟子，捧著劍派最重的寶物。'],
             ['雲越', '是你毀了軒轅劍。是你讓六十位同門，為早已死去的殘片送命。'],
@@ -1033,6 +1101,43 @@
     // =========================================================================
     //  TOWNS
     // =========================================================================
+    // ---- side quests ----
+    let questBattle = null;
+    function nestEvent() {
+        const q = S.flags.quests;
+        if (q.nest >= 1) return say([['', '巨大的蛛網已被斬破，林間又聽得見鳥聲了。']]);
+        say([
+            ['', '林緣掛滿了層層疊疊的蛛網——網心深處，傳來孩子微弱的哭聲。'],
+            ['', '<b class="bad">網的主人，回來了。</b>'],
+        ], () => { questBattle = 'nest'; startBattle(['zhuyao', 'zhuyao', 'zhuyao'], false); });
+    }
+    function caravanEvent() {
+        if (S.flags.quests.caravan >= 1) return say([['', '商隊早已啟程，車轍漸被風沙掩去。']]);
+        say([
+            ['', '沙丘之間，一支商隊被妖物團團圍住，貨車傾覆，駝鈴亂響。'],
+            ['商隊首領', '救、救命啊——！'],
+        ], () => { questBattle = 'caravan'; startBattle(['shaxie', 'shaxie', 'hanba'], false); });
+    }
+    function questReward(q) {
+        if (q === 'nest') {
+            S.flags.quests.nest = 1;
+            say([
+                ['', '你們劈開網繭，抱出瑟瑟發抖的孩子。'],
+                ['孩子', '嗚……我要回家……回桃源村……'],
+                ['', '<i>（送孩子回桃源村，找村長覆命吧。）</i>'],
+            ]);
+        } else if (q === 'caravan') {
+            S.flags.quests.caravan = 1;
+            S.gold += 300;
+            S.inv.fu_shui = (S.inv.fu_shui || 0) + 1;
+            say([
+                ['商隊首領', '多謝各位俠士相救！這點謝儀，還望收下——還有這張祖傳的水靈符！'],
+                ['', '<b class="gold">獲得 白銀 300 兩、五行符・水 ×1！</b>'],
+            ]);
+        }
+        save();
+    }
+
     let townId = null;
     function openTown(id) {
         townId = id;
@@ -1102,7 +1207,20 @@
                     ['', '<b class="good">墨璃加入了隊伍！</b> 👷‍♀️'],
                 ]);
             }
-            if (!c.earth) return say([['村長', '神農洞在平原以東。洞中之物並非生於彼處——而是被<i>安置</i>在那裡的。保重。']]);
+            if (S.flags.quests.nest === 1) {
+                S.flags.quests.nest = 2;
+                S.gold += 200;
+                S.inv.neidan = (S.inv.neidan || 0) + 1;
+                save();
+                return say([
+                    ['村長', '娃兒！我的天，你們把娃兒帶回來了！大恩不言謝——這是村裡湊的謝儀，還有祖上傳下的一顆內丹！'],
+                    ['', '<b class="gold">獲得 白銀 200 兩、內丹 ×1！</b>'],
+                ]);
+            }
+            if (!c.earth) return say([
+                ['村長', '神農洞在平原以東。洞中之物並非生於彼處——而是被<i>安置</i>在那裡的。保重。'],
+                ['村長', '……對了，獵戶家的娃兒在西南方林緣失蹤了。若見到大片蛛網 🕸️，千萬當心。'],
+            ]);
             if (!c.fire) return say([
                 ['村長', '一片殘魄重鳴，田野已見生機。只是你們說的幻象，教老朽心驚……劍派中人，親手<i>解劍</i>？'],
                 ['墨璃', '袍上繡的是劍派山紋，村長。我們親眼所見。'],
@@ -1507,6 +1625,21 @@
         if (!B) return;
         if (checkBattleEnd()) return;
         if (i >= acts.length) {
+            // 玄淵's lingering will intervenes once in the final battle
+            const e0 = B.enemies[0];
+            if (!B.xuHelp && e0 && e0.id === 'shihun' && e0.hp > 0 && e0.hp < e0.maxhp * 0.4) {
+                B.xuHelp = true;
+                for (const h of aliveHeroes()) {
+                    const st2 = heroStats(h);
+                    const heal = Math.round(st2.maxhp * 0.45);
+                    h.hp = Math.min(st2.maxhp, h.hp + heal);
+                    queueFx('#hc-' + S.party.indexOf(h), null, '+' + heal, '#2ecc71');
+                }
+                sfx('heal');
+                bMsg('玄淵殘存的意志，攥住了噬魂：「孩子們——就是現在！」全隊氣血大幅回復！');
+                renderBattle();
+                flushFx();
+            }
             // end of round: poison ticks
             let anyPoison = false;
             S.party.forEach((h, idx) => {
@@ -1742,7 +1875,11 @@
         return false;
     }
 
+    let lastBoss = null;
     function victory() {
+        const q = questBattle;
+        questBattle = null;
+        lastBoss = B.enemies[0].id;
         const xp = B.enemies.reduce((s, e) => s + (e.captured ? Math.floor(e.xp / 2) : e.xp), 0);
         const gold = B.enemies.reduce((s, e) => s + (e.captured ? 0 : e.gold), 0);
         S.gold += gold;
@@ -1762,7 +1899,7 @@
         }
         const wasBoss = B.isBoss;
         endBattle();
-        say(msgs.map(m => ['', m]), wasBoss ? () => bossVictory() : null);
+        say(msgs.map(m => ['', m]), wasBoss ? () => bossVictory() : (q ? () => questReward(q) : null));
         save();
     }
     function bossVictory() {
@@ -1772,19 +1909,44 @@
             sfx('crystal');
             say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('劍魄之力，載著你回到了洞外。'));
             save();
+        } else if (dungeonId === 'tomb') {
+            S.flags.reforged = true;
+            S.party[0].weapon = WEAPONS.auron.length - 1;
+            sfx('crystal');
+            say([
+                ['', '殘影散作點點劍光，沒入爐膛——沉寂一年的劍爐，轟然重燃。'],
+                ['雲越', '（將三片劍魄置入爐心。）師父……看著吧。'],
+                ['', '<i>爐火徹夜不熄。出爐之劍，劍身完整如初，卻依舊黯淡如夜——它的「魂」，還鎖在另一個人的胸膛裡。</i>'],
+                ['墨璃', '重鑄完成了。但劍魂仍在玄淵體內。去幽都之門吧——去把它，要回來。'],
+                ['', '⚔️ <b>雲越的佩劍重鑄為「軒轅・殘鋒」！</b>（攻擊大幅提升）'],
+            ], () => exitDungeon('你握著重鑄的殘鋒，步出劍塚。'));
+            save();
+        } else if (lastBoss === 'xuanyuan_w') {
+            // Phase 2: the 噬魂 seizes his hollow body
+            S.party.forEach(h => { const st = heroStats(h); h.hp = st.maxhp; h.mp = st.maxmp; });
+            save();
+            say([
+                ['', '<i>玄淵墜下。被吞的劍光開始離體歸鞘——就在此刻，幽都深處，千隻蒼白的眼睛，同時睜開。</i>'],
+                ['噬魂', '（無數聲音疊在一起）終於……亮起來了。多謝你們，替我把「門」，打開。'],
+                ['青璇', '那東西——它抓住了他的軀殼！'],
+                ['', '<i>黑暗如潮，湧入玄淵空洞的身體。他的影子自地上站起，眼中燃著千點白芒。</i>'],
+                ['噬魂・借體', '這具殼，還盛得下一點光。正好——連你們的，一併吃了。'],
+                ['', '<b class="good">歸來的劍光護住眾人——全隊氣血、真氣完全恢復！</b>'],
+            ], () => startBattle(['shihun'], true));
         } else {
             S.flags.malachorDown = true;
             save();
             say([
+                ['', '<i>三人同握殘鋒，一劍劈落——千眼崩碎，黑潮退散，湧回幽都深處。玄淵的身軀輕輕跪倒，如釋重負。</i>'],
                 ['玄淵', '……好亮。原來三隻手同握……便不灼人了……'],
-                ['', '<i>被吞噬的光自他體內奔流而出，歸向劍魄——殘片騰空相合。一年以來，軒轅劍第一次完整地立於黑暗之中。剎那間，他的面容變回了演武場上那位長老。而後，他消散了。</i>'],
+                ['', '<i>被吞噬的光自他體內奔流而出，歸向劍身。一年以來，軒轅劍第一次完整地亮於黑暗之中。剎那間，他的面容變回了演武場上那位長老。而後，他消散了。</i>'],
                 ['玄淵', '<i>雲越，我最不成器的弟子。噬魂仍在幽都之下游弋。同持此劍，勿使一人獨擔……如此，這道光在深淵眼中，便如一柄已然出鞘的劍，懸於一片已然敗亡的戰場。</i>'],
                 ['墨璃', '同持。兼愛——劍，本就該這樣握。'],
                 ['雲越', '……安息吧，師公。接下來，換我們守夜。'],
             ], showEnding);
         }
     }
-    // ---- Soul Cauldron: refine & fuse captured spirits ----
+    // ---- 煉妖壺：收妖、煉化、合成 ----
     let fuseSel = null;
     function openHu() {
         $('menu').classList.remove('open');
@@ -1834,7 +1996,7 @@
         takeMon(id);
         S.inv[m.refine] = (S.inv[m.refine] || 0) + 1;
         sfx('item');
-        $('huMsg').textContent = '煉化成功: ' + m.name + ' → ' + ITEMS[m.refine].e + ' ' + ITEMS[m.refine].name;
+        $('huMsg').textContent = '煉化成功：' + m.name + ' → ' + ITEMS[m.refine].e + ' ' + ITEMS[m.refine].name;
         if (fuseSel && !S.hu[fuseSel]) fuseSel = null;
         save();
         renderHu();
@@ -1862,8 +2024,8 @@
         fuseSel = null;
         sfx('crystal');
         const rel = eA === eB ? '同屬' : (SHENG[eA] === eB || SHENG[eB] === eA) ? '相生' : '相剋';
-        $('huMsg').textContent = '合成 (' + eA + '+' + eB + ' ' + rel + '): ' +
-            ITEMS[result].e + ' ' + ITEMS[result].name + '!';
+        $('huMsg').textContent = '合成（' + eA + '＋' + eB + ' ' + rel + '）：' +
+            ITEMS[result].e + ' ' + ITEMS[result].name + '！';
         save();
         renderHu();
     }
@@ -1940,7 +2102,10 @@
             const raw = localStorage.getItem(SAVE_KEY);
             if (!raw) return null;
             const s = JSON.parse(raw);
-            return (s && s.party && s.party.length) ? s : null;
+            if (!(s && s.party && s.party.length)) return null;
+            s.hu = s.hu || {};
+            s.flags.quests = s.flags.quests || { nest: 0, caravan: 0 };
+            return s;
         } catch { return null; }
     }
     function showTitle() {
@@ -1984,14 +2149,89 @@
     // =========================================================================
     //  INPUT
     // =========================================================================
+    const DIRS = {
+        ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
+        ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
+    };
+    const held = {};
     document.addEventListener('keydown', e => {
         if (mode === 'dialog' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return nextDialog(); }
-        const dirs = {
-            ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
-            ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
-        };
-        if (dirs[e.key]) { e.preventDefault(); tryMove(...dirs[e.key]); }
-        else if (e.key === 'm' || e.key === 'Escape') openMenu();
+        if (DIRS[e.key]) {
+            e.preventDefault();
+            stopAutoWalk();
+            held[e.key] = true;
+            if (!e.repeat) tryMove(...DIRS[e.key]);
+        } else if (e.key === 'm' || e.key === 'Escape') openMenu();
+    });
+    document.addEventListener('keyup', e => { delete held[e.key]; });
+    window.addEventListener('blur', () => { for (const k in held) delete held[k]; });
+    setInterval(() => {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        for (const k in held) if (DIRS[k]) { tryMove(...DIRS[k]); return; }
+    }, 150);
+
+    // ---- click / tap to walk: BFS pathfinding ----
+    let walkPath = [], walkTimer = null;
+    walkTarget = null;
+    function walkableTile(x, y) { return !BLOCKED[mapAt(x, y)]; }
+    function pathTo(tx, ty) {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        const p = curPos();
+        if ((tx === p.x && ty === p.y) || !walkableTile(tx, ty)) return;
+        const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
+        const W = m[0].length, H = m.length;
+        const key = (x, y) => y * W + x;
+        const prev = new Map([[key(p.x, p.y), null]]);
+        const q = [[p.x, p.y]];
+        let found = false;
+        while (q.length && !found) {
+            const [cx, cy] = q.shift();
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = cx + dx, ny = cy + dy;
+                if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                if (!walkableTile(nx, ny) || prev.has(key(nx, ny))) continue;
+                prev.set(key(nx, ny), [cx, cy]);
+                if (nx === tx && ny === ty) { found = true; break; }
+                q.push([nx, ny]);
+            }
+        }
+        if (!found) return;
+        const path = [];
+        let cur = [tx, ty];
+        while (cur && !(cur[0] === p.x && cur[1] === p.y)) {
+            path.unshift(cur);
+            cur = prev.get(key(cur[0], cur[1]));
+        }
+        walkPath = path;
+        walkTarget = { x: tx, y: ty };
+        clearInterval(walkTimer);
+        walkTimer = setInterval(stepAutoWalk, 150);
+        sfx('blip');
+    }
+    function stepAutoWalk() {
+        if (mode !== 'world' && mode !== 'dungeon') return stopAutoWalk();
+        if (!walkPath.length) return stopAutoWalk();
+        const p = curPos();
+        const [nx, ny] = walkPath[0];
+        if (Math.abs(nx - p.x) + Math.abs(ny - p.y) !== 1) return stopAutoWalk();
+        walkPath.shift();
+        tryMove(nx - p.x, ny - p.y);
+    }
+    function stopAutoWalk() {
+        walkPath = [];
+        walkTarget = null;
+        clearInterval(walkTimer);
+    }
+    function canvasTile(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        const vx = Math.floor((clientX - r.left) * (canvas.width / r.width) / TILE);
+        const vy = Math.floor((clientY - r.top) * (canvas.height / r.height) / TILE);
+        const p = curPos();
+        return [p.x - Math.floor(VW / 2) + vx, p.y - Math.floor(VH / 2) + vy];
+    }
+    canvas.addEventListener('click', e => {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        pathTo(...canvasTile(e.clientX, e.clientY));
     });
     let tX = 0, tY = 0;
     canvas.addEventListener('touchstart', e => {
@@ -2001,7 +2241,11 @@
     canvas.addEventListener('touchend', e => {
         e.preventDefault();
         const dx = e.changedTouches[0].clientX - tX, dy = e.changedTouches[0].clientY - tY;
-        if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) {
+            if (mode === 'world' || mode === 'dungeon') pathTo(...canvasTile(tX, tY));
+            return;
+        }
+        stopAutoWalk();
         if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
         else tryMove(0, dy > 0 ? 1 : -1);
     });
