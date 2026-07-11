@@ -102,6 +102,15 @@
         }
         #hud .chip { background: #1a2230; border-radius: 6px; padding: 4px 10px; }
         #hud b { color: #f1c40f; }
+        #quest {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            margin: 4px 0; font-size: 13px; color: #cdd6e0;
+            background: rgba(26, 34, 48, 0.85); border: 1px solid #2c3e50;
+            border-radius: 6px; padding: 5px 14px; max-width: 96vw; box-sizing: border-box;
+            text-align: center;
+        }
+        #quest::before { content: '🎯'; }
+        #quest b { color: #f1c40f; }
         #controls { display: flex; gap: 8px; margin: 6px 0; }
         .shopItem { display: flex; justify-content: space-between; gap: 14px; width: 100%; }
         #screenList { width: 100%; max-width: 360px; }
@@ -186,8 +195,10 @@
         <span class="chip" id="hCrystals">劍魄: —</span>
         <span class="chip" id="hParty"></span>
     </div>
+    <div id="quest"><span id="questText">目標：前往北方的桃源村</span></div>
     <div id="controls">
         <button id="btnMenu">📜 選單</button>
+        <button id="btnEnc">⚔️ 遇敵：正常</button>
         <button id="btnSound">🎵 音效：開</button>
     </div>
     <p class="sub">方向鍵長按可行走・<b>點擊地圖可自動尋路</b> · 先削弱妖怪再「收妖」 · 煉妖壺中依五行合成</p>
@@ -674,6 +685,7 @@
         document.getElementById('btnSound').textContent = soundOn ? '🎵 音效：開' : '🔇 音效：關';
     });
     document.getElementById('btnSound').textContent = soundOn ? '🎵 音效：開' : '🔇 音效：關';
+    document.getElementById('btnEnc').addEventListener('click', cycleEnc);
     for (const ev of ['keydown', 'pointerdown', 'touchstart']) document.addEventListener(ev, ensureAudio);
 
     // =========================================================================
@@ -873,8 +885,22 @@
         if (id === 'tomb') return !!S.flags.reforged;
         return !!S.flags.crystals[DUNGEONS[id].crystal];
     }
+    function objectiveText() {
+        if (!S) return '';
+        const c = S.flags.crystals, f = S.flags;
+        const n = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        if (f.malachorDown) return '天下重歸光明——自由探索，或收服天下妖靈。';
+        if (n === 3 && f.reforged) return '持重鑄之劍，攻向北方山隘的<b>幽都之門 🌑</b>，向玄淵討回劍魂。';
+        if (n === 3) return '三片劍魄已齊——前往東邊樹林的<b>劍塚 🛕</b>，重鑄軒轅劍。';
+        if (!f.recruited || !f.recruited.lyra) return '前往北方的<b>桃源村 🏮</b>，與村長交談。';
+        if (!c.earth) return '深入東方的<b>神農洞 ⛩️</b>，取回大地的劍魄。';
+        if (!c.fire) return '前往西北<b>青丘寨 🎋</b>尋求狐仙相助，再攻<b>祝融火窟 🌋</b>。';
+        if (!c.water) return '南下<b>望川鎮 🏜️</b>打探，尋找沙中的<b>河伯水府 🏯</b>。';
+        return '尋齊三片劍魄。';
+    }
     function updateHud() {
         if (!S) return;
+        $('questText').innerHTML = '目標：' + objectiveText();
         $('hGold').innerHTML = S.gold;
         const c = S.flags.crystals;
         $('hCrystals').innerHTML = '劍魄: ' + (['earth', 'fire', 'water'].map(k => c[k] ? '⚔️' : '▫️').join(''));
@@ -955,9 +981,21 @@
         if (y < 10 && x < 14) return 2;
         return 1;
     }
+    const ENC_MODES = [
+        { mul: 1, label: '⚔️ 遇敵：正常' },
+        { mul: 0.4, label: '⚔️ 遇敵：稀少' },
+        { mul: 0, label: '🕊️ 遇敵：關閉' },
+    ];
+    let encMode = Number(localStorage.getItem('xyEnc') || 0) % ENC_MODES.length;
+    function cycleEnc() {
+        encMode = (encMode + 1) % ENC_MODES.length;
+        localStorage.setItem('xyEnc', encMode);
+        $('btnEnc').textContent = ENC_MODES[encMode].label;
+    }
+    $('btnEnc').textContent = ENC_MODES[encMode].label;
     function maybeEncounter(tier, rate) {
         if (stepCount < 4) return;
-        if (Math.random() < rate) {
+        if (Math.random() < rate * ENC_MODES[encMode].mul) {
             stepCount = 0;
             const pool = TIERS[tier];
             const n = 1 + Math.floor(Math.random() * Math.min(3, S.party.length + 1));
