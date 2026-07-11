@@ -46,7 +46,11 @@
         .btncol { display: flex; flex-direction: column; gap: 8px; min-width: 230px; margin-top: 10px; }
         .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
         /* Battle */
-        #battle { justify-content: flex-start; }
+        #battle {
+            justify-content: flex-start;
+            background: radial-gradient(ellipse at 50% 22%, rgba(30, 38, 60, 0.96), rgba(8, 10, 18, 0.985));
+        }
+        h1 { text-shadow: 0 0 18px rgba(180, 200, 255, 0.25); }
         #enemyRow { display: flex; gap: 18px; justify-content: center; margin: 18px 0 6px; flex-wrap: wrap; }
         .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; position: relative; }
         .enemy:hover { transform: scale(1.1); }
@@ -109,19 +113,18 @@
 </head>
 <body>
     <h1>⚔️ 軒轅殘劍</h1>
-    <p class="sub">A Xuan-Yuan style RPG. Three sword-soul fragments. One warden of the dark. 收妖、煉化、合成。</p>
+    <p class="sub">上古軒轅劍風格 RPG。三片劍魄，一位守暗之人。收妖、煉化、合成。</p>
     <div id="frame">
         <canvas id="gameCanvas" width="480" height="352"></canvas>
 
         <div class="overlay" id="title">
             <div class="big">⚔️</div>
             <h2>軒轅殘劍</h2>
-            <div style="font-size:13px;color:#95a5a6;max-width:340px">One year ago the 軒轅劍 — the blade that has
-                sealed the gates of 幽都 since the Yellow Emperor\'s war — shattered in its shrine in a single
-                night. The sword sect died defending the shards. Their worst student was away buying wine.</div>
+            <div style="font-size:13px;color:#95a5a6;max-width:340px">一年前的一夜之間，自黃帝涿鹿之戰以來鎮守幽都之門的
+                軒轅劍，在祠中崩裂。劍派滿門為守護殘片而死——只有那個下山買酒的、最不成器的弟子活了下來。</div>
             <div class="btncol">
-                <button class="primary" id="btnNew">⚔️ New Game 新的旅程</button>
-                <button id="btnContinue">📜 Continue 繼續</button>
+                <button class="primary" id="btnNew">⚔️ 新的旅程</button>
+                <button id="btnContinue">📜 繼續</button>
             </div>
         </div>
 
@@ -140,14 +143,14 @@
         </div>
 
         <div class="overlay" id="shop">
-            <h2 id="shopTitle">🛒 Shop</h2>
+            <h2 id="shopTitle">🛒 雜貨舖</h2>
             <div style="font-size:13px" class="gold" id="shopGold"></div>
             <div class="btncol" id="shopItems" style="min-width:280px"></div>
-            <div class="btnrow"><button id="shopLeave">↩️ Leave</button></div>
+            <div class="btnrow"><button id="shopLeave">↩️ 離開</button></div>
         </div>
 
         <div class="overlay" id="menu">
-            <h2>📜 Menu</h2>
+            <h2>📜 選單</h2>
             <div id="menuBody" style="width:100%;max-width:380px"></div>
             <div class="btnrow" id="menuBtns"></div>
         </div>
@@ -155,26 +158,26 @@
         <div class="overlay" id="hu">
             <div class="big">🏺</div>
             <h2>煉妖壺 Soul Cauldron</h2>
-            <div style="font-size:12px;color:#95a5a6;max-width:340px">煉化 refines a spirit into medicine. 合成 fuses two:
-                same element → 內丹 · 相生 pair → 五行符 · 相剋 pair → 清心符</div>
+            <div style="font-size:12px;color:#95a5a6;max-width:340px">「煉化」將妖靈煉為丹藥。「合成」熔鑄兩隻妖靈：
+                同屬 → 內丹 · 相生 → 五行符 · 相剋 → 清心符</div>
             <div id="huMsg" style="font-size:13px;color:#f1c40f;min-height:18px;margin:6px"></div>
             <div class="btncol" id="huList" style="min-width:300px"></div>
-            <div class="btnrow"><button id="huLeave">↩️ Close</button></div>
+            <div class="btnrow"><button id="huLeave">↩️ 關閉</button></div>
         </div>
 
         <div class="overlay" id="dialog">
             <div id="dialogBox">
                 <div><span class="speaker" id="dSpeaker"></span></div>
                 <div id="dText"></div>
-                <div class="cont">▼ tap / press Enter</div>
+                <div class="cont">▼ 點擊繼續</div>
             </div>
         </div>
 
         <div class="overlay" id="ending">
             <div class="big">🌅</div>
-            <h2>The Blade Re-Drawn 劍光再現</h2>
+            <h2>劍光再現</h2>
             <div id="endText" style="font-size:14px;color:#bdc3c7;max-width:340px;line-height:1.6"></div>
-            <div class="btncol"><button class="primary" id="btnEndTitle">✨ Title screen</button></div>
+            <div class="btncol"><button class="primary" id="btnEndTitle">✨ 回到主選單</button></div>
         </div>
         <div id="flashFx"></div>
     </div>
@@ -184,11 +187,11 @@
         <span class="chip" id="hParty"></span>
     </div>
     <div id="controls">
-        <button id="btnMenu">📜 Menu</button>
-        <button id="btnSound">🎵 On</button>
+        <button id="btnMenu">📜 選單</button>
+        <button id="btnSound">🎵 音效：開</button>
     </div>
-    <p class="sub">Move: arrows / WASD / swipe · Weaken monsters, then 收妖 to capture · Fuse pairs in the 煉妖壺 by 五行</p>
-    <a class="back" href="index.html">← All games</a>
+    <p class="sub">方向鍵 / WASD / 滑動移動 · 先削弱妖怪再「收妖」 · 在煉妖壺中依五行合成</p>
+    <a class="back" href="index.html">← 全部遊戲</a>
 
     <script>
     'use strict';
@@ -292,13 +295,13 @@
     };
 
     const DUNGEONS = {
-        earth: { name: '神農洞 Shennong Cave', tier: 1, boss: 'tubo', crystal: 'earth', worldChar: 'A',
+        earth: { name: '神農洞', tier: 1, boss: 'tubo', crystal: 'earth', worldChar: 'A',
                  chests: { '13,1': { gold: 120 }, '1,8': { item: 'jinchuang', n: 3 } } },
-        fire: { name: '祝融火窟 Zhurong Firepit', tier: 2, boss: 'bifang', crystal: 'fire', worldChar: 'B',
+        fire: { name: '祝融火窟', tier: 2, boss: 'bifang', crystal: 'fire', worldChar: 'B',
                 chests: { '13,1': { gold: 350 }, '3,7': { item: 'juqi', n: 2 } } },
-        water: { name: '河伯水府 River Lord\'s Palace', tier: 3, boss: 'gonggong', crystal: 'water', worldChar: 'C',
+        water: { name: '河伯水府', tier: 3, boss: 'gonggong', crystal: 'water', worldChar: 'C',
                  chests: { '13,1': { gold: 700 }, '2,7': { item: 'huanhun', n: 2 } } },
-        castle: { name: '幽都之門 Gate of Youdu', tier: 4, boss: 'xuanyuan_w', crystal: null, worldChar: 'K',
+        castle: { name: '幽都之門', tier: 4, boss: 'xuanyuan_w', crystal: null, worldChar: 'K',
                   chests: { '15,1': { gold: 1500 }, '5,5': { item: 'dahuan', n: 4 }, '15,9': { item: 'juqi', n: 3 } } },
     };
 
@@ -348,44 +351,44 @@
 
     // Heroes: base + growth per level; spells learned at levels
     const HEROES = {
-        auron: { name: '雲越', e: '🤺', cls: 'Swordsman 劍客',
+        auron: { name: '雲越', e: '🤺', cls: '劍客',
                  hp: [40, 13], mp: [6, 2], atk: [10, 2.2], def: [6, 1.6], mag: [2, 0.5], spd: [6, 0.9],
                  spells: [{ lv: 6, id: 'cleave' }] },
-        lyra:  { name: '墨璃', e: '👷‍♀️', cls: 'Mohist 墨家',
+        lyra:  { name: '墨璃', e: '👷‍♀️', cls: '墨家機關師',
                  hp: [30, 9], mp: [14, 4], atk: [5, 1.2], def: [5, 1.2], mag: [9, 2.2], spd: [7, 1.0],
                  spells: [{ lv: 1, id: 'cure' }, { lv: 5, id: 'protect' }, { lv: 8, id: 'crossbow' },
                           { lv: 9, id: 'cura' }, { lv: 11, id: 'revive' }, { lv: 13, id: 'sanctus' }] },
-        zephyr:{ name: '青璇', e: '🦊', cls: 'Fox Spirit 狐仙',
+        zephyr:{ name: '青璇', e: '🦊', cls: '青丘狐仙',
                  hp: [28, 8], mp: [16, 4], atk: [5, 1.0], def: [4, 1.1], mag: [10, 2.4], spd: [8, 1.1],
                  spells: [{ lv: 1, id: 'fire' }, { lv: 1, id: 'spark' }, { lv: 5, id: 'frost' },
                           { lv: 9, id: 'fira' }, { lv: 14, id: 'meteor' }] },
     };
     const SPELLS = {
-        cleave:  { name: '橫掃千軍', mp: 6, kind: 'physAll', mult: 1.1, desc: 'hits all foes' },
-        fire:    { name: '狐火訣', mp: 4, kind: 'dmg', power: 14, elem: '火', desc: 'one foe 火' },
-        frost:   { name: '寒泉訣', mp: 6, kind: 'dmg', power: 18, elem: '水', desc: 'one foe 水' },
-        spark:   { name: '驚雷訣', mp: 7, kind: 'dmg', power: 24, elem: '木', desc: 'one foe 木(雷)' },
-        crossbow:{ name: '機關連弩', mp: 7, kind: 'dmg', power: 22, elem: '土', desc: 'one foe 土' },
-        fira:    { name: '焚天火舞', mp: 12, kind: 'dmgAll', power: 16, elem: '火', desc: 'all foes 火' },
-        meteor:  { name: '九尾天狐', mp: 22, kind: 'dmgAll', power: 42, desc: 'all foes, huge' },
-        cure:    { name: '金創術', mp: 4, kind: 'heal', power: 16, desc: 'heal + cure poison' },
-        protect: { name: '機關盾', mp: 6, kind: 'protect', desc: 'ally takes less damage' },
-        cura:    { name: '回春術', mp: 10, kind: 'heal', power: 45, desc: 'big heal + cure poison' },
-        sanctus: { name: '兼愛無疆', mp: 16, kind: 'healAll', power: 30, desc: 'heal party, cure poison' },
-        revive:  { name: '起死回生', mp: 14, kind: 'revive', desc: 'raise a fallen ally' },
+        cleave:  { name: '橫掃千軍', mp: 6, kind: 'physAll', mult: 1.1, desc: '劍氣橫掃全體敵人' },
+        fire:    { name: '狐火訣', mp: 4, kind: 'dmg', power: 14, elem: '火', desc: '單體・火' },
+        frost:   { name: '寒泉訣', mp: 6, kind: 'dmg', power: 18, elem: '水', desc: '單體・水' },
+        spark:   { name: '驚雷訣', mp: 7, kind: 'dmg', power: 24, elem: '木', desc: '單體・木（雷）' },
+        crossbow:{ name: '機關連弩', mp: 7, kind: 'dmg', power: 22, elem: '土', desc: '單體・土' },
+        fira:    { name: '焚天火舞', mp: 12, kind: 'dmgAll', power: 16, elem: '火', desc: '全體・火' },
+        meteor:  { name: '九尾天狐', mp: 22, kind: 'dmgAll', power: 42, desc: '全體・大傷害' },
+        cure:    { name: '金創術', mp: 4, kind: 'heal', power: 16, desc: '治療＋解毒' },
+        protect: { name: '機關盾', mp: 6, kind: 'protect', desc: '為隊友張開減傷機關盾' },
+        cura:    { name: '回春術', mp: 10, kind: 'heal', power: 45, desc: '大治療＋解毒' },
+        sanctus: { name: '兼愛無疆', mp: 16, kind: 'healAll', power: 30, desc: '全隊治療＋解毒' },
+        revive:  { name: '起死回生', mp: 14, kind: 'revive', desc: '使倒下的隊友復生' },
     };
     const ITEMS = {
-        jinchuang:{ name: '金創藥', e: '🧪', cost: 30, desc: '+50 HP', use: 'heal', power: 50 },
-        dahuan:   { name: '大還丹', e: '⚗️', cost: 120, desc: '+150 HP', use: 'heal', power: 150 },
-        juqi:     { name: '聚氣散', e: '💧', cost: 150, desc: '+30 MP', use: 'mp', power: 30 },
-        huanhun:  { name: '還魂香', e: '🕯️', cost: 300, desc: 'revive ally', use: 'revive' },
-        neidan:   { name: '內丹', e: '🔮', cost: 0, desc: 'permanent +12 max HP', use: 'permHp', power: 12, fuseOnly: true },
-        qingxin:  { name: '清心符', e: '📜', cost: 0, desc: 'heal party 60, cure all ills', use: 'healAllCure', power: 60, fuseOnly: true },
-        fu_jin:   { name: '五行符・金', e: '🀄', cost: 0, desc: 'battle: 金 blast, all foes', use: 'atkAll', elem: '金', power: 55, fuseOnly: true },
-        fu_mu:    { name: '五行符・木', e: '🎍', cost: 0, desc: 'battle: 木 blast, all foes', use: 'atkAll', elem: '木', power: 55, fuseOnly: true },
-        fu_shui:  { name: '五行符・水', e: '🌊', cost: 0, desc: 'battle: 水 blast, all foes', use: 'atkAll', elem: '水', power: 55, fuseOnly: true },
-        fu_huo:   { name: '五行符・火', e: '🔥', cost: 0, desc: 'battle: 火 blast, all foes', use: 'atkAll', elem: '火', power: 55, fuseOnly: true },
-        fu_tu:    { name: '五行符・土', e: '⛰️', cost: 0, desc: 'battle: 土 blast, all foes', use: 'atkAll', elem: '土', power: 55, fuseOnly: true },
+        jinchuang:{ name: '金創藥', e: '🧪', cost: 30, desc: '氣血 +50', use: 'heal', power: 50 },
+        dahuan:   { name: '大還丹', e: '⚗️', cost: 120, desc: '氣血 +150', use: 'heal', power: 150 },
+        juqi:     { name: '聚氣散', e: '💧', cost: 150, desc: '真氣 +30', use: 'mp', power: 30 },
+        huanhun:  { name: '還魂香', e: '🕯️', cost: 300, desc: '復活隊友', use: 'revive' },
+        neidan:   { name: '內丹', e: '🔮', cost: 0, desc: '永久提升氣血上限 12', use: 'permHp', power: 12, fuseOnly: true },
+        qingxin:  { name: '清心符', e: '📜', cost: 0, desc: '全隊回復60並解除異常', use: 'healAllCure', power: 60, fuseOnly: true },
+        fu_jin:   { name: '五行符・金', e: '🀄', cost: 0, desc: '戰鬥用：金之靈擊・全體', use: 'atkAll', elem: '金', power: 55, fuseOnly: true },
+        fu_mu:    { name: '五行符・木', e: '🎍', cost: 0, desc: '戰鬥用：木之靈擊・全體', use: 'atkAll', elem: '木', power: 55, fuseOnly: true },
+        fu_shui:  { name: '五行符・水', e: '🌊', cost: 0, desc: '戰鬥用：水之靈擊・全體', use: 'atkAll', elem: '水', power: 55, fuseOnly: true },
+        fu_huo:   { name: '五行符・火', e: '🔥', cost: 0, desc: '戰鬥用：火之靈擊・全體', use: 'atkAll', elem: '火', power: 55, fuseOnly: true },
+        fu_tu:    { name: '五行符・土', e: '⛰️', cost: 0, desc: '戰鬥用：土之靈擊・全體', use: 'atkAll', elem: '土', power: 55, fuseOnly: true },
     };
     const ELEM_FU = { '金': 'fu_jin', '木': 'fu_mu', '水': 'fu_shui', '火': 'fu_huo', '土': 'fu_tu' };
     const SHOP_ITEMS = ['jinchuang', 'dahuan', 'juqi', 'huanhun'];
@@ -402,12 +405,12 @@
                     { name: '鎖子甲', def: 12, cost: 320 }, { name: '軟蝟甲', def: 20, cost: 1000 }];
 
     const TOWNS = {
-        1: { name: '桃源村 Taoyuan', emoji: '🏮', inn: 15, tier: 1,
-             flavor: 'A peach-blossom village at the edge of the plains.' },
-        2: { name: '青丘寨 Qingqiu', emoji: '🎋', inn: 40, tier: 2,
-             flavor: 'A fox-spirit stockade woven into the bamboo sea.' },
-        3: { name: '望川鎮 Wangchuan', emoji: '🏜️', inn: 80, tier: 3,
-             flavor: 'A river-trade town scoured by the wasteland wind.' },
+        1: { name: '桃源村', emoji: '🏮', inn: 15, tier: 1,
+             flavor: '平原邊陲、桃花掩映的小村。' },
+        2: { name: '青丘寨', emoji: '🎋', inn: 40, tier: 2,
+             flavor: '竹海深處、狐仙聚居的山寨。' },
+        3: { name: '望川鎮', emoji: '🏜️', inn: 80, tier: 3,
+             flavor: '荒漠風沙侵蝕的河運商鎮。' },
     };
 
     // =========================================================================
@@ -540,16 +543,37 @@
         o.connect(g).connect(dest || master);
         o.start(t); o.stop(t + dur + 0.02);
     }
+    // 古箏-style pluck: sharp attack, fast decay, subtle upward 滑音 slide, octave shimmer
     function leadNote(m, t, dur) {
         if (!audio) return;
-        for (const det of [-5, 5]) { // two detuned oscillators = chorus width
+        t += (Math.random() - 0.5) * 0.012; // humanize
+        const f = fq(m);
+        const voices = [['triangle', 1, 0.052], ['sine', 2, 0.016]];
+        for (const [type, mult, g0] of voices) {
             const o = audio.createOscillator(), g = audio.createGain();
-            o.type = 'square'; o.frequency.value = fq(m); o.detune.value = det;
-            g.gain.setValueAtTime(0.02, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+            o.type = type;
+            o.frequency.setValueAtTime(f * mult * 0.975, t);
+            o.frequency.exponentialRampToValueAtTime(f * mult, t + 0.035);
+            g.gain.setValueAtTime(g0 * (0.9 + Math.random() * 0.2), t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 1.7, 0.18));
             o.connect(g).connect(leadBus);
-            o.start(t); o.stop(t + dur + 0.02);
+            o.start(t); o.stop(t + dur * 1.8 + 0.06);
         }
+    }
+    // 笛-style flute: soft attack sine with vibrato, doubles phrase heads on the second pass
+    function flute(m, t, dur) {
+        if (!audio) return;
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = fq(m);
+        const lfo = audio.createOscillator(), lg = audio.createGain();
+        lfo.frequency.value = 5.2; lg.gain.value = 9;
+        lfo.connect(lg); lg.connect(o.detune);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.026, t + 0.07);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(leadBus);
+        o.start(t); lfo.start(t);
+        o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
     }
     function drum(ch, t) {
         if (!audio) return;
@@ -562,16 +586,16 @@
             g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
             o.connect(g).connect(master);
             o.start(t); o.stop(t + 0.14);
-        } else if (ch === 'h') {
+        } else if (ch === 'h') { // 梆子 woodblock: resonant band-passed tick
             const src = audio.createBufferSource();
             src.buffer = noiseBuf;
-            const hp = audio.createBiquadFilter();
-            hp.type = 'highpass'; hp.frequency.value = 6500;
+            const bp = audio.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 7;
             const g = audio.createGain();
-            g.gain.setValueAtTime(0.05, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
-            src.connect(hp); hp.connect(g); g.connect(master);
-            src.start(t); src.stop(t + 0.06);
+            g.gain.setValueAtTime(0.11, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+            src.connect(bp); bp.connect(g); g.connect(master);
+            src.start(t); src.stop(t + 0.07);
         }
     }
     function startTrack(name) {
@@ -586,8 +610,10 @@
             if (!T) return;
             while (seqTime < audio.currentTime + 0.28) {
                 const bar = Math.floor(seqStep / 8) % 8, pos = seqStep % 8;
+                const pass = Math.floor(seqStep / 64) % 2;
                 const n = T.lead[bar][pos];
                 if (n) leadNote(n, seqTime, T.step * 1.1);
+                if (n && pass === 1 && pos === 0) flute(n + 12, seqTime, T.step * 7);
                 if (pos % T.bassEvery === 0) tone(fq(T.bass[bar]), seqTime, T.step * T.bassEvery * 0.9, 'triangle', 0.065);
                 if (pos % T.arpEvery === 0) {
                     const chord = T.chords[bar];
@@ -620,9 +646,9 @@
         soundOn = !soundOn;
         localStorage.setItem('xySound', soundOn ? '1' : '0');
         master.gain.value = soundOn ? 1 : 0;
-        document.getElementById('btnSound').textContent = soundOn ? '🎵 On' : '🔇 Off';
+        document.getElementById('btnSound').textContent = soundOn ? '🎵 音效：開' : '🔇 音效：關';
     });
-    document.getElementById('btnSound').textContent = soundOn ? '🎵 On' : '🔇 Off';
+    document.getElementById('btnSound').textContent = soundOn ? '🎵 音效：開' : '🔇 音效：關';
     for (const ev of ['keydown', 'pointerdown', 'touchstart']) document.addEventListener(ev, ensureAudio);
 
     // =========================================================================
@@ -632,9 +658,10 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const $ = id => document.getElementById(id);
-    const TCOLORS = { '.': '#3a6b35', f: '#2c5428', '^': '#6b6255', '~': '#1f5b8c', s: '#c9a35f',
-                      '#': '#22303f', l: '#8e2f24', w: '#1f5b8c', S: '#3a6b35', T: '#3a2d1e', B: '#241a2e',
-                      1: '#3a6b35', 2: '#2c5428', 3: '#c9a35f', A: '#3a6b35', K: '#6b6255', C: '#c9a35f' };
+    const TCOLORS = { '.': '#4f7249', f: '#33582f', '^': '#7a7469', '~': '#2e5d7d', s: '#c9b077',
+                      '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#241a2e',
+                      1: '#4f7249', 2: '#33582f', 3: '#c9b077', A: '#4f7249', K: '#7a7469', C: '#c9b077',
+                      d: '#8d6e4b' };
     const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑',
                      l: '🔥', w: '🌊', T: '📦', '~': null };
 
@@ -645,12 +672,74 @@
     }
     function curPos() { return mode === 'dungeon' ? S.dpos : S; }
 
-    function draw() {
+    // deterministic per-tile hash for texture details
+    function th(x, y, n) {
+        let h = (x * 374761393 + y * 668265263) ^ (n * 1274126177);
+        h = (h ^ (h >> 13)) * 1103515245;
+        return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+    }
+    // ambient particles per area
+    let particles = [], pKind = null;
+    function particleKind() {
+        if (mode === 'dungeon') return { earth: 'dust', fire: 'ember', water: 'bubble', castle: 'mist' }[dungeonId] || 'dust';
+        return 'petal';
+    }
+    function initParticles(kind) {
+        pKind = kind;
+        const n = kind === 'mist' ? 7 : 16;
+        particles = Array.from({ length: n }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            s: Math.random() * 2 + (kind === 'mist' ? 26 : 1.5),
+            ph: Math.random() * Math.PI * 2,
+            v: Math.random() * 0.4 + 0.2,
+        }));
+    }
+    function drawParticles(t) {
+        const kind = particleKind();
+        if (kind !== pKind) initParticles(kind);
+        for (const p of particles) {
+            if (kind === 'petal') {
+                p.y += p.v * 0.6; p.x += Math.sin(t / 900 + p.ph) * 0.5 - 0.15;
+                ctx.fillStyle = 'rgba(245,183,201,0.7)';
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(t / 700 + p.ph);
+                ctx.fillRect(-p.s, -p.s * 0.5, p.s * 2, p.s);
+                ctx.restore();
+            } else if (kind === 'ember') {
+                p.y -= p.v; p.x += Math.sin(t / 300 + p.ph) * 0.4;
+                ctx.fillStyle = 'rgba(255,156,74,' + (0.4 + 0.4 * Math.sin(t / 150 + p.ph)) + ')';
+                ctx.fillRect(p.x, p.y, p.s, p.s);
+            } else if (kind === 'bubble') {
+                p.y -= p.v * 0.5; p.x += Math.sin(t / 800 + p.ph) * 0.3;
+                ctx.strokeStyle = 'rgba(180,220,255,0.4)';
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.stroke();
+            } else if (kind === 'dust') {
+                p.x += p.v * 0.3; p.y += Math.sin(t / 1100 + p.ph) * 0.2;
+                ctx.fillStyle = 'rgba(190,170,140,0.3)';
+                ctx.fillRect(p.x, p.y, 1.6, 1.6);
+            } else { // mist
+                p.x += p.v * 0.25;
+                const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.s);
+                g.addColorStop(0, 'rgba(160,170,195,0.10)');
+                g.addColorStop(1, 'rgba(160,170,195,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+            }
+            if (p.y > canvas.height + 10) { p.y = -8; p.x = Math.random() * canvas.width; }
+            if (p.y < -10) { p.y = canvas.height + 8; p.x = Math.random() * canvas.width; }
+            if (p.x > canvas.width + 12) p.x = -10;
+            if (p.x < -12) p.x = canvas.width + 10;
+        }
+    }
+    let lastHud = 0;
+    function draw(t) {
         if (!S || (mode !== 'world' && mode !== 'dungeon')) return;
+        t = t || performance.now();
         const p = curPos();
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const camX = p.x - Math.floor(VW / 2), camY = p.y - Math.floor(VH / 2);
-        ctx.font = '20px serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         for (let vy = 0; vy < VH; vy++) {
@@ -659,24 +748,87 @@
                 let ch = mapAt(x, y);
                 if (mode === 'dungeon' && ch === 'T' && S.flags.chests[dungeonId + ':' + x + ',' + y]) ch = '.';
                 if (mode === 'dungeon' && ch === 'B' && bossDown(dungeonId)) ch = '.';
-                ctx.fillStyle = TCOLORS[ch] || '#3a6b35';
-                ctx.fillRect(vx * TILE, vy * TILE, TILE, TILE);
-                if (ch === '~' || ch === 'w') { // water shimmer
-                    ctx.fillStyle = 'rgba(255,255,255,0.06)';
-                    if ((x + y) % 3 === 0) ctx.fillRect(vx * TILE + 6, vy * TILE + 14, 12, 2);
+                const px0 = vx * TILE, py0 = vy * TILE;
+                ctx.fillStyle = TCOLORS[ch] || '#4f7249';
+                ctx.fillRect(px0, py0, TILE, TILE);
+
+                // -------- textured details --------
+                if (ch === '.' || ch === 'S' || '123AC'.includes(ch)) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
+                    }
+                    if (mode === 'world' && ch === '.' && th(x, y, 9) < 0.06) {
+                        ctx.fillStyle = th(x, y, 11) < 0.5 ? '#f5b7c9' : '#f0e6c8';
+                        ctx.fillRect(px0 + th(x, y, 10) * (TILE - 6) + 3, py0 + th(x, y, 12) * (TILE - 6) + 3, 3, 3);
+                    }
+                } else if (ch === 's' || ch === '3') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
+                    }
+                } else if (ch === 'f' || ch === '2') {
+                    ctx.fillStyle = 'rgba(20,40,18,0.5)';
+                    ctx.fillRect(px0 + 6 + th(x, y, 1) * 6, py0 + 4, 2, TILE - 8);
+                    ctx.fillRect(px0 + 20 + th(x, y, 2) * 6, py0 + 6, 2, TILE - 10);
+                } else if (ch === '^') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.09)';
+                    ctx.beginPath();
+                    ctx.moveTo(px0, py0 + TILE);
+                    ctx.lineTo(px0 + TILE * 0.55, py0 + 4);
+                    ctx.lineTo(px0 + TILE, py0 + TILE);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+                    ctx.fillRect(px0, py0 + TILE * 0.72, TILE, TILE * 0.28);
+                } else if (ch === '~' || ch === 'w') {
+                    for (let k = 0; k < 2; k++) {
+                        const ph = ((t / 1400 + th(x, y, k) + k * 0.5) % 1);
+                        ctx.fillStyle = 'rgba(255,255,255,' + (0.10 * Math.sin(ph * Math.PI)) + ')';
+                        ctx.fillRect(px0 + 3, py0 + ph * (TILE - 4) + 2, TILE - 6, 2);
+                    }
+                } else if (ch === 'l') {
+                    ctx.fillStyle = 'rgba(255,150,40,' + (0.15 + 0.12 * Math.sin(t / 260 + x * 2 + y * 3)) + ')';
+                    ctx.fillRect(px0, py0, TILE, TILE);
+                } else if (ch === '#') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                    ctx.fillRect(px0 + 1, py0 + 1, TILE - 2, 2);
+                    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                    ctx.fillRect(px0 + 1, py0 + TILE - 3, TILE - 2, 2);
                 }
+
+                ctx.font = '20px serif';
                 const em = TEMOJI[ch];
-                if (em) ctx.fillText(em, vx * TILE + TILE / 2, vy * TILE + TILE / 2 + 1);
-                if (ch === 'B' && mode === 'dungeon') ctx.fillText(BOSSES[DUNGEONS[dungeonId].boss].e, vx * TILE + TILE / 2, vy * TILE + TILE / 2);
-                if (ch === 'S' && mode === 'dungeon') ctx.fillText('🚪', vx * TILE + TILE / 2, vy * TILE + TILE / 2);
+                if (em) ctx.fillText(em, px0 + TILE / 2, py0 + TILE / 2 + 1);
+                if (ch === 'B' && mode === 'dungeon') ctx.fillText(BOSSES[DUNGEONS[dungeonId].boss].e, px0 + TILE / 2, py0 + TILE / 2);
+                if (ch === 'S' && mode === 'dungeon') ctx.fillText('🚪', px0 + TILE / 2, py0 + TILE / 2);
             }
         }
-        // player
-        const px = (p.x - camX) * TILE + TILE / 2, py = (p.y - camY) * TILE + TILE / 2;
+        drawParticles(t);
+        // player: soft shadow + gentle bob
+        const px = (p.x - camX) * TILE + TILE / 2;
+        const py = (p.y - camY) * TILE + TILE / 2 + Math.sin(t / 320) * 1.6;
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(px, (p.y - camY) * TILE + TILE - 4, 9, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.font = '22px serif';
         ctx.fillText('🤺', px, py);
-        updateHud();
+        // ink-wash vignette
+        const vg = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.height * 0.42,
+                                            canvas.width / 2, canvas.height / 2, canvas.height * 0.85);
+        vg.addColorStop(0, 'rgba(8,10,18,0)');
+        vg.addColorStop(1, 'rgba(8,10,18,0.32)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (t - lastHud > 250) { lastHud = t; updateHud(); }
     }
+    function renderLoop(t) {
+        if (S && (mode === 'world' || mode === 'dungeon')) draw(t);
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
     function bossDown(id) {
         return id === 'castle' ? S.flags.malachorDown : !!S.flags.crystals[DUNGEONS[id].crystal];
     }
@@ -745,7 +897,7 @@
             maybeEncounter(regionTier(x, y), ch === 'f' ? 0.16 : ch === 's' ? 0.12 : 0.1);
         } else {
             const D = DUNGEONS[dungeonId];
-            if (ch === 'S' && stepCount > 2) return exitDungeon('You step back into daylight.');
+            if (ch === 'S' && stepCount > 2) return exitDungeon('你回到了日光之下。');
             if (ch === 'T') return openChest(x, y);
             if (ch === 'B' && !bossDown(dungeonId)) {
                 const intro = BOSS_INTROS[D.boss];
@@ -776,14 +928,14 @@
             const c = S.flags.crystals;
             if (!(c.earth && c.fire && c.water)) {
                 return say([
-                    ['', 'A wall of starless dark seals the 幽都之門 — not a barrier, but an <i>absence</i>, like the night the sword died.'],
-                    ['', 'Only the light of all three 劍魄 could part it.'],
+                    ['', '一堵無星的黑暗封住幽都之門——那不是屏障，而是一種<i>缺失</i>，如同劍死去的那一夜。'],
+                    ['', '唯有三片劍魄之光，能將其劈開。'],
                 ]);
             }
-            if (S.flags.malachorDown) return say([['', 'The gate lies silent. Its warden keeps a different watch now.']]);
+            if (S.flags.malachorDown) return say([['', '大門沉寂無聲。它的守望者，已換了一種方式守夜。']]);
         }
         if (bossDown(id) && id !== 'castle') {
-            return say([['', D.name + ' is quiet now. Its 劍魄 hums in your pack.']]);
+            return say([['', D.name + '已歸於寂靜。它的劍魄，正在你的行囊中低鳴。']]);
         }
         dungeonId = id;
         mode = 'dungeon';
@@ -793,7 +945,7 @@
         for (let yy = 0; yy < m.length; yy++)
             for (let xx = 0; xx < m[0].length; xx++)
                 if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
-        say([['', 'You enter <b>' + D.name + '</b>…' + (D.boss === 'xuanyuan_w' ? ' A cold, familiar voice sighs in the dark.' : '')]]);
+        say([['', '你踏入<b>' + D.name + '</b>……' + (D.boss === 'xuanyuan_w' ? '黑暗中，傳來一聲冰冷而熟悉的嘆息。' : '')]]);
         startTrack('dungeon');
         draw();
     }
@@ -813,10 +965,10 @@
         sfx('chest');
         if (loot.gold) {
             S.gold += loot.gold;
-            say([['', 'You found a chest: <b class="gold">' + loot.gold + ' gold</b>! 💰']]);
+            say([['', '發現寶箱：<b class="gold">白銀 ' + loot.gold + ' 兩</b>！💰']]);
         } else {
             S.inv[loot.item] = (S.inv[loot.item] || 0) + loot.n;
-            say([['', 'You found a chest: <b>' + ITEMS[loot.item].name + ' ×' + loot.n + '</b>! ' + ITEMS[loot.item].e]]);
+            say([['', '發現寶箱：<b>' + ITEMS[loot.item].name + ' ×' + loot.n + '</b>！' + ITEMS[loot.item].e]]);
         }
         save();
     }
@@ -826,55 +978,55 @@
     // =========================================================================
     const BOSS_INTROS = {
         tubo: [
-            ['???', '深處來者何人。 THE WARDEN TOOK THE LIGHT. 土伯 KEEPS THE DARK.'],
-            ['墨璃', '雲越 — those bindings on its arms. Sect knotwork. This spirit was a <i>guardian of your shrine</i>, still holding its last order.'],
-            ['雲越', 'Then its last order ends here.'],
+            ['？？？', '深處來者，何人。守劍人取走了光。土伯，看守黑暗。'],
+            ['墨璃', '雲越——它臂上的縛紋，是劍派的結法。這守護靈曾是你們祠堂的護法，至今仍守著最後一道命令。'],
+            ['雲越', '那就讓這道命令，到此為止。'],
         ],
         bifang: [
-            ['畢方', 'More sparks come climbing. The light he swallowed burns him, little sparks… as it burns me. Quench one flame and the other only grows.'],
-            ['青璇', 'A 畢方. They only nest where calamity is about to hatch. Lovely.'],
-            ['墨璃', '"The light he swallowed." Firebird — WHO swallowed the sword\'s light?'],
-            ['畢方', 'The one who wept while he did it. 燒吧！'],
+            ['畢方', '又有火星子爬上來了。他吞下的光灼燒著他，小火星……一如灼燒著我。熄了一團火，另一團只會燒得更旺。'],
+            ['青璇', '畢方。此鳥現世，必有大災將至。真教人「歡喜」。'],
+            ['墨璃', '「他吞下的光」——火鳥！究竟是誰，吞下了劍光？！'],
+            ['畢方', '那個一邊流淚、一邊動手的人。燒吧！'],
         ],
         gonggong: [
-            ['共工', 'Children of the dry land. He drowned the blade\'s light in his own heart to hide you from the 噬魂 — and you would raise it back into the sky?'],
-            ['雲越', 'The 噬魂. The golem, the firebird, now you. Say his name.'],
-            ['共工', '你早已知道，劍客。 You mourned him. Come — the river does not move aside.'],
+            ['共工', '旱地的孩子們。他把劍光溺入自己心中，只為藏起你們、避開噬魂之目——你們卻要把光重新舉上天空？'],
+            ['雲越', '噬魂。石靈、火鳥，如今是你。說出他的名字。'],
+            ['共工', '你早已知道，劍客。你為他燒過空棺。來吧——大河，從不讓路。'],
         ],
         xuanyuan_w: [
-            ['玄淵', '雲越。 The wine-buyer. Fate does love its small jokes — the sect\'s worst student, carrying the sect\'s greatest treasure.'],
-            ['雲越', 'You shattered the 軒轅劍. You let sixty of us die defending shards you\'d already killed.'],
-            ['玄淵', 'I gave them quick deaths. What stirs beneath 幽都 — 蚩尤\'s remnant, the 噬魂 — offers none. It has hunted the blade\'s light since the Yellow Emperor first drew it at 涿鹿. I felt it wake the night it found us again.'],
-            ['玄淵', 'So I unmade the blade and swallowed its spirit. A world without the sword\'s light is a world <b>unseen</b>. Dark. Crawling. <i>Alive.</i>'],
-            ['墨璃', '前輩… look at your hands. The light is eating you hollow.'],
-            ['玄淵', 'Yes. And I would burn this way for ten thousand years, gladly. Turn back, children. Do not raise a beacon over a world that survives by being forgotten.'],
-            ['雲越', 'A world of graves and monsters isn\'t saved, 玄淵 — it\'s dying slowly, alone, in the dark. My master taught that a blade is only as dark as the hand that holds it. Three hands hold this one now.'],
-            ['玄淵', 'Three hands… you sound exactly like him. 拔劍吧，雲越。 Prove it.'],
+            ['玄淵', '雲越。買酒的那個。天意果然愛開小玩笑——劍派最不成器的弟子，捧著劍派最重的寶物。'],
+            ['雲越', '是你毀了軒轅劍。是你讓六十位同門，為早已死去的殘片送命。'],
+            ['玄淵', '我給了他們痛快。而幽都之下甦醒的東西——蚩尤殘魂、噬魂——不會給。自黃帝於涿鹿拔劍那日起，它便追逐著劍光。它再度尋到我們那夜，我聽見它，醒了。'],
+            ['玄淵', '所以我親手毀劍，吞其劍靈。沒有劍光的世界，是一個<b>不被看見</b>的世界。黑暗、腐爛，卻——<i>活著</i>。'],
+            ['墨璃', '前輩……看看你的手。那光，正把你燒成空殼。'],
+            ['玄淵', '是。哪怕燒上一萬年，我也甘願。回頭吧，孩子們。不要在一個靠遺忘才得以倖存的世界上空，點起烽火。'],
+            ['雲越', '遍地墳塚與妖物的世界，不叫倖存，玄淵——那只是在黑暗裡，慢慢地死。家師說過：劍無黑暗，黑暗只在握劍的手。如今握著這柄劍的，是三隻手。'],
+            ['玄淵', '三隻手……你說話的樣子，和他一模一樣。拔劍吧，雲越。證明給我看。'],
         ],
     };
     const CRYSTAL_VISIONS = {
         earth: [
-            ['', 'The guardian crumbles — and the first 劍魄 flares awake beneath your hands.'],
-            ['', '<i>A vision floods in: a robed swordsman kneels in the sect shrine before the blazing 軒轅劍. He is whispering an apology. He draws its light into his chest like a man breathing in smoke — and the blade goes grey, and cracks.</i>'],
-            ['墨璃', 'The sword wasn\'t broken by an enemy. It was <b>unmade from inside the shrine</b>. Those robes bore your sect\'s sigil, 雲越.'],
-            ['雲越', 'Steady. Two shards left. The steel will tell us the rest.'],
-            ['', '✨ You obtained the first <b>劍魄</b>! ⚔️'],
+            ['', '守護靈崩解——第一片劍魄在你掌中甦醒。'],
+            ['', '<i>幻象湧入腦海：一名披袍的劍客跪在祠堂中，面對灼灼發光的軒轅劍。他在低聲致歉。他將劍光吸入胸膛，如同吞嚥濃煙——劍身轉為死灰，寸寸龜裂。</i>'],
+            ['墨璃', '軒轅劍不是被外敵所毀。它是<b>在祠堂之內，被人親手解開的</b>。雲越——那袍上，繡著你們劍派的山紋。'],
+            ['雲越', '……穩住。還剩兩片。劍會告訴我們剩下的事。'],
+            ['', '✨ 取得第一片<b>劍魄</b>！⚔️'],
         ],
         fire: [
-            ['', 'The firebird gutters out — and the second 劍魄 reignites, warm and steady.'],
-            ['', '<i>Another vision: the same robed figure, younger, in the sect courtyard — correcting a small boy\'s grip on a wooden sword, so patiently, while the other disciples laugh.</i>'],
-            ['雲越', '…That\'s me. That small idiot is <b>me</b>, and that is Grand Elder 玄淵. My first teacher. We burned an empty coffin for him!'],
-            ['墨璃', 'Then the man we hunt is the man you mourned. 玄淵 broke the sword. 玄淵 broke the world.'],
-            ['青璇', 'A man doesn\'t burn his life\'s work without a reason, swordling. I want to know what frightened <i>him</i>.'],
-            ['', '✨ You obtained the second <b>劍魄</b>! ⚔️'],
+            ['', '火鳥燃盡熄滅——第二片劍魄重新亮起，溫潤而安定。'],
+            ['', '<i>又一段幻象：同一個披袍的身影，年輕了許多，站在演武場上——他耐心地扶正一個小男孩握木劍的手，任由其他弟子在旁笑鬧。</i>'],
+            ['雲越', '……那是我。那個笨小子是<b>我</b>，而那位是玄淵師公。我的啟蒙恩師。我們為他燒過空棺！'],
+            ['墨璃', '那麼，我們追殺的人，正是你們哀悼過的人。毀劍的是玄淵。毀掉這個世界的，也是玄淵。'],
+            ['青璇', '沒有人會無緣無故燒掉自己一生的心血，小劍客。我倒想知道——是什麼東西，嚇住了<i>他</i>。'],
+            ['', '✨ 取得第二片<b>劍魄</b>！⚔️'],
         ],
         water: [
-            ['', 'The river lord dissolves into spray — and the last 劍魄, the oldest, opens like an eye.'],
-            ['', '<i>It shows you what 玄淵 saw: beneath 幽都, in the dark the Yellow Emperor sealed, a hunger with a thousand pale eyes — 蚩尤\'s remnant, the 噬魂 — turning slowly toward every glint of the sword\'s light.</i>'],
-            ['青璇', 'So he hid you. He swallowed the light and made the world invisible. He broke the sword to <i>save</i> what it guarded.'],
-            ['墨璃', 'And it\'s killing him. Alone, for a year, holding a divine blade\'s spirit inside a human heart…'],
-            ['雲越', 'Sixty of my sect are still dead, 墨璃. But — maybe both things are true. We end this at the 幽都之門. All of it.'],
-            ['', '✨ You obtained the third <b>劍魄</b>! ⚔️'],
+            ['', '河伯化作漫天水霧消散——最後一片、也是最古老的一片劍魄，如眼睛般睜開。'],
+            ['', '<i>它讓你看見玄淵當年所見：幽都之下、黃帝封印的至暗深處，一頭生著千隻蒼白眼睛的飢餓之物——蚩尤殘魂、噬魂——正緩緩轉向每一絲劍光的微芒。</i>'],
+            ['青璇', '所以他藏起了你們。他吞下劍光，讓整個世界隱形。他毀掉軒轅劍，是為了<i>保住</i>劍所守護的一切。'],
+            ['墨璃', '而那光正在殺死他。整整一年，孤身一人，把神劍之靈鎖在一顆凡人的心裡……'],
+            ['雲越', '我的六十位同門，依然死了，墨璃。但——也許兩件事都是真的。我們去幽都之門，做個了結。所有的了結。'],
+            ['', '✨ 取得第三片<b>劍魄</b>！⚔️'],
         ],
     };
 
@@ -899,10 +1051,10 @@
             b.addEventListener('click', fn);
             box.appendChild(b);
         };
-        add('🛏️ Inn — rest & save (' + T.inn + 'g)', () => innRest(T));
-        add('🛒 Shop', () => openShop(T.tier));
-        add('💬 Talk to townsfolk', () => townTalk(id));
-        add('🚪 Leave town', leaveTown, 'primary');
+        add('🛏️ 客棧——休息並存檔（' + T.inn + ' 兩）', () => innRest(T));
+        add('🛒 商店', () => openShop(T.tier));
+        add('💬 與村民交談', () => townTalk(id));
+        add('🚪 離開村子', leaveTown, 'primary');
         $('town').classList.add('open');
     }
     function leaveTown() {
@@ -912,7 +1064,7 @@
         draw();
     }
     function innRest(T) {
-        if (S.gold < T.inn) return say([['店家', '客官，沒錢沒床。 No coin, no bed, friend.']]);
+        if (S.gold < T.inn) return say([['店家', '客官，沒錢沒床。']]);
         S.gold -= T.inn;
         S.party.forEach(fullHeal);
         sfx('heal');
@@ -922,14 +1074,14 @@
             S.flags.dream = true;
             save();
             say([
-                ['', '<i>That night, you dream of the sect shrine — roofless now, open to a starless sky.</i>'],
-                ['???', '…two shards of my heart hum in your pack, wine-buyer. Did you think I would not hear them calling?'],
-                ['???', 'Every step you take toward me, the blade grows brighter. Every step, IT swims closer through the dark beneath 幽都. Hurry, then. One of us should get what he wants.'],
-                ['', '<i>You wake with frost on your blanket — in a warm room. (Party restored — game saved.)</i>'],
+                ['', '<i>當夜，你夢見師門祠堂——屋頂已失，頭上是無星的天。</i>'],
+                ['？？？', '……我心頭的兩片碎片，正在你行囊裡嗡鳴，買酒的。你以為，我聽不見它們喚我嗎？'],
+                ['？？？', '你們每走近一步，劍光便亮一分。每亮一分，幽都之下的那東西，便游近一寸。快些來吧。你我之中，總該有一個能如願。'],
+                ['', '<i>你在溫暖的房裡醒來，被褥上卻結著霜。（隊伍已恢復——進度已存檔）</i>'],
             ]);
         } else {
             save();
-            say([['店家', '客官安歇。 Rest well, hero. <i>(Party fully restored — game saved.)</i>']]);
+            say([['店家', '客官安歇。<i>（隊伍已完全恢復——進度已存檔）</i>']]);
         }
         updateHud();
     }
@@ -942,22 +1094,22 @@
                 fullHeal(S.party[S.party.length - 1]);
                 save();
                 return say([
-                    ['村長', '雲越。 The last of the sword sect. You have your master\'s stubborn jaw.'],
-                    ['村長', 'A 劍魄 sleeps in 神農洞 to the east — but the cave\'s guardian spirit has gone… wrong. It kills anything that approaches the shard.'],
-                    ['墨璃', 'Then you\'ll need me. 墨璃, of the 墨家. My mechanisms mend flesh and turn blades — and Mohists do not stand aside while the world burns.'],
-                    ['墨璃', '兼愛，非攻。 Universal love; no aggression. But your Grand Elder 玄淵 once told my master that some things must be broken to be kept. I\'ve wondered about that sentence for a year.'],
-                    ['雲越', '…玄淵. There\'s a name I buried with an empty coffin. Fine, 墨家. Stay behind me.'],
-                    ['', '<b class="good">墨璃 joined the party!</b> 👷‍♀️'],
+                    ['村長', '雲越啊。劍派最後的傳人……你這倔強的下巴，跟你師父一個模樣。'],
+                    ['村長', '東邊神農洞中沉睡著一片劍魄。只是洞裡的守護靈……變了。任何靠近殘片的活物，都會被它殺死。'],
+                    ['墨璃', '那你需要我。墨家，墨璃——我的機關能縫合血肉，也能擋開刀劍。墨者，不會眼看天下焚而袖手。'],
+                    ['墨璃', '兼愛，非攻。不過……你們的玄淵長老，曾對家師說過一句話：「有些東西，必先毀之，方能存之。」這句話，我想了一整年。'],
+                    ['雲越', '……玄淵。這名字，我早已隨空棺埋了。罷了，墨家的，跟緊我。'],
+                    ['', '<b class="good">墨璃加入了隊伍！</b> 👷‍♀️'],
                 ]);
             }
-            if (!c.earth) return say([['村長', '神農洞 lies east across the plains. Whatever waits at its heart was not born there — it was <i>stationed</i> there. 保重。']]);
+            if (!c.earth) return say([['村長', '神農洞在平原以東。洞中之物並非生於彼處——而是被<i>安置</i>在那裡的。保重。']]);
             if (!c.fire) return say([
-                ['村長', 'One shard sings again, and the fields already breathe easier. But your vision, child… a swordsman of the sect, <i>unmaking</i> the blade?'],
-                ['墨璃', 'The robes bore the sect\'s mountain sigil, elder. I know what we saw.'],
-                ['村長', 'Then go northwest, through the bamboo sea to 青丘寨. The fox spirits watched that night from their hills. Fire remembers faces.'],
+                ['村長', '一片殘魄重鳴，田野已見生機。只是你們說的幻象，教老朽心驚……劍派中人，親手<i>解劍</i>？'],
+                ['墨璃', '袍上繡的是劍派山紋，村長。我們親眼所見。'],
+                ['村長', '那就往西北去吧，穿過竹海，到青丘寨。那一夜，狐仙們在山上看著。火，是記得人臉的。'],
             ]);
-            if (!c.water) return say([['村長', 'Two shards. The traders from 望川鎮 say the river lord\'s palace rose from the wasteland sands, dripping. Finish it, children.']]);
-            return say([['村長', 'So it\'s true. 玄淵 lives, the 噬魂 is real, and both wait at the 幽都之門 in the northern pass. Whatever he was to your sect, 雲越 — do not hesitate. He won\'t.']]);
+            if (!c.water) return say([['村長', '兩片劍魄了。望川鎮的商旅說，河伯的水府從荒漠沙中升起，還在滴著水。去做個了斷吧，孩子們。']]);
+            return say([['村長', '果真如此。玄淵未死，噬魂真有其物，兩者都在北方隘口的幽都之門等著。雲越——無論他曾是你的什麼人，切莫遲疑。他，不會遲疑。']]);
         }
         if (id === 2) {
             if (!S.flags.recruited.zephyr) {
@@ -966,24 +1118,24 @@
                 fullHeal(S.party[S.party.length - 1]);
                 save();
                 return say([
-                    ['寨民', 'Strangers! The fire mountain 祝融火窟 has burned for a year — ash where bamboo grew. And the fox lady… she won\'t stop staring at it.'],
-                    ['青璇', 'Because I was <i>on</i> it, little man. You — swordling. You reek of the broken blade\'s light.'],
-                    ['青璇', 'I am 青璇 of 青丘. Nine tails, nine grudges. The night the sword shattered, the sky over the fire-cave tore open and half my clan\'s spirit-lights went out.'],
-                    ['青璇', 'Something didn\'t attack your sword. Something <b>fled into hiding behind its death</b>. I\'m coming with you. Object, and I\'ll ride in your little pot.'],
-                    ['', '<b class="good">青璇 joined the party!</b> 🦊'],
+                    ['寨民', '外鄉人！祝融火窟燒了一整年——竹海都成了灰。還有那位狐仙娘子……她整日盯著那座山。'],
+                    ['青璇', '因為那晚我就在山上，小矮子。——喂，帶劍的。你身上，有斷劍之光的味道。'],
+                    ['青璇', '青丘，青璇。九條尾巴，九樁恩怨。軒轅劍崩碎那夜，火窟上空的天裂開了，我族一半的靈燈就此熄滅。'],
+                    ['青璇', '沒有什麼東西襲擊了你們的劍。是有什麼東西，<b>藏進了劍的死亡背後</b>。我跟你們走。敢說個「不」字，就請你進我壺裡坐坐。'],
+                    ['', '<b class="good">青璇加入了隊伍！</b> 🦊'],
                 ]);
             }
-            if (!c.fire) return say([['寨民', '祝融火窟 is south of the stockade, among the burnt groves. The fire that guards it… the hunters say it <i>weeps</i> while it burns. 小心。']]);
-            if (!c.water) return say([['青璇\'s kin', 'She always said the eruption wasn\'t rage — it was <i>fever</i>. A mountain trying to burn something out of itself. The river lord may know more. 望川鎮 lies far south.']]);
-            return say([['寨民', 'Green shoots in the ash groves… Whatever you three are doing — finish it at the 幽都之門.']]);
+            if (!c.fire) return say([['寨民', '祝融火窟在寨子南邊，焦竹林深處。守著它的那團火……獵戶說，它一邊燃燒，一邊<i>哭泣</i>。小心。']]);
+            if (!c.water) return say([['青璇的族人', '她一直說，那場噴發不是暴怒——是<i>高燒</i>。一座山想把體內的什麼東西燒出去。河伯或許知道更多。望川鎮在遙遠的南方。']]);
+            return say([['寨民', '灰燼裡冒出新筍了……無論你們三位在做什麼——去幽都之門，做個了結吧。']]);
         }
         if (id === 3) {
             if (!c.water) return say([
-                ['船夫', 'The 河伯水府 rose from the sands southeast of here, dripping, like the river spat it back.'],
-                ['船夫', 'My grandmother served the sword sect\'s shrine. She said the water shard was the oldest — that it remembered why the 軒轅劍 was forged at all. Not to <i>wield</i> the light. To <b>hide the world behind it</b>.'],
+                ['船夫', '河伯水府從東南方的沙地裡升起來了，滴著水，像是大河把它吐了回來。'],
+                ['船夫', '我祖母侍奉過劍派祠堂。她說水之劍魄最為古老——它還記得軒轅劍鑄成的真正緣由：不是為了<i>揮舞</i>那道光，而是為了<b>把整個世界藏在光的背後</b>。'],
             ]);
-            if (!(c.earth && c.fire && c.water)) return say([['船夫', 'Still missing a shard, friend? Retrace your steps — the caves keep what they\'re given.']]);
-            return say([['船夫', 'All three shards?! Then it\'s the 幽都之門 for you — the gate hides in the northern mountain pass. Hey. If the old stories are right and the blade\'s light draws that… <i>thing</i>… you\'d best be sure, hero.']]);
+            if (!(c.earth && c.fire && c.water)) return say([['船夫', '還缺一片劍魄？回頭找找吧，朋友——洞窟不會弄丟托付給它的東西。']]);
+            return say([['船夫', '三片都齊了？！那就去幽都之門吧——大門藏在北方山隘裡。喂，朋友。若老故事是真的，劍光會引來那個……<i>東西</i>……你可要想清楚了，英雄。']]);
         }
     }
 
@@ -999,12 +1151,12 @@
     let shopTier = 1;
     function renderShop(tier) {
         shopTier = tier;
-        $('shopGold').textContent = '💰 ' + S.gold + ' gold';
+        $('shopGold').textContent = '💰 白銀 ' + S.gold + ' 兩';
         const box = $('shopItems');
         box.innerHTML = '';
         const add = (label, cost, fn, disabled) => {
             const b = document.createElement('button');
-            b.innerHTML = '<span class="shopItem"><span>' + label + '</span><span class="gold">' + cost + 'g</span></span>';
+            b.innerHTML = '<span class="shopItem"><span>' + label + '</span><span class="gold">' + cost + ' 兩</span></span>';
             b.disabled = disabled || S.gold < cost;
             b.addEventListener('click', () => { S.gold -= cost; fn(); sfx('item'); save(); renderShop(shopTier); updateHud(); });
             box.appendChild(b);
@@ -1020,12 +1172,12 @@
             const next = h.weapon + 1;
             if (next < wlist.length && next <= tier) {
                 const w = wlist[next];
-                add('⚔️ ' + w.name + ' <small>for ' + HEROES[h.id].name + '</small>', w.cost, () => { h.weapon = next; });
+                add('⚔️ ' + w.name + ' <small>（' + HEROES[h.id].name + '）</small>', w.cost, () => { h.weapon = next; });
             }
             const anext = h.armor + 1;
             if (anext < ARMORS.length && anext <= tier) {
                 const a = ARMORS[anext];
-                add('🛡️ ' + a.name + ' <small>for ' + HEROES[h.id].name + '</small>', a.cost, () => { h.armor = anext; });
+                add('🛡️ ' + a.name + ' <small>（' + HEROES[h.id].name + '）</small>', a.cost, () => { h.armor = anext; });
             }
         }
     }
@@ -1054,10 +1206,10 @@
             html += '<div class="heroCard' + (h.hp <= 0 ? ' ko' : '') + '" style="margin:5px auto;max-width:300px">' +
                 '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv ' + h.lv + ' ' + H.cls + '</small></div>' +
                 '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
-                'HP ' + h.hp + '/' + st.maxhp + ' · MP ' + h.mp + '/' + st.maxmp +
+                '氣血 ' + h.hp + '/' + st.maxhp + ' · 真氣 ' + h.mp + '/' + st.maxmp +
                 '<div style="color:#95a5a6">⚔️' + st.atk + ' 🛡️' + st.def + ' ✨' + st.mag +
                 ' · ' + WEAPONS[h.id][h.weapon].name + ', ' + ARMORS[h.armor].name +
-                '<br>XP ' + h.xp + '/' + xpNext(h.lv) + '</div></div>';
+                '<br>修為 ' + h.xp + '/' + xpNext(h.lv) + '</div></div>';
         }
         body.innerHTML = html;
         const btns = $('menuBtns');
@@ -1075,8 +1227,8 @@
             add(ITEMS[key].e + ' ' + ITEMS[key].name + ' ×' + S.inv[key], () => useItemMenu(key));
         }
         add('🏺 煉妖壺', openHu);
-        if (prevMode === 'world') add('💾 Save', () => { save(); say([['', 'Game saved. ✅']]); closeMenu(); });
-        add('↩️ Close', closeMenu, 'primary');
+        if (prevMode === 'world') add('💾 存檔', () => { save(); say([['', '進度已存檔 ✅']]); closeMenu(); });
+        add('↩️ 關閉', closeMenu, 'primary');
     }
     function useItemMenu(key) {
         // apply to first hero who benefits
@@ -1131,7 +1283,7 @@
             fxq: [],
         };
         $('battle').classList.add('open');
-        bMsg(isBoss ? '☠️ ' + B.enemies[0].name + ' blocks your path!' : 'Enemies attack!');
+        bMsg(isBoss ? '☠️ ' + B.enemies[0].name + '擋住了去路！' : '妖怪來襲！');
         renderBattle();
         promptHero();
     }
@@ -1166,7 +1318,7 @@
             d.innerHTML = '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv' + h.lv + '</small> ' + icons + '</div>' +
                 '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
                 '<div class="mini"><div class="mpf" style="width:' + Math.max(0, h.mp / st.maxmp * 100) + '%"></div></div>' +
-                'HP ' + Math.max(0, h.hp) + ' · MP ' + h.mp;
+                '氣血 ' + Math.max(0, h.hp) + ' · 真氣 ' + h.mp;
             pp.appendChild(d);
         });
     }
@@ -1212,9 +1364,9 @@
         if (stt.sleep) {
             if (Math.random() < 0.4) {
                 stt.sleep = false;
-                bMsg(HEROES[S.party[B.heroIdx].id].name + ' wakes up!');
+                bMsg(HEROES[S.party[B.heroIdx].id].name + '醒來了！');
             } else {
-                bMsg(HEROES[S.party[B.heroIdx].id].name + ' is fast asleep… 💤');
+                bMsg(HEROES[S.party[B.heroIdx].id].name + '沉睡不醒……💤');
                 renderBattle();
                 $('cmds').innerHTML = '';
                 B.heroIdx++;
@@ -1225,7 +1377,7 @@
         const h = S.party[B.heroIdx];
         const H = HEROES[h.id];
         renderBattle();
-        bMsg('<b>' + H.name + '</b> — choose a command.');
+        bMsg('<b>' + H.name + '</b>——請下指令。');
         const c = $('cmds');
         c.innerHTML = '';
         const add = (label, fn, disabled) => {
@@ -1235,16 +1387,16 @@
             b.addEventListener('click', fn);
             c.appendChild(b);
         };
-        add('⚔️ Attack', () => { pendingAction = { kind: 'attack', hero: B.heroIdx }; targetMode(); });
+        add('⚔️ 攻擊', () => { pendingAction = { kind: 'attack', hero: B.heroIdx }; targetMode(); });
         const spells = knownSpells(h);
         if (spells.length) {
-            add('✨ Magic', () => showSpellMenu(h, spells));
+            add('✨ 法術', () => showSpellMenu(h, spells));
         }
-        add('🎒 Item', () => showItemMenu());
-        add('🛡️ Defend', () => queueAction({ kind: 'defend', hero: B.heroIdx }));
+        add('🎒 物品', () => showItemMenu());
+        add('🛡️ 防禦', () => queueAction({ kind: 'defend', hero: B.heroIdx }));
         if (!B.isBoss) {
             add('🏺 收妖', () => { pendingAction = { kind: 'capture', hero: B.heroIdx }; targetMode(); });
-            add('🏃 Flee', () => queueAction({ kind: 'flee', hero: B.heroIdx }));
+            add('🏃 逃跑', () => queueAction({ kind: 'flee', hero: B.heroIdx }));
         }
     }
     function showSpellMenu(h, spells) {
@@ -1288,20 +1440,20 @@
         if (!any) {
             const d = document.createElement('div');
             d.style.cssText = 'font-size:13px;color:#95a5a6;align-self:center';
-            d.textContent = 'No items!';
+            d.textContent = '沒有物品！';
             c.appendChild(d);
         }
         backBtn(c);
     }
     function backBtn(c) {
         const b = document.createElement('button');
-        b.textContent = '↩️ Back';
+        b.textContent = '↩️ 返回';
         b.className = 'danger';
         b.addEventListener('click', promptHero);
         c.appendChild(b);
     }
     function targetMode() {
-        bMsg('Choose a target! 🎯');
+        bMsg('選擇目標！🎯');
         $('cmds').innerHTML = '';
         backBtn($('cmds'));
         document.querySelectorAll('.enemy:not(.dead)').forEach(d => d.classList.add('target'));
@@ -1367,7 +1519,7 @@
             });
             B.heroIdx = 0;
             if (anyPoison) {
-                bMsg('The poison seeps deeper… ☠️');
+                bMsg('毒素正在蔓延……☠️');
                 renderBattle();
                 flushFx();
                 if (checkBattleEnd()) return;
@@ -1398,29 +1550,29 @@
                 t.hp -= dmg;
                 sfx('hit');
                 queueFx('#en-' + t.idx, 'shake', '-' + dmg, '#f1c40f');
-                bMsg(H.name + ' attacks ' + t.name + ' — <b>' + dmg + '</b> damage!' + (t.hp <= 0 ? ' 💥 Defeated!' : ''));
+                bMsg(H.name + '攻擊' + t.name + '——<b>' + dmg + '</b> 點傷害！' + (t.hp <= 0 ? ' 💥 擊敗！' : ''));
                 return 750;
             }
             if (a.kind === 'defend') {
                 B.defending[a.hero] = true;
                 h.mp = Math.min(st.maxmp, h.mp + 2);
-                bMsg(H.name + ' defends. 🛡️ (+2 MP)');
+                bMsg(H.name + '嚴陣防禦。🛡️（真氣 +2）');
                 return 550;
             }
             if (a.kind === 'flee') {
                 if (Math.random() < 0.6) {
-                    bMsg('You fled the battle! 🏃');
+                    bMsg('成功脫離了戰鬥！🏃');
                     setTimeout(endBattle, 600);
                     return 9999;
                 }
-                bMsg(H.name + ' tries to flee… but fails!');
+                bMsg(H.name + '想要脫身……卻沒能逃掉！');
                 return 700;
             }
             if (a.kind === 'capture') {
                 let t = B.enemies[a.target];
                 if (!t || t.hp <= 0) t = aliveEnemies()[0];
                 if (!t) return 80;
-                if (t.boss) { bMsg('The 煉妖壺 trembles — this spirit is far too mighty!'); return 700; }
+                if (t.boss) { bMsg('煉妖壺劇烈震顫——此妖太過強大，收不得！'); return 700; }
                 const p = Math.min(0.85, Math.max(0.08, 0.9 * (1 - t.hp / t.maxhp)));
                 if (Math.random() < p) {
                     t.hp = 0;
@@ -1428,10 +1580,10 @@
                     S.hu[t.id] = (S.hu[t.id] || 0) + 1;
                     sfx('chest');
                     queueFx('#en-' + t.idx, 'shake', '🏺', '#f1c40f');
-                    bMsg(H.name + ' raises the 煉妖壺 — the ' + t.name + ' is drawn inside! 🏺');
+                    bMsg(H.name + '高舉煉妖壺——' + t.name + '被吸入壺中！🏺');
                 } else {
                     sfx('blip');
-                    bMsg('The ' + t.name + ' resists the 煉妖壺! (weaken it first — ' + Math.round(p * 100) + '% chance)');
+                    bMsg(t.name + '掙脫了煉妖壺！（先削弱它——成功率 ' + Math.round(p * 100) + '%）');
                 }
                 return 800;
             }
@@ -1452,7 +1604,7 @@
                         total += dmg;
                         queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : '#f1c40f');
                     }
-                    bMsg(H.name + ' unleashes the ' + it.name + '! ' + total + ' total damage! ' + it.e);
+                    bMsg(H.name + '祭出' + it.name + '！共 ' + total + ' 點傷害！' + it.e);
                     return 850;
                 }
                 if (it.use === 'healAllCure') {
@@ -1464,13 +1616,13 @@
                         B.status[idx] = {};
                         queueFx('#hc-' + idx, null, '+' + it.power, '#2ecc71');
                     });
-                    bMsg(H.name + ' reads the 清心符 — clarity washes over the party. 📜');
+                    bMsg(H.name + '誦讀清心符——清光滌盪全隊。📜');
                     return 800;
                 }
                 applyItem(it, S.party[a.target]);
                 sfx(it.use === 'heal' ? 'heal' : 'item');
                 if (it.use === 'heal') queueFx('#hc-' + a.target, null, '+' + it.power, '#2ecc71');
-                bMsg(H.name + ' uses ' + it.name + ' on ' + HEROES[S.party[a.target].id].name + '. ' + it.e);
+                bMsg(H.name + '對' + HEROES[S.party[a.target].id].name + '使用了' + it.name + '。' + it.e);
                 return 700;
             }
             if (a.kind === 'spell') {
@@ -1494,7 +1646,7 @@
                         total += dmg;
                         queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : mult < 1 ? '#95a5a6' : '#f1c40f');
                     }
-                    bMsg(H.name + ' casts <b>' + sp.name + '</b>! ' + total + ' total damage! ✨' + note);
+                    bMsg(H.name + '施展《<b>' + sp.name + '</b>》！共 ' + total + ' 點傷害！✨' + note);
                     return 800;
                 }
                 if (sp.kind === 'heal') {
@@ -1504,7 +1656,7 @@
                     if (B.status[a.target]) B.status[a.target].poison = false;
                     sfx('heal');
                     queueFx('#hc-' + a.target, null, '+' + heal, '#2ecc71');
-                    bMsg(H.name + ' casts <b>' + sp.name + '</b> — ' + HEROES[t.id].name + ' recovers ' + heal + ' HP! 💚');
+                    bMsg(H.name + '施展《<b>' + sp.name + '</b>》——' + HEROES[t.id].name + '回復 ' + heal + ' 點氣血！💚');
                     return 750;
                 }
                 if (sp.kind === 'healAll') {
@@ -1517,14 +1669,14 @@
                         if (B.status[idx]) B.status[idx].poison = false;
                         queueFx('#hc-' + idx, null, '+' + heal, '#2ecc71');
                     }
-                    bMsg(H.name + ' casts <b>' + sp.name + '</b> — the party is bathed in light! 💚');
+                    bMsg(H.name + '施展《<b>' + sp.name + '</b>》——柔光沐浴全隊！💚');
                     return 800;
                 }
                 if (sp.kind === 'protect') {
                     B.status[a.target] = { ...(B.status[a.target] || {}), protect: true };
                     sfx('heal');
                     queueFx('#hc-' + a.target, null, '🛡️', '#3498db');
-                    bMsg(H.name + ' casts <b>Protect</b> — ' + HEROES[S.party[a.target].id].name + ' is shielded!');
+                    bMsg(H.name + '施展《<b>機關盾</b>》——' + HEROES[S.party[a.target].id].name + '獲得了守護！');
                     return 750;
                 }
                 if (sp.kind === 'revive') {
@@ -1533,7 +1685,7 @@
                         t.hp = Math.floor(heroStats(t).maxhp / 2);
                         sfx('heal');
                         queueFx('#hc-' + a.target, null, '🌟', '#f1c40f');
-                        bMsg(H.name + ' casts <b>Revive</b> — ' + HEROES[t.id].name + ' rises again! 🌟');
+                        bMsg(H.name + '施展《<b>起死回生</b>》——' + HEROES[t.id].name + '重新站了起來！🌟');
                     }
                     return 800;
                 }
@@ -1561,7 +1713,7 @@
                 if (B.status[idx]) B.status[idx].sleep = false;
                 queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
             }
-            bMsg(e.name + ' unleashes <b>' + sp.name + '</b> on the whole party! 🔥');
+            bMsg(e.name + '施展《<b>' + sp.name + '</b>》，席捲全隊！🔥');
             return 900;
         }
         const h = heroes[Math.floor(Math.random() * heroes.length)];
@@ -1575,12 +1727,12 @@
         queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
         let suffix = h.hp <= 0 ? ' 😵' : '';
         const stt = B.status[idx] = B.status[idx] || {};
-        if (stt.sleep) { stt.sleep = false; suffix += ' (woke up!)'; }
+        if (stt.sleep) { stt.sleep = false; suffix += '（驚醒了！）'; }
         else if (h.hp > 0 && e.inflict && !stt[e.inflict] && Math.random() < 0.28) {
             stt[e.inflict] = true;
-            suffix += e.inflict === 'poison' ? ' <b style="color:#9b59b6">☠️ Poisoned!</b>' : ' <b style="color:#8ea6c9">💤 Fell asleep!</b>';
+            suffix += e.inflict === 'poison' ? ' <b style="color:#9b59b6">☠️ 中毒了！</b>' : ' <b style="color:#8ea6c9">💤 睡著了！</b>';
         }
-        bMsg(e.name + ' attacks ' + HEROES[h.id].name + ' — <b>' + dmg + '</b> damage!' + suffix);
+        bMsg(e.name + '攻擊' + HEROES[h.id].name + '——<b>' + dmg + '</b> 點傷害！' + suffix);
         return 750;
     }
 
@@ -1595,7 +1747,7 @@
         const gold = B.enemies.reduce((s, e) => s + (e.captured ? 0 : e.gold), 0);
         S.gold += gold;
         sfx('fanfare');
-        const msgs = ['<b class="good">Victory!</b> +' + xp + ' XP · <span class="gold">+' + gold + ' gold</span>'];
+        const msgs = ['<b class="good">戰鬥勝利！</b>修為 +' + xp + ' · <span class="gold">白銀 +' + gold + ' 兩</span>'];
         for (const h of aliveHeroes()) {
             h.xp += xp;
             while (h.lv < MAXLV && h.xp >= xpNext(h.lv)) {
@@ -1604,8 +1756,8 @@
                 const st = heroStats(h);
                 h.hp = st.maxhp; h.mp = st.maxmp;
                 const newSpell = HEROES[h.id].spells.find(s => s.lv === h.lv);
-                msgs.push('⬆️ <b>' + HEROES[h.id].name + '</b> reached Lv ' + h.lv + '!' +
-                    (newSpell ? ' Learned <b>' + SPELLS[newSpell.id].name + '</b>! ✨' : ''));
+                msgs.push('⬆️ <b>' + HEROES[h.id].name + '</b>升至 ' + h.lv + ' 級！' +
+                    (newSpell ? ' 習得《<b>' + SPELLS[newSpell.id].name + '</b>》！✨' : ''));
             }
         }
         const wasBoss = B.isBoss;
@@ -1618,17 +1770,17 @@
         if (D.crystal) {
             S.flags.crystals[D.crystal] = true;
             sfx('crystal');
-            say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('The crystal\'s power carries you back outside.'));
+            say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('劍魄之力，載著你回到了洞外。'));
             save();
         } else {
             S.flags.malachorDown = true;
             save();
             say([
-                ['玄淵', '…so bright. It does not burn… when three hands hold it…'],
-                ['', '<i>The stolen light streams out of him, homeward — three rivers of dawn pouring into the 劍魄, and the shards leap together, and the 軒轅劍 stands whole in the dark for the first time in a year. For one moment his face is the one from the courtyard. Then he is gone.</i>'],
-                ['玄淵', '<i>雲越。 My worst student. The 噬魂 still swims beneath 幽都. Hold the blade TOGETHER, where I held it alone… and its light will read, from the deep dark, like a sword already drawn over a battlefield already lost.</i>'],
-                ['墨璃', 'Together, then. 兼愛 — as it was always meant to be held.'],
-                ['雲越', '…Rest, 師公. We have the watch.'],
+                ['玄淵', '……好亮。原來三隻手同握……便不灼人了……'],
+                ['', '<i>被吞噬的光自他體內奔流而出，歸向劍魄——殘片騰空相合。一年以來，軒轅劍第一次完整地立於黑暗之中。剎那間，他的面容變回了演武場上那位長老。而後，他消散了。</i>'],
+                ['玄淵', '<i>雲越，我最不成器的弟子。噬魂仍在幽都之下游弋。同持此劍，勿使一人獨擔……如此，這道光在深淵眼中，便如一柄已然出鞘的劍，懸於一片已然敗亡的戰場。</i>'],
+                ['墨璃', '同持。兼愛——劍，本就該這樣握。'],
+                ['雲越', '……安息吧，師公。接下來，換我們守夜。'],
             ], showEnding);
         }
     }
@@ -1647,7 +1799,7 @@
         list.innerHTML = '';
         const ids = Object.keys(S.hu).filter(k => S.hu[k] > 0);
         if (!ids.length) {
-            list.innerHTML = '<div style="color:#95a5a6;font-size:13px">The cauldron is empty. Weaken monsters in battle, then 收妖!</div>';
+            list.innerHTML = '<div style="color:#95a5a6;font-size:13px">壺中空空如也。先在戰鬥中削弱妖怪，再「收妖」！</div>';
             return;
         }
         for (const id of ids) {
@@ -1690,13 +1842,13 @@
     function fusePick(id) {
         if (!fuseSel) {
             fuseSel = id;
-            $('huMsg').textContent = '已選 ' + MON[id].name + ' — pick a second spirit to fuse.';
+            $('huMsg').textContent = '已選 ' + MON[id].name + '——再選一隻妖靈合成。';
             renderHu();
             return;
         }
         const a = fuseSel, b = id;
         if (a === b && (S.hu[a] || 0) < 2) {
-            $('huMsg').textContent = 'Need two of that spirit!';
+            $('huMsg').textContent = '同種妖靈，需要兩隻！';
             return;
         }
         const eA = MON[a].elem, eB = MON[b].elem;
@@ -1726,8 +1878,8 @@
         startTrack(null);
         // Respawn: revive party at the starting village shrine, lose half gold
         say([
-            ['', '<b class="bad">The party has fallen…</b>'],
-            ['', 'You awaken in 桃源村\'s shrine. Half your silver paid for the herbalists.'],
+            ['', '<b class="bad">隊伍全滅……</b>'],
+            ['', '你在桃源村的祠堂中醒來。半數銀兩，交給了藥師。'],
         ], () => {
             S.gold = Math.floor(S.gold / 2);
             S.party.forEach(fullHeal);
@@ -1760,16 +1912,16 @@
         startTrack('town');
         const lead = S.party[0];
         const epilogue = {
-            auron: 'rebuilt the sword sect. Sixty-one names are carved on its founding stone — the last one added by his own hand.',
-            lyra: 'returned to the 墨家 with proof their oldest teaching holds: even a broken world can be mended, if the light is held together. 兼愛。',
-            zephyr: 'went home to 青丘 with new spirit-lights for her clan — and, somehow, someone else\'s wine.',
+            auron: '重建了劍派。開派石碑上刻著六十一個名字——最後一個，是他親手刻上的。',
+            lyra: '帶著證據回到墨家：縱是破碎的世界也能修補，只要眾人共持其光。兼愛。',
+            zephyr: '帶著新的靈燈回到青丘——順便，帶走了某人的酒。',
         };
         $('endText').innerHTML =
-            'The reforged 軒轅劍 blazes <b>as one light braided from three wills</b> — burning, to the thousand pale eyes ' +
-            'beneath 幽都, like a blade already drawn over a battlefield already lost. The 噬魂 turns away from a world ' +
-            'that reads as conquered.<br><br>玄淵\'s vigil is over. Theirs begins.<br><br>' +
+            '重鑄的軒轅劍燃起<b>三道意志編成的一束光</b>——在幽都之下那千隻蒼白眼睛看來，恰似一柄早已出鞘的劍，' +
+            '懸於一片早已敗亡的戰場之上。噬魂調轉目光，離開了這個「早已被征服」的世界。<br><br>' +
+            '玄淵的守望結束了。他們的，才剛開始。<br><br>' +
             S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> (Lv ' + h.lv + ') ' + epilogue[h.id]).join('<br><br>') +
-            '<br><br>💰 ' + S.gold + ' gold · Thank you for playing!';
+            '<br><br>💰 白銀 ' + S.gold + ' 兩 · 感謝遊玩！';
         $('ending').classList.add('open');
     }
     $('btnEndTitle').addEventListener('click', () => {
@@ -1809,10 +1961,10 @@
         startTrack('overworld');
         draw();
         say([
-            ['雲越', 'One night. That\'s all it took. The 軒轅劍 cracked in its shrine, the seal on 幽都 thinned, and my sect died defending shards of a blade that no longer shone.'],
-            ['雲越', 'Sixty brothers and sisters. I was down the mountain buying wine.'],
-            ['雲越', 'All I carry now is the sect\'s last treasure — the 煉妖壺 — and word from 桃源村: a 劍魄, a soul-shard of the broken sword, stirs in the caves to the east.'],
-            ['', '<i>Visit the village just north. Weaken monsters and use 收妖 to capture them into the cauldron — then refine or fuse them in the Menu.</i>'],
+            ['雲越', '一夜之間。只需一夜——軒轅劍在祠中崩裂，幽都封印鬆動，滿門師兄弟為守護早已黯淡的殘片而死。'],
+            ['雲越', '六十位同門。而我那晚，下山買酒去了。'],
+            ['雲越', '如今我身上只剩師門最後的寶物——煉妖壺，還有桃源村捎來的口信：東邊洞窟裡，有一片「劍魄」甦醒了。'],
+            ['', '<i>先去北邊的村子。戰鬥中削弱妖怪後可用「收妖」收入壺中，再到選單裡煉化或合成。</i>'],
         ]);
         S.flags.intro = true;
         save();
