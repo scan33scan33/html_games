@@ -1,0 +1,2344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>軒轅殘劍 Broken Sword</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #10141f;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #ecf0f1;
+            touch-action: none;
+        }
+        h1 { margin: 10px 0 2px; font-size: 24px; }
+        p.sub { color: #7f8c8d; margin: 0 0 8px; font-size: 12px; text-align: center; }
+        #frame { position: relative; }
+        canvas { display: block; border-radius: 8px; background: #0a0d15; max-width: 96vw; }
+        .overlay {
+            position: absolute; inset: 0;
+            background: rgba(8, 10, 18, 0.93);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 14px;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+        .overlay.open { display: flex; }
+        .overlay h2 { margin: 6px 0; }
+        .overlay .big { font-size: 46px; margin: 2px; }
+        button {
+            padding: 9px 16px; font-size: 14px; border-radius: 7px;
+            background: #2c3e50; color: #ecf0f1; cursor: pointer; border: 1px solid #3d4f63;
+        }
+        button:hover:not(:disabled) { background: #3d4f63; }
+        button:disabled { opacity: 0.45; cursor: default; }
+        button.primary { background: #2980b9; border-color: #3498db; }
+        button.danger { background: #922b21; border-color: #c0392b; }
+        .btncol { display: flex; flex-direction: column; gap: 8px; min-width: 230px; margin-top: 10px; }
+        .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+        /* Battle */
+        #battle {
+            justify-content: flex-start;
+            background: radial-gradient(ellipse at 50% 22%, rgba(30, 38, 60, 0.96), rgba(8, 10, 18, 0.985));
+        }
+        h1 { text-shadow: 0 0 18px rgba(180, 200, 255, 0.25); }
+        #enemyRow { display: flex; gap: 18px; justify-content: center; margin: 18px 0 6px; flex-wrap: wrap; }
+        .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; position: relative; }
+        .enemy:hover { transform: scale(1.1); }
+        .enemy .sprite { font-size: 46px; }
+        .enemy .ehp { font-size: 10px; color: #bdc3c7; }
+        .enemy.target .sprite { filter: drop-shadow(0 0 6px #f1c40f); }
+        .enemy.dead { opacity: 0.15; pointer-events: none; }
+        #bMsg { min-height: 40px; font-size: 14px; color: #f8f9fa; padding: 4px 10px; line-height: 1.5; }
+        #partyPanel { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+        .heroCard {
+            background: #1a2230; border: 1px solid #2c3e50; border-radius: 8px;
+            padding: 6px 10px; font-size: 12px; min-width: 118px; text-align: left;
+            position: relative;
+        }
+        .dmgFloat {
+            position: absolute; top: 2px; font-weight: bold; font-size: 17px;
+            pointer-events: none; text-shadow: 0 1px 3px #000; z-index: 5;
+            animation: floatUp 0.9s forwards;
+        }
+        @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-34px); } }
+        @keyframes shakeX { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shakeX 0.28s; }
+        @keyframes lungeA { 0%, 100% { transform: none; } 40% { transform: translateY(9px) scale(1.12); } }
+        .lunge { animation: lungeA 0.32s; }
+        #flashFx { position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: 8px; z-index: 40; }
+        @keyframes flashA { from { opacity: 0.6; } to { opacity: 0; } }
+        #flashFx.flashAnim { animation: flashA 0.4s; }
+        .heroCard.active { border-color: #f1c40f; }
+        .heroCard.ko { opacity: 0.4; }
+        .heroCard .nm { font-weight: bold; font-size: 13px; }
+        .mini { height: 7px; border-radius: 3px; background: #0a0d15; overflow: hidden; margin: 3px 0; }
+        .mini > div { height: 100%; }
+        .mini .hpf { background: #e74c3c; }
+        .mini .mpf { background: #3498db; }
+        #cmds { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; min-height: 40px; }
+        /* dialog */
+        #dialog { justify-content: flex-end; background: transparent; pointer-events: none; }
+        #dialogBox {
+            pointer-events: auto;
+            background: rgba(10, 13, 21, 0.95); border: 2px solid #3d4f63; border-radius: 10px;
+            padding: 12px 16px; margin-bottom: 12px; width: 92%; box-sizing: border-box;
+            text-align: left; font-size: 14px; line-height: 1.55; cursor: pointer;
+        }
+        #dialogBox .speaker { color: #f1c40f; font-weight: bold; }
+        #dialogBox .cont { color: #7f8c8d; font-size: 11px; text-align: right; }
+        #hud {
+            display: flex; gap: 10px; align-items: center; justify-content: center;
+            font-size: 13px; margin: 8px 0 4px; flex-wrap: wrap;
+        }
+        #hud .chip { background: #1a2230; border-radius: 6px; padding: 4px 10px; }
+        #hud b { color: #f1c40f; }
+        #quest {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            margin: 4px 0; font-size: 13px; color: #cdd6e0;
+            background: rgba(26, 34, 48, 0.85); border: 1px solid #2c3e50;
+            border-radius: 6px; padding: 5px 14px; max-width: 96vw; box-sizing: border-box;
+            text-align: center;
+        }
+        #quest::before { content: '🎯'; }
+        #quest b { color: #f1c40f; }
+        #controls { display: flex; gap: 8px; margin: 6px 0; }
+        .shopItem { display: flex; justify-content: space-between; gap: 14px; width: 100%; }
+        #screenList { width: 100%; max-width: 360px; }
+        a.back { color: #7f8c8d; font-size: 12px; margin: 8px 0 14px; }
+        .gold { color: #f1c40f; }
+        .good { color: #2ecc71; }
+        .bad { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>⚔️ 軒轅殘劍</h1>
+    <p class="sub">上古軒轅劍風格 RPG。三片劍魄，一位守暗之人。收妖、煉化、合成。</p>
+    <div id="frame">
+        <canvas id="gameCanvas" width="480" height="352"></canvas>
+
+        <div class="overlay" id="title">
+            <div class="big">⚔️</div>
+            <h2>軒轅殘劍</h2>
+            <div style="font-size:13px;color:#95a5a6;max-width:340px">一年前的一夜之間，自黃帝涿鹿之戰以來鎮守幽都之門的
+                軒轅劍，在祠中崩裂。劍派滿門為守護殘片而死——只有那個下山買酒的、最不成器的弟子活了下來。</div>
+            <div class="btncol">
+                <button class="primary" id="btnNew">⚔️ 新的旅程</button>
+                <button id="btnContinue">📜 繼續</button>
+            </div>
+        </div>
+
+        <div class="overlay" id="battle">
+            <div id="enemyRow"></div>
+            <div id="bMsg"></div>
+            <div id="cmds"></div>
+            <div id="partyPanel"></div>
+        </div>
+
+        <div class="overlay" id="town">
+            <div class="big" id="townEmoji">🏘️</div>
+            <h2 id="townName"></h2>
+            <div id="townText" style="font-size:13px;color:#95a5a6"></div>
+            <div class="btncol" id="townBtns"></div>
+        </div>
+
+        <div class="overlay" id="shop">
+            <h2 id="shopTitle">🛒 雜貨舖</h2>
+            <div style="font-size:13px" class="gold" id="shopGold"></div>
+            <div class="btncol" id="shopItems" style="min-width:280px"></div>
+            <div class="btnrow"><button id="shopLeave">↩️ 離開</button></div>
+        </div>
+
+        <div class="overlay" id="menu">
+            <h2>📜 選單</h2>
+            <div id="menuBody" style="width:100%;max-width:380px"></div>
+            <div class="btnrow" id="menuBtns"></div>
+        </div>
+
+        <div class="overlay" id="hu">
+            <div class="big">🏺</div>
+            <h2>煉妖壺 Soul Cauldron</h2>
+            <div style="font-size:12px;color:#95a5a6;max-width:340px">「煉化」將妖靈煉為丹藥。「合成」熔鑄兩隻妖靈：
+                同屬 → 內丹 · 相生 → 五行符 · 相剋 → 清心符</div>
+            <div id="huMsg" style="font-size:13px;color:#f1c40f;min-height:18px;margin:6px"></div>
+            <div class="btncol" id="huList" style="min-width:300px"></div>
+            <div class="btnrow"><button id="huLeave">↩️ 關閉</button></div>
+        </div>
+
+        <div class="overlay" id="dialog">
+            <div id="dialogBox">
+                <div><span class="speaker" id="dSpeaker"></span></div>
+                <div id="dText"></div>
+                <div class="cont">▼ 點擊繼續</div>
+            </div>
+        </div>
+
+        <div class="overlay" id="ending">
+            <div class="big">🌅</div>
+            <h2>劍光再現</h2>
+            <div id="endText" style="font-size:14px;color:#bdc3c7;max-width:340px;line-height:1.6"></div>
+            <div class="btncol"><button class="primary" id="btnEndTitle">✨ 回到主選單</button></div>
+        </div>
+        <div id="flashFx"></div>
+    </div>
+    <div id="hud">
+        <span class="chip">💰 <b id="hGold">0</b></span>
+        <span class="chip" id="hCrystals">劍魄: —</span>
+        <span class="chip" id="hParty"></span>
+    </div>
+    <div id="quest"><span id="questText">目標：前往北方的桃源村</span></div>
+    <div id="controls">
+        <button id="btnMenu">📜 選單</button>
+        <button id="btnEnc">⚔️ 遇敵：正常</button>
+        <button id="btnSound">🎵 音效：開</button>
+    </div>
+    <p class="sub">方向鍵長按可行走・<b>點擊地圖可自動尋路</b> · 先削弱妖怪再「收妖」 · 煉妖壺中依五行合成</p>
+    <a class="back" href="../index.html">← 全部遊戲</a>
+
+    <script src="sprites.js"></script>
+    <script>
+    'use strict';
+    // =========================================================================
+    //  DATA
+    // =========================================================================
+    const WORLD = [
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~ffffffffffff^^^^^^^^^^^^^^^^..ff....~~',
+        '~~f2ffffffffff^^^^^^^^^^^^^^^^.ff.....~~',
+        '~~ffffffffffff^^....K......^^........~~',
+        '~~ffffffffffff^^........^^.....ff.~~'.padEnd(38, '.') + '~~',
+        '~~fffBffffffff^^........^^....fff.~~'.padEnd(38, '.') + '~~',
+        '~~ffffffffffff^^........^^........~~'.padEnd(38, '.') + '~~',
+        '~~ffffffffffff^^^^^^^.^^^^^^^^........~~',
+        '~~ffffffffffff^^^^^^^.^^^^^^^^......ff~~',
+        '~~..ffff..............................~~',
+        '~~....................................~~',
+        '~~...ff......ff................ff.....~~',
+        '~~........1..........................~~'.slice(0, 38) + '~~',
+        '~~....................................~~',
+        '~~..f.....S...............f...........~~'.slice(0, 38) + '~~',
+        '~~..ff..............A.....ff..........~~'.slice(0, 38) + '~~',
+        '~~..........................ff........~~'.slice(0, 38) + '~~',
+        '~~....^^......................^^......~~'.slice(0, 38) + '~~',
+        '~~....^^......................^^......~~'.slice(0, 38) + '~~',
+        '~~..............ff....................~~'.slice(0, 38) + '~~',
+        '~~..............ff....................~~'.slice(0, 38) + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^ssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^ssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssss3sssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssCsssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^^sssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    ].map(r => (r + '~'.repeat(40)).slice(0, 40));
+    // Act-2 and side-quest locations carved into the world:
+    // J 劍塚 (sword tomb, eastern woods) · n 蛛網 (spider nest) · x 商隊 (caravan)
+    WORLD[6] = WORLD[6].slice(0, 31) + 'J' + WORLD[6].slice(32);
+    WORLD[20] = WORLD[20].slice(0, 16) + 'n' + WORLD[20].slice(17);
+    WORLD[26] = WORLD[26].slice(0, 25) + 'x' + WORLD[26].slice(26);
+
+    const DMAPS = {
+        earth: [
+            '################',
+            '#S.....##....T.#',
+            '#..##..##..##..#',
+            '#..##......##..#',
+            '#......##......#',
+            '#.####.##.####.#',
+            '#......##......#',
+            '#..##..##..##..#',
+            '#T.##......##.B#',
+            '#......##......#',
+            '################',
+        ],
+        fire: [
+            '################',
+            '#S....ll.....T.#',
+            '#.....ll.......#',
+            '#..lll....lll..#',
+            '#..lll....lll..#',
+            '#......ll......#',
+            '#.....llll.....#',
+            '#..T..llll.....#',
+            '#......ll....B.#',
+            '#..............#',
+            '################',
+        ],
+        water: [
+            '################',
+            '#S...w....w..T.#',
+            '#....w....w....#',
+            '#..www....www..#',
+            '#..............#',
+            '#....wwwwww....#',
+            '#....w....w....#',
+            '#.T..w....w....#',
+            '#....w....w..B.#',
+            '#..............#',
+            '################',
+        ],
+        castle: [
+            '##################',
+            '#S..##......##.T.#',
+            '#...##..##..##...#',
+            '#.......##.......#',
+            '#.####......####.#',
+            '#.#..T.####......#',
+            '#.....####...##..#',
+            '#.##......##.##..#',
+            '#.##..##..##.....#',
+            '#.....##......#T.#',
+            '#..##....##..##..#',
+            '#..##...B##..##..#',
+            '##################',
+        ],
+    };
+
+    DMAPS.tomb = [
+        '################',
+        '#S.....##..T...#',
+        '#..##..##..##..#',
+        '#..##......##..#',
+        '#......##......#',
+        '#.####.##.####.#',
+        '#......##......#',
+        '#..##..##..##..#',
+        '#T.##......##.B#',
+        '#......##......#',
+        '################',
+    ];
+    const DUNGEONS = {
+        earth: { name: '神農洞', tier: 1, boss: 'tubo', crystal: 'earth', worldChar: 'A',
+                 chests: { '13,1': { gold: 120 }, '1,8': { item: 'jinchuang', n: 3 } } },
+        fire: { name: '祝融火窟', tier: 2, boss: 'bifang', crystal: 'fire', worldChar: 'B',
+                chests: { '13,1': { gold: 350 }, '3,7': { item: 'juqi', n: 2 } } },
+        water: { name: '河伯水府', tier: 3, boss: 'gonggong', crystal: 'water', worldChar: 'C',
+                 chests: { '13,1': { gold: 700 }, '2,7': { item: 'huanhun', n: 2 } } },
+        tomb: { name: '劍塚', tier: 4, boss: 'jianling', crystal: null, worldChar: 'J',
+                chests: { '11,1': { item: 'dahuan', n: 3 }, '1,8': { gold: 1200 } } },
+        castle: { name: '幽都之門', tier: 4, boss: 'xuanyuan_w', crystal: null, worldChar: 'K',
+                  chests: { '15,1': { gold: 1500 }, '5,5': { item: 'dahuan', n: 4 }, '15,9': { item: 'juqi', n: 3 } } },
+    };
+
+    // 五行 wuxing: 金 metal, 木 wood, 水 water, 火 fire, 土 earth
+    // 相剋 (overcoming): 金剋木 木剋土 土剋水 水剋火 火剋金
+    const KE = { '金': '木', '木': '土', '土': '水', '水': '火', '火': '金' };
+    const SHENG = { '木': '火', '火': '土', '土': '金', '金': '水', '水': '木' };
+    const ELEM_COLOR = { '金': '#d4af37', '木': '#2ecc71', '水': '#3498db', '火': '#e74c3c', '土': '#c98f3c' };
+
+    // hp, atk, def, spd, xp, gold; elem = wuxing; refine = 煉化 result; inflict = status on hit
+    const MON = {
+        shanxiao: { name: '山魈', e: '👺', elem: '木', hp: 20, atk: 8, def: 2, spd: 4, xp: 9, gold: 7, refine: 'jinchuang' },
+        fuyao:    { name: '蝠妖', e: '🦇', elem: '木', hp: 16, atk: 9, def: 1, spd: 10, xp: 9, gold: 7, refine: 'jinchuang' },
+        yaolang:  { name: '妖狼', e: '🐺', elem: '金', hp: 30, atk: 11, def: 3, spd: 9, xp: 14, gold: 12, refine: 'jinchuang' },
+        shijing:  { name: '石精', e: '🪨', elem: '土', hp: 38, atk: 13, def: 5, spd: 4, xp: 18, gold: 14, refine: 'jinchuang' },
+        wangliang:{ name: '魍魎', e: '👻', elem: '水', hp: 45, atk: 17, def: 6, spd: 10, xp: 30, gold: 24, inflict: 'sleep', refine: 'juqi' },
+        kulou:    { name: '骷髏兵', e: '💀', elem: '金', hp: 60, atk: 20, def: 8, spd: 7, xp: 38, gold: 30, refine: 'jinchuang' },
+        zhuyao:   { name: '蛛妖', e: '🕷️', elem: '木', hp: 50, atk: 18, def: 6, spd: 12, xp: 34, gold: 26, inflict: 'poison', refine: 'juqi' },
+        shanjun:  { name: '山君', e: '🐯', elem: '金', hp: 90, atk: 25, def: 9, spd: 8, xp: 55, gold: 45, refine: 'juqi' },
+        shaxie:   { name: '沙蠍', e: '🦂', elem: '土', hp: 80, atk: 28, def: 13, spd: 11, xp: 70, gold: 55, inflict: 'poison', refine: 'dahuan' },
+        hanba:    { name: '旱魃', e: '🧟', elem: '火', hp: 100, atk: 30, def: 15, spd: 6, xp: 85, gold: 65, spell: 'flameAll', refine: 'dahuan' },
+        sheji:    { name: '蛇姬', e: '🐍', elem: '水', hp: 95, atk: 32, def: 13, spd: 13, xp: 95, gold: 75, inflict: 'poison', refine: 'dahuan' },
+        fengxi:   { name: '封豨', e: '🐗', elem: '土', hp: 110, atk: 30, def: 16, spd: 5, xp: 105, gold: 85, refine: 'dahuan' },
+        xingtian: { name: '刑天', e: '🦾', elem: '金', hp: 140, atk: 40, def: 19, spd: 12, xp: 150, gold: 110, refine: 'huanhun' },
+        qiongqi:  { name: '窮奇', e: '🐅', elem: '金', hp: 170, atk: 46, def: 23, spd: 11, xp: 190, gold: 150, refine: 'huanhun' },
+        taotie:   { name: '饕餮', e: '👹', elem: '土', hp: 160, atk: 50, def: 19, spd: 15, xp: 210, gold: 170, spell: 'flameAll', refine: 'huanhun' },
+        youhun:   { name: '幽魂', e: '🌫️', elem: '水', hp: 130, atk: 44, def: 17, spd: 17, xp: 175, gold: 140, inflict: 'sleep', refine: 'huanhun' },
+    };
+    const TIERS = {
+        1: ['shanxiao', 'fuyao', 'yaolang', 'shijing'],
+        2: ['wangliang', 'kulou', 'zhuyao', 'shanjun'],
+        3: ['shaxie', 'hanba', 'sheji', 'fengxi'],
+        4: ['xingtian', 'qiongqi', 'taotie', 'youhun'],
+    };
+    const BOSSES = {
+        tubo:       { name: '土伯', e: '🗿', elem: '土', hp: 320, atk: 24, def: 10, spd: 4, xp: 160, gold: 200, spell: 'quake', boss: true },
+        bifang:     { name: '畢方', e: '🦩', elem: '火', hp: 600, atk: 36, def: 14, spd: 11, xp: 420, gold: 500, spell: 'flameAll', boss: true },
+        gonggong:   { name: '共工', e: '🌊', elem: '水', hp: 900, atk: 46, def: 18, spd: 13, xp: 850, gold: 1000, spell: 'tidalWave', boss: true },
+        jianling:   { name: '師尊殘影', e: '⚔️', elem: '金', hp: 1100, atk: 52, def: 22, spd: 14, xp: 700, gold: 800, spell: 'swordRain', boss: true },
+        xuanyuan_w: { name: '玄淵', e: '🌑', elem: null, hp: 1300, atk: 58, def: 24, spd: 15, xp: 500, gold: 500, spell: 'darkStorm', boss: true },
+        shihun:     { name: '噬魂・借體', e: '👁️', elem: null, hp: 1800, atk: 66, def: 26, spd: 16, xp: 0, gold: 0, spell: 'devour', boss: true },
+    };
+    const ENEMY_SPELLS = {
+        flameAll:  { name: '烈焰漫天', power: 18, all: true },
+        quake:     { name: '崩山裂地', power: 14, all: true },
+        tidalWave: { name: '怒濤覆舟', power: 26, all: true },
+        darkStorm: { name: '幽都噬光', power: 34, all: true },
+        swordRain: { name: '萬劍歸宗', power: 30, all: true },
+        devour:    { name: '噬光蝕魂', power: 42, all: true },
+    };
+
+    // Heroes: base + growth per level; spells learned at levels
+    const HEROES = {
+        auron: { name: '雲越', e: '🤺', cls: '劍客',
+                 hp: [40, 13], mp: [6, 2], atk: [10, 2.2], def: [6, 1.6], mag: [2, 0.5], spd: [6, 0.9],
+                 spells: [{ lv: 6, id: 'cleave' }] },
+        lyra:  { name: '墨璃', e: '👷‍♀️', cls: '墨家機關師',
+                 hp: [30, 9], mp: [14, 4], atk: [5, 1.2], def: [5, 1.2], mag: [9, 2.2], spd: [7, 1.0],
+                 spells: [{ lv: 1, id: 'cure' }, { lv: 5, id: 'protect' }, { lv: 8, id: 'crossbow' },
+                          { lv: 9, id: 'cura' }, { lv: 11, id: 'revive' }, { lv: 13, id: 'sanctus' }] },
+        zephyr:{ name: '青璇', e: '🦊', cls: '青丘狐仙',
+                 hp: [28, 8], mp: [16, 4], atk: [5, 1.0], def: [4, 1.1], mag: [10, 2.4], spd: [8, 1.1],
+                 spells: [{ lv: 1, id: 'fire' }, { lv: 1, id: 'spark' }, { lv: 5, id: 'frost' },
+                          { lv: 9, id: 'fira' }, { lv: 14, id: 'meteor' }] },
+    };
+    const SPELLS = {
+        cleave:  { name: '橫掃千軍', mp: 6, kind: 'physAll', mult: 1.1, desc: '劍氣橫掃全體敵人' },
+        fire:    { name: '狐火訣', mp: 4, kind: 'dmg', power: 14, elem: '火', desc: '單體・火' },
+        frost:   { name: '寒泉訣', mp: 6, kind: 'dmg', power: 18, elem: '水', desc: '單體・水' },
+        spark:   { name: '驚雷訣', mp: 7, kind: 'dmg', power: 24, elem: '木', desc: '單體・木（雷）' },
+        crossbow:{ name: '機關連弩', mp: 7, kind: 'dmg', power: 22, elem: '土', desc: '單體・土' },
+        fira:    { name: '焚天火舞', mp: 12, kind: 'dmgAll', power: 16, elem: '火', desc: '全體・火' },
+        meteor:  { name: '九尾天狐', mp: 22, kind: 'dmgAll', power: 42, desc: '全體・大傷害' },
+        cure:    { name: '金創術', mp: 4, kind: 'heal', power: 16, desc: '治療＋解毒' },
+        protect: { name: '機關盾', mp: 6, kind: 'protect', desc: '為隊友張開減傷機關盾' },
+        cura:    { name: '回春術', mp: 10, kind: 'heal', power: 45, desc: '大治療＋解毒' },
+        sanctus: { name: '兼愛無疆', mp: 16, kind: 'healAll', power: 30, desc: '全隊治療＋解毒' },
+        revive:  { name: '起死回生', mp: 14, kind: 'revive', desc: '使倒下的隊友復生' },
+    };
+    const ITEMS = {
+        jinchuang:{ name: '金創藥', e: '🧪', cost: 30, desc: '氣血 +50', use: 'heal', power: 50 },
+        dahuan:   { name: '大還丹', e: '⚗️', cost: 120, desc: '氣血 +150', use: 'heal', power: 150 },
+        juqi:     { name: '聚氣散', e: '💧', cost: 150, desc: '真氣 +30', use: 'mp', power: 30 },
+        huanhun:  { name: '還魂香', e: '🕯️', cost: 300, desc: '復活隊友', use: 'revive' },
+        neidan:   { name: '內丹', e: '🔮', cost: 0, desc: '永久提升氣血上限 12', use: 'permHp', power: 12, fuseOnly: true },
+        qingxin:  { name: '清心符', e: '📜', cost: 0, desc: '全隊回復60並解除異常', use: 'healAllCure', power: 60, fuseOnly: true },
+        fu_jin:   { name: '五行符・金', e: '🀄', cost: 0, desc: '戰鬥用：金之靈擊・全體', use: 'atkAll', elem: '金', power: 55, fuseOnly: true },
+        fu_mu:    { name: '五行符・木', e: '🎍', cost: 0, desc: '戰鬥用：木之靈擊・全體', use: 'atkAll', elem: '木', power: 55, fuseOnly: true },
+        fu_shui:  { name: '五行符・水', e: '🌊', cost: 0, desc: '戰鬥用：水之靈擊・全體', use: 'atkAll', elem: '水', power: 55, fuseOnly: true },
+        fu_huo:   { name: '五行符・火', e: '🔥', cost: 0, desc: '戰鬥用：火之靈擊・全體', use: 'atkAll', elem: '火', power: 55, fuseOnly: true },
+        fu_tu:    { name: '五行符・土', e: '⛰️', cost: 0, desc: '戰鬥用：土之靈擊・全體', use: 'atkAll', elem: '土', power: 55, fuseOnly: true },
+    };
+    const ELEM_FU = { '金': 'fu_jin', '木': 'fu_mu', '水': 'fu_shui', '火': 'fu_huo', '土': 'fu_tu' };
+    const SHOP_ITEMS = ['jinchuang', 'dahuan', 'juqi', 'huanhun'];
+    const ALL_ITEM_IDS = Object.keys(ITEMS);
+    const WEAPONS = {
+        auron:  [{ name: '鏽劍', atk: 2, cost: 0 }, { name: '青銅劍', atk: 7, cost: 90 },
+                 { name: '百煉劍', atk: 16, cost: 380 }, { name: '湛盧', atk: 30, cost: 1300 },
+                 { name: '軒轅・殘鋒', atk: 45, cost: 0 }],
+        lyra:   [{ name: '舊機匣', mag: 1, cost: 0 }, { name: '木鳶機', mag: 4, cost: 80 },
+                 { name: '雲梯弩', mag: 10, cost: 330 }, { name: '非攻・墨核', mag: 18, cost: 1100 }],
+        zephyr: [{ name: '狐尾墜', mag: 1, cost: 0 }, { name: '靈狐珠', mag: 5, cost: 90 },
+                 { name: '青丘月', mag: 11, cost: 350 }, { name: '九尾玉', mag: 20, cost: 1200 }],
+    };
+    const ARMORS = [{ name: '布衣', def: 2, cost: 0 }, { name: '皮甲', def: 6, cost: 70 },
+                    { name: '鎖子甲', def: 12, cost: 320 }, { name: '軟蝟甲', def: 20, cost: 1000 }];
+
+    const TOWNS = {
+        1: { name: '桃源村', emoji: '🏮', inn: 15, tier: 1,
+             flavor: '平原邊陲、桃花掩映的小村。' },
+        2: { name: '青丘寨', emoji: '🎋', inn: 40, tier: 2,
+             flavor: '竹海深處、狐仙聚居的山寨。' },
+        3: { name: '望川鎮', emoji: '🏜️', inn: 80, tier: 3,
+             flavor: '荒漠風沙侵蝕的河運商鎮。' },
+    };
+
+    // =========================================================================
+    //  STATE
+    // =========================================================================
+    const SAVE_KEY = 'xuanyuanSave';
+    const MAXLV = 22;
+    let S = null;            // save state
+    let mode = 'title';      // title world dungeon battle town shop menu dialog ending
+    let dungeonId = null;
+    let stepCount = 0;
+    let B = null;            // battle state
+
+    function newState() {
+        return {
+            x: 0, y: 0, gold: 150,
+            party: [{ id: 'auron', lv: 1, xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 }],
+            inv: { jinchuang: 3 },
+            hu: {},
+            flags: { intro: false, crystals: {}, recruited: {}, chests: {}, quests: { nest: 0, caravan: 0 }, reforged: false },
+            dpos: null,
+        };
+    }
+    const xpNext = lv => 12 * lv * lv;
+    function heroStats(h) {
+        const H = HEROES[h.id];
+        const w = WEAPONS[h.id][h.weapon], a = ARMORS[h.armor];
+        const st = {};
+        for (const k of ['hp', 'mp', 'atk', 'def', 'mag', 'spd'])
+            st[k] = Math.round(H[k][0] + H[k][1] * (h.lv - 1));
+        st.atk += w.atk || 0;
+        st.mag += w.mag || 0;
+        st.def += a.def;
+        st.hp += h.bonushp || 0;
+        st.maxhp = st.hp; st.maxmp = st.mp;
+        return st;
+    }
+    function knownSpells(h) {
+        return HEROES[h.id].spells.filter(s => h.lv >= s.lv).map(s => s.id);
+    }
+    function fullHeal(h) {
+        const st = heroStats(h);
+        h.hp = st.maxhp;
+        h.mp = st.maxmp;
+    }
+
+    // =========================================================================
+    //  AUDIO — pentatonic (宮商角徵羽) chiptune tracks + sfx
+    // =========================================================================
+    let audio = null, master = null, leadBus = null, noiseBuf = null;
+    let soundOn = localStorage.getItem('xySound') !== '0';
+    let seqTimer = null, seqStep = 0, seqTime = 0, track = null;
+    const fq = m => 440 * Math.pow(2, (m - 69) / 12);
+    // 8 bars x 8 steps per track, all in the Chinese pentatonic scale (宮商角徵羽).
+    // 玄淵's motif (A-G-E-C descending) hides in the town theme's last bar and drives the boss theme.
+    const TRACKS = {
+        overworld: { step: 0.16, bassEvery: 4, arpEvery: 1, drums: 'k--h--h-',
+            lead: [
+                [72, 0, 74, 0, 76, 0, 79, 76], [74, 0, 76, 0, 79, 0, 81, 79],
+                [76, 0, 79, 0, 84, 0, 81, 79], [76, 74, 72, 0, 74, 0, 76, 0],
+                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 79, 0, 76, 0, 74, 76],
+                [79, 0, 76, 0, 74, 0, 72, 74], [74, 72, 69, 0, 72, 0, 0, 0]],
+            bass: [48, 50, 45, 43, 48, 50, 43, 48],
+            chords: [[60, 64, 67], [62, 67, 69], [57, 60, 64], [55, 62, 67],
+                     [60, 64, 67], [62, 67, 69], [55, 62, 67], [60, 64, 67]] },
+        town: { step: 0.21, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [76, 0, 0, 74, 0, 0, 72, 0], [74, 0, 0, 72, 0, 0, 69, 0],
+                [72, 0, 0, 69, 0, 0, 67, 0], [69, 0, 67, 0, 64, 0, 0, 0],
+                [76, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 76, 0, 0, 74, 0],
+                [72, 0, 0, 76, 0, 0, 72, 0], [69, 0, 67, 0, 64, 0, 60, 0]],
+            bass: [45, 43, 41, 40, 45, 43, 41, 43],
+            chords: [[57, 60, 64], [55, 62, 67], [53, 60, 65], [52, 57, 64],
+                     [57, 60, 64], [55, 62, 67], [53, 60, 65], [55, 62, 67]] },
+        battle: { step: 0.11, bassEvery: 2, arpEvery: 1, drums: 'k-hk-h-h',
+            lead: [
+                [69, 69, 0, 72, 74, 0, 76, 74], [67, 67, 0, 69, 72, 0, 74, 72],
+                [64, 64, 0, 67, 69, 0, 72, 69], [62, 64, 67, 69, 76, 69, 67, 64],
+                [69, 69, 0, 72, 74, 0, 79, 76], [67, 67, 0, 74, 72, 0, 69, 72],
+                [64, 67, 72, 76, 79, 76, 72, 69], [62, 0, 62, 62, 74, 0, 62, 0]],
+            bass: [45, 43, 40, 38, 45, 43, 40, 38],
+            chords: [[57, 60, 64], [55, 62, 67], [52, 57, 64], [50, 57, 62],
+                     [57, 60, 64], [55, 62, 67], [52, 57, 64], [50, 57, 62]] },
+        dungeon: { step: 0.19, bassEvery: 4, arpEvery: 2, drums: 'k-------',
+            lead: [
+                [62, 0, 0, 65, 0, 0, 62, 0], [67, 0, 0, 65, 0, 0, 62, 0],
+                [72, 0, 0, 69, 0, 0, 67, 0], [62, 0, 0, 0, 0, 0, 0, 0],
+                [62, 0, 0, 65, 0, 0, 67, 0], [69, 0, 0, 67, 0, 0, 65, 0],
+                [65, 0, 0, 62, 0, 0, 60, 0], [62, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [38, 36, 33, 31, 38, 36, 33, 38],
+            chords: [[50, 55, 57], [48, 53, 55], [45, 50, 52], [43, 48, 50],
+                     [50, 55, 57], [48, 53, 55], [45, 50, 52], [50, 55, 57]] },
+        boss: { step: 0.105, bassEvery: 2, arpEvery: 1, drums: 'kkh-k-h-',
+            lead: [
+                [69, 0, 67, 0, 64, 0, 60, 0], [69, 69, 67, 67, 64, 64, 62, 60],
+                [72, 0, 69, 0, 67, 0, 62, 0], [64, 62, 64, 62, 64, 0, 57, 0],
+                [69, 0, 72, 0, 76, 0, 72, 0], [79, 76, 79, 76, 79, 0, 67, 0],
+                [72, 69, 72, 69, 72, 0, 62, 0], [64, 64, 64, 64, 62, 62, 62, 62]],
+            bass: [45, 45, 43, 40, 45, 45, 43, 45],
+            chords: [[57, 60, 64], [57, 60, 64], [55, 62, 67], [52, 57, 64],
+                     [57, 60, 64], [50, 57, 62], [55, 62, 67], [52, 57, 64]] },
+        // 憶 — a tender 《魯冰花》-style ballad (original melody in that gentle
+        // major-pentatonic idiom): slow, flute-forward, lots of breathing space.
+        // Used for remembrance visions, the master's memory, and the ending.
+        memory: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
+                [69, 0, 72, 0, 74, 0, 0, 0], [72, 0, 69, 0, 67, 0, 0, 0],
+                [72, 0, 74, 0, 76, 0, 0, 0], [79, 0, 76, 0, 74, 0, 72, 0],
+                [69, 0, 67, 0, 69, 0, 72, 0], [69, 0, 67, 0, 64, 0, 0, 0]],
+            bass: [48, 45, 41, 43, 48, 45, 40, 43],
+            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
+                     [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]] },
+    };
+    function ensureAudio() {
+        if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        master = audio.createGain();
+        master.gain.value = soundOn ? 1 : 0;
+        master.connect(audio.destination);
+        // lead bus with an echo send for a fatter, less beepy melody
+        leadBus = audio.createGain();
+        leadBus.connect(master);
+        const delay = audio.createDelay(0.5);
+        delay.delayTime.value = 0.26;
+        const fb = audio.createGain(); fb.gain.value = 0.25;
+        const wet = audio.createGain(); wet.gain.value = 0.18;
+        leadBus.connect(delay); delay.connect(fb); fb.connect(delay);
+        delay.connect(wet); wet.connect(master);
+        // shared white-noise buffer for percussion
+        noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        if (track) startTrack(track);
+    }
+    function tone(f, t, dur, type, gain, dest) {
+        if (!audio) return;
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(dest || master);
+        o.start(t); o.stop(t + dur + 0.02);
+    }
+    // 古箏-style pluck: sharp attack, fast decay, subtle upward 滑音 slide, octave shimmer
+    function leadNote(m, t, dur) {
+        if (!audio) return;
+        t += (Math.random() - 0.5) * 0.012; // humanize
+        const f = fq(m);
+        const voices = [['triangle', 1, 0.052], ['sine', 2, 0.016]];
+        for (const [type, mult, g0] of voices) {
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.type = type;
+            o.frequency.setValueAtTime(f * mult * 0.975, t);
+            o.frequency.exponentialRampToValueAtTime(f * mult, t + 0.035);
+            g.gain.setValueAtTime(g0 * (0.9 + Math.random() * 0.2), t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 1.7, 0.18));
+            o.connect(g).connect(leadBus);
+            o.start(t); o.stop(t + dur * 1.8 + 0.06);
+        }
+    }
+    // 笛-style flute: soft attack sine with vibrato, doubles phrase heads on the second pass
+    function flute(m, t, dur) {
+        if (!audio) return;
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = fq(m);
+        const lfo = audio.createOscillator(), lg = audio.createGain();
+        lfo.frequency.value = 5.2; lg.gain.value = 9;
+        lfo.connect(lg); lg.connect(o.detune);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.026, t + 0.07);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(leadBus);
+        o.start(t); lfo.start(t);
+        o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+    }
+    function drum(ch, t) {
+        if (!audio) return;
+        if (ch === 'k') {
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(130, t);
+            o.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+            g.gain.setValueAtTime(0.22, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+            o.connect(g).connect(master);
+            o.start(t); o.stop(t + 0.14);
+        } else if (ch === 'h') { // 梆子 woodblock: resonant band-passed tick
+            const src = audio.createBufferSource();
+            src.buffer = noiseBuf;
+            const bp = audio.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 7;
+            const g = audio.createGain();
+            g.gain.setValueAtTime(0.11, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+            src.connect(bp); bp.connect(g); g.connect(master);
+            src.start(t); src.stop(t + 0.07);
+        }
+    }
+    function startTrack(name) {
+        track = name;
+        if (!audio) return;
+        clearInterval(seqTimer);
+        if (!name) return;
+        seqStep = 0;
+        seqTime = audio.currentTime + 0.08;
+        seqTimer = setInterval(() => {
+            const T = TRACKS[track];
+            if (!T) return;
+            while (seqTime < audio.currentTime + 0.28) {
+                const bar = Math.floor(seqStep / 8) % 8, pos = seqStep % 8;
+                const pass = Math.floor(seqStep / 64) % 2;
+                const n = T.lead[bar][pos];
+                if (n) leadNote(n, seqTime, T.step * 1.1);
+                if (n && pass === 1 && pos === 0) flute(n + 12, seqTime, T.step * 7);
+                if (pos % T.bassEvery === 0) tone(fq(T.bass[bar]), seqTime, T.step * T.bassEvery * 0.9, 'triangle', 0.065);
+                if (pos % T.arpEvery === 0) {
+                    const chord = T.chords[bar];
+                    tone(fq(chord[(pos / T.arpEvery) % 3]), seqTime, T.step * 0.9, 'sine', 0.022);
+                }
+                drum(T.drums[pos], seqTime);
+                seqStep++;
+                seqTime += T.step;
+            }
+        }, 70);
+    }
+    function sfx(kind) {
+        if (!audio || !soundOn) return;
+        const t = audio.currentTime;
+        const seqs = {
+            hit: [[160, 'sawtooth', 0.1]], hurt: [[110, 'square', 0.12]],
+            spell: [[440, 'sine', 0.08], [660, 'sine', 0.08], [880, 'sine', 0.1]],
+            heal: [[523, 'sine', 0.09], [784, 'sine', 0.12]],
+            item: [[660, 'square', 0.07], [880, 'square', 0.08]],
+            chest: [[523, 'square', 0.08], [659, 'square', 0.08], [784, 'square', 0.12]],
+            fanfare: [[523, 'square', 0.09], [523, 'square', 0.06], [523, 'square', 0.06], [659, 'square', 0.14], [784, 'square', 0.2]],
+            crystal: [[880, 'sine', 0.12], [1109, 'sine', 0.12], [1319, 'sine', 0.2], [1760, 'sine', 0.28]],
+            gameover: [[330, 'sawtooth', 0.2], [262, 'sawtooth', 0.2], [196, 'sawtooth', 0.3], [131, 'sawtooth', 0.45]],
+            step: [], blip: [[520, 'square', 0.05]],
+        };
+        (seqs[kind] || []).forEach((s, i) => tone(s[0], t + i * 0.1, s[2], s[1], 0.08));
+    }
+    document.getElementById('btnSound').addEventListener('click', () => {
+        ensureAudio();
+        soundOn = !soundOn;
+        localStorage.setItem('xySound', soundOn ? '1' : '0');
+        master.gain.value = soundOn ? 1 : 0;
+        document.getElementById('btnSound').textContent = soundOn ? '🎵 音效：開' : '🔇 音效：關';
+    });
+    document.getElementById('btnSound').textContent = soundOn ? '🎵 音效：開' : '🔇 音效：關';
+    document.getElementById('btnEnc').addEventListener('click', cycleEnc);
+    for (const ev of ['keydown', 'pointerdown', 'touchstart']) document.addEventListener(ev, ensureAudio);
+
+    // =========================================================================
+    //  RENDERING
+    // =========================================================================
+    const TILE = 32, VW = 15, VH = 11;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const $ = id => document.getElementById(id);
+    const TCOLORS = { '.': '#4f7249', f: '#33582f', '^': '#7a7469', '~': '#2e5d7d', s: '#c9b077',
+                      '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#241a2e',
+                      1: '#4f7249', 2: '#33582f', 3: '#c9b077', A: '#4f7249', K: '#7a7469', C: '#c9b077',
+                      J: '#33582f', n: '#33582f', x: '#c9b077',
+                      d: '#8d6e4b' };
+    const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑', J: '🛕', n: '🕸️', x: '🏕️',
+                     l: '🔥', w: '🌊', T: '📦', '~': null };
+    // common terrain features rendered as procedural pixel sprites (sprites.js);
+    // tiles not listed here fall back to the emoji in TEMOJI
+    const TILE_SPRITE = { f: 'tree', '^': 'peak', 1: 'house', 2: 'house', 3: 'house', w: 'wave' };
+
+    function mapAt(x, y) {
+        const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
+        if (y < 0 || y >= m.length || x < 0 || x >= m[0].length) return mode === 'dungeon' ? '#' : '~';
+        return m[y][x];
+    }
+    function curPos() { return mode === 'dungeon' ? S.dpos : S; }
+
+    // deterministic per-tile hash for texture details
+    function th(x, y, n) {
+        let h = (x * 374761393 + y * 668265263) ^ (n * 1274126177);
+        h = (h ^ (h >> 13)) * 1103515245;
+        return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+    }
+    // ambient particles per area
+    let particles = [], pKind = null;
+    var walkTarget = null;
+    function particleKind() {
+        if (mode === 'dungeon') return { earth: 'dust', fire: 'ember', water: 'bubble', castle: 'mist' }[dungeonId] || 'dust';
+        return 'petal';
+    }
+    function initParticles(kind) {
+        pKind = kind;
+        const n = kind === 'mist' ? 7 : 16;
+        particles = Array.from({ length: n }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            s: Math.random() * 2 + (kind === 'mist' ? 26 : 1.5),
+            ph: Math.random() * Math.PI * 2,
+            v: Math.random() * 0.4 + 0.2,
+        }));
+    }
+    function drawParticles(t) {
+        const kind = particleKind();
+        if (kind !== pKind) initParticles(kind);
+        for (const p of particles) {
+            if (kind === 'petal') {
+                p.y += p.v * 0.6; p.x += Math.sin(t / 900 + p.ph) * 0.5 - 0.15;
+                ctx.fillStyle = 'rgba(245,183,201,0.7)';
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(t / 700 + p.ph);
+                ctx.fillRect(-p.s, -p.s * 0.5, p.s * 2, p.s);
+                ctx.restore();
+            } else if (kind === 'ember') {
+                p.y -= p.v; p.x += Math.sin(t / 300 + p.ph) * 0.4;
+                ctx.fillStyle = 'rgba(255,156,74,' + (0.4 + 0.4 * Math.sin(t / 150 + p.ph)) + ')';
+                ctx.fillRect(p.x, p.y, p.s, p.s);
+            } else if (kind === 'bubble') {
+                p.y -= p.v * 0.5; p.x += Math.sin(t / 800 + p.ph) * 0.3;
+                ctx.strokeStyle = 'rgba(180,220,255,0.4)';
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.stroke();
+            } else if (kind === 'dust') {
+                p.x += p.v * 0.3; p.y += Math.sin(t / 1100 + p.ph) * 0.2;
+                ctx.fillStyle = 'rgba(190,170,140,0.3)';
+                ctx.fillRect(p.x, p.y, 1.6, 1.6);
+            } else { // mist
+                p.x += p.v * 0.25;
+                const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.s);
+                g.addColorStop(0, 'rgba(160,170,195,0.10)');
+                g.addColorStop(1, 'rgba(160,170,195,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+            }
+            if (p.y > canvas.height + 10) { p.y = -8; p.x = Math.random() * canvas.width; }
+            if (p.y < -10) { p.y = canvas.height + 8; p.x = Math.random() * canvas.width; }
+            if (p.x > canvas.width + 12) p.x = -10;
+            if (p.x < -12) p.x = canvas.width + 10;
+        }
+    }
+    let lastHud = 0;
+    function draw(t) {
+        if (!S || (mode !== 'world' && mode !== 'dungeon')) return;
+        t = t || performance.now();
+        const p = curPos();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const camX = p.x - Math.floor(VW / 2), camY = p.y - Math.floor(VH / 2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let vy = 0; vy < VH; vy++) {
+            for (let vx = 0; vx < VW; vx++) {
+                const x = camX + vx, y = camY + vy;
+                let ch = mapAt(x, y);
+                if (mode === 'dungeon' && ch === 'T' && S.flags.chests[dungeonId + ':' + x + ',' + y]) ch = '.';
+                if (mode === 'dungeon' && ch === 'B' && bossDown(dungeonId)) ch = '.';
+                const px0 = vx * TILE, py0 = vy * TILE;
+                ctx.fillStyle = TCOLORS[ch] || '#4f7249';
+                ctx.fillRect(px0, py0, TILE, TILE);
+
+                // -------- textured details --------
+                if (ch === '.' || ch === 'S' || '123AC'.includes(ch)) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
+                    }
+                    if (mode === 'world' && ch === '.' && th(x, y, 9) < 0.06) {
+                        ctx.fillStyle = th(x, y, 11) < 0.5 ? '#f5b7c9' : '#f0e6c8';
+                        ctx.fillRect(px0 + th(x, y, 10) * (TILE - 6) + 3, py0 + th(x, y, 12) * (TILE - 6) + 3, 3, 3);
+                    }
+                } else if (ch === 's' || ch === '3') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
+                    }
+                } else if (ch === 'f' || ch === '2') {
+                    ctx.fillStyle = 'rgba(20,40,18,0.5)';
+                    ctx.fillRect(px0 + 6 + th(x, y, 1) * 6, py0 + 4, 2, TILE - 8);
+                    ctx.fillRect(px0 + 20 + th(x, y, 2) * 6, py0 + 6, 2, TILE - 10);
+                } else if (ch === '^') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.09)';
+                    ctx.beginPath();
+                    ctx.moveTo(px0, py0 + TILE);
+                    ctx.lineTo(px0 + TILE * 0.55, py0 + 4);
+                    ctx.lineTo(px0 + TILE, py0 + TILE);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+                    ctx.fillRect(px0, py0 + TILE * 0.72, TILE, TILE * 0.28);
+                } else if (ch === '~' || ch === 'w') {
+                    for (let k = 0; k < 2; k++) {
+                        const ph = ((t / 1400 + th(x, y, k) + k * 0.5) % 1);
+                        ctx.fillStyle = 'rgba(255,255,255,' + (0.10 * Math.sin(ph * Math.PI)) + ')';
+                        ctx.fillRect(px0 + 3, py0 + ph * (TILE - 4) + 2, TILE - 6, 2);
+                    }
+                } else if (ch === 'l') {
+                    ctx.fillStyle = 'rgba(255,150,40,' + (0.15 + 0.12 * Math.sin(t / 260 + x * 2 + y * 3)) + ')';
+                    ctx.fillRect(px0, py0, TILE, TILE);
+                } else if (ch === '#') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                    ctx.fillRect(px0 + 1, py0 + 1, TILE - 2, 2);
+                    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                    ctx.fillRect(px0 + 1, py0 + TILE - 3, TILE - 2, 2);
+                }
+
+                // procedural pixel sprites for the common terrain features,
+                // emoji fallback for the rarer special tiles (see sprites.js)
+                const sprName = TILE_SPRITE[ch];
+                if (sprName && window.SPR) {
+                    if (ch === 'w') SPR.blit(ctx, 'wave', px0, py0, TILE);
+                    else SPR.blit(ctx, sprName, px0, py0, TILE);
+                } else {
+                    ctx.font = '20px serif';
+                    const em = TEMOJI[ch];
+                    if (em) ctx.fillText(em, px0 + TILE / 2, py0 + TILE / 2 + 1);
+                }
+                if (ch === 'B' && mode === 'dungeon') { ctx.font = '20px serif'; ctx.fillText(BOSSES[DUNGEONS[dungeonId].boss].e, px0 + TILE / 2, py0 + TILE / 2); }
+                if (ch === 'S' && mode === 'dungeon') { ctx.font = '20px serif'; ctx.fillText('🚪', px0 + TILE / 2, py0 + TILE / 2); }
+            }
+        }
+        drawParticles(t);
+        // click-to-walk destination marker
+        if (walkTarget) {
+            const mx = (walkTarget.x - camX) * TILE + TILE / 2;
+            const my = (walkTarget.y - camY) * TILE + TILE / 2;
+            if (mx > -TILE && my > -TILE && mx < canvas.width + TILE && my < canvas.height + TILE) {
+                ctx.strokeStyle = 'rgba(241,196,15,' + (0.5 + 0.35 * Math.sin(t / 180)) + ')';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(mx, my, 8 + 2.5 * Math.sin(t / 180), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        // player: soft shadow + gentle bob
+        const px = (p.x - camX) * TILE + TILE / 2;
+        const py = (p.y - camY) * TILE + TILE / 2 + Math.sin(t / 320) * 1.6;
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(px, (p.y - camY) * TILE + TILE - 4, 9, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (window.SPR) {
+            SPR.blitCenter(ctx, 'player', px, py, 26);
+        } else {
+            ctx.font = '22px serif';
+            ctx.fillText('🤺', px, py);
+        }
+        // ink-wash vignette
+        const vg = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.height * 0.42,
+                                            canvas.width / 2, canvas.height / 2, canvas.height * 0.85);
+        vg.addColorStop(0, 'rgba(8,10,18,0)');
+        vg.addColorStop(1, 'rgba(8,10,18,0.32)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (t - lastHud > 250) { lastHud = t; updateHud(); }
+    }
+    function renderLoop(t) {
+        if (S && (mode === 'world' || mode === 'dungeon')) draw(t);
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+    function bossDown(id) {
+        if (id === 'castle') return S.flags.malachorDown;
+        if (id === 'tomb') return !!S.flags.reforged;
+        return !!S.flags.crystals[DUNGEONS[id].crystal];
+    }
+    function objectiveText() {
+        if (!S) return '';
+        const c = S.flags.crystals, f = S.flags;
+        const n = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        if (f.malachorDown) return '天下重歸光明——自由探索，或收服天下妖靈。';
+        if (n === 3 && f.reforged) return '持重鑄之劍，攻向北方山隘的<b>幽都之門 🌑</b>，向玄淵討回劍魂。';
+        if (n === 3) return '三片劍魄已齊——前往東邊樹林的<b>劍塚 🛕</b>，重鑄軒轅劍。';
+        if (!f.recruited || !f.recruited.lyra) return '前往北方的<b>桃源村 🏮</b>，與村長交談。';
+        if (!c.earth) return '深入東方的<b>神農洞 ⛩️</b>，取回大地的劍魄。';
+        if (!c.fire) return '前往西北<b>青丘寨 🎋</b>尋求狐仙相助，再攻<b>祝融火窟 🌋</b>。';
+        if (!c.water) return '南下<b>望川鎮 🏜️</b>打探，尋找沙中的<b>河伯水府 🏯</b>。';
+        return '尋齊三片劍魄。';
+    }
+    function updateHud() {
+        if (!S) return;
+        $('questText').innerHTML = '目標：' + objectiveText();
+        $('hGold').innerHTML = S.gold;
+        const c = S.flags.crystals;
+        $('hCrystals').innerHTML = '劍魄: ' + (['earth', 'fire', 'water'].map(k => c[k] ? '⚔️' : '▫️').join(''));
+        $('hParty').innerHTML = S.party.map(h => {
+            const st = heroStats(h);
+            return HEROES[h.id].e + ' ' + h.hp + '/' + st.maxhp;
+        }).join(' · ');
+    }
+
+    // =========================================================================
+    //  DIALOG SYSTEM
+    // =========================================================================
+    let dialogQueue = [], dialogDone = null, prevMode = 'world';
+    function say(lines, done) {
+        dialogQueue = lines.slice();
+        dialogDone = done || null;
+        if (mode !== 'dialog') prevMode = mode;
+        mode = 'dialog';
+        $('dialog').classList.add('open');
+        nextDialog(false);
+    }
+    function nextDialog(advance = true) {
+        if (advance) dialogQueue.shift();
+        if (!dialogQueue.length) {
+            $('dialog').classList.remove('open');
+            mode = prevMode;
+            const cb = dialogDone;
+            dialogDone = null;
+            if (cb) cb();
+            draw();
+            return;
+        }
+        const [speaker, text] = dialogQueue[0];
+        $('dSpeaker').textContent = speaker ? speaker + ':' : '';
+        $('dText').innerHTML = text;
+    }
+    $('dialogBox').addEventListener('click', () => nextDialog());
+
+    // =========================================================================
+    //  MOVEMENT & WORLD EVENTS
+    // =========================================================================
+    const BLOCKED = { '~': 1, '^': 1, '#': 1, l: 1, w: 1 };
+    function tryMove(dx, dy) {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        const p = curPos();
+        const nx = p.x + dx, ny = p.y + dy;
+        const ch = mapAt(nx, ny);
+        if (BLOCKED[ch]) return;
+        p.x = nx; p.y = ny;
+        stepCount++;
+        enterTile(ch, nx, ny);
+        draw();
+    }
+
+    function enterTile(ch, x, y) {
+        if (mode === 'world') {
+            if ('123'.includes(ch)) return openTown(Number(ch));
+            if (ch === 'n') return nestEvent();
+            if (ch === 'x') return caravanEvent();
+            for (const [id, D] of Object.entries(DUNGEONS)) {
+                if (D.worldChar === ch) return tryEnterDungeon(id);
+            }
+            maybeEncounter(regionTier(x, y), ch === 'f' ? 0.16 : ch === 's' ? 0.12 : 0.1);
+        } else {
+            const D = DUNGEONS[dungeonId];
+            if (ch === 'S' && stepCount > 2) return exitDungeon('你回到了日光之下。');
+            if (ch === 'T') return openChest(x, y);
+            if (ch === 'B' && !bossDown(dungeonId)) {
+                const intro = BOSS_INTROS[D.boss];
+                if (intro) return say(intro, () => startBattle([D.boss], true));
+                return startBattle([D.boss], true);
+            }
+            maybeEncounter(D.tier, 0.13);
+        }
+    }
+    function regionTier(x, y) {
+        if (y >= 22) return 3;
+        if (y < 10 && x < 14) return 2;
+        return 1;
+    }
+    const ENC_MODES = [
+        { mul: 1, label: '⚔️ 遇敵：正常' },
+        { mul: 0.4, label: '⚔️ 遇敵：稀少' },
+        { mul: 0, label: '🕊️ 遇敵：關閉' },
+    ];
+    let encMode = Number(localStorage.getItem('xyEnc') || 0) % ENC_MODES.length;
+    function cycleEnc() {
+        encMode = (encMode + 1) % ENC_MODES.length;
+        localStorage.setItem('xyEnc', encMode);
+        $('btnEnc').textContent = ENC_MODES[encMode].label;
+    }
+    $('btnEnc').textContent = ENC_MODES[encMode].label;
+    function maybeEncounter(tier, rate) {
+        if (stepCount < 4) return;
+        if (Math.random() < rate * ENC_MODES[encMode].mul) {
+            stepCount = 0;
+            const pool = TIERS[tier];
+            const n = 1 + Math.floor(Math.random() * Math.min(3, S.party.length + 1));
+            const troop = Array.from({ length: n }, () => pool[Math.floor(Math.random() * pool.length)]);
+            startBattle(troop, false);
+        }
+    }
+    function tryEnterDungeon(id) {
+        const D = DUNGEONS[id];
+        if (id === 'tomb') {
+            const c = S.flags.crystals;
+            if (!(c.earth && c.fire && c.water)) {
+                return say([
+                    ['', '斷壁殘垣之間，師門的劍爐沉寂如墓。'],
+                    ['雲越', '殘劍無魂，爐火不應……先尋齊三片劍魄吧。'],
+                ]);
+            }
+            if (S.flags.reforged) {
+                return say([['', '劍爐餘溫尚存。爐前的灰燼裡，再無殘影徘徊。']]);
+            }
+        }
+        if (id === 'castle') {
+            const c = S.flags.crystals;
+            if (!(c.earth && c.fire && c.water)) {
+                return say([
+                    ['', '一堵無星的黑暗封住幽都之門——那不是屏障，而是一種<i>缺失</i>，如同劍死去的那一夜。'],
+                    ['', '唯有三片劍魄之光，能將其劈開。'],
+                ]);
+            }
+            if (S.flags.malachorDown) return say([['', '大門沉寂無聲。它的守望者，已換了一種方式守夜。']]);
+            if (!S.flags.reforged) {
+                return say([
+                    ['', '三片劍魄在你行囊中共鳴——卻仍是三段斷鐵，劈不開這片黑暗。'],
+                    ['墨璃', '東邊樹林裡的<b>劍塚 🛕</b>……你們師門的劍爐就在那裡。只有它，能將三片劍魄重鑄為一。'],
+                ]);
+            }
+        }
+        if (bossDown(id) && id !== 'castle') {
+            return say([['', D.name + '已歸於寂靜。它的劍魄，正在你的行囊中低鳴。']]);
+        }
+        dungeonId = id;
+        mode = 'dungeon';
+        stepCount = 0;
+        // find S tile
+        const m = DMAPS[id];
+        for (let yy = 0; yy < m.length; yy++)
+            for (let xx = 0; xx < m[0].length; xx++)
+                if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
+        say([['', '你踏入<b>' + D.name + '</b>……' + (D.boss === 'xuanyuan_w' ? '黑暗中，傳來一聲冰冷而熟悉的嘆息。' : '')]]);
+        startTrack('dungeon');
+        draw();
+    }
+    function exitDungeon(msg) {
+        mode = 'world';
+        dungeonId = null;
+        stepCount = 0;
+        startTrack('overworld');
+        if (msg) say([['', msg]]);
+        draw();
+    }
+    function openChest(x, y) {
+        const key = dungeonId + ':' + x + ',' + y;
+        if (S.flags.chests[key]) return;
+        S.flags.chests[key] = true;
+        const loot = DUNGEONS[dungeonId].chests[x + ',' + y] || { gold: 50 };
+        sfx('chest');
+        if (loot.gold) {
+            S.gold += loot.gold;
+            say([['', '發現寶箱：<b class="gold">白銀 ' + loot.gold + ' 兩</b>！💰']]);
+        } else {
+            S.inv[loot.item] = (S.inv[loot.item] || 0) + loot.n;
+            say([['', '發現寶箱：<b>' + ITEMS[loot.item].name + ' ×' + loot.n + '</b>！' + ITEMS[loot.item].e]]);
+        }
+        save();
+    }
+
+    // =========================================================================
+    //  STORY — boss confrontations & crystal visions
+    // =========================================================================
+    const BOSS_INTROS = {
+        tubo: [
+            ['？？？', '深處來者，何人。守劍人取走了光。土伯，看守黑暗。'],
+            ['墨璃', '雲越——它臂上的縛紋，是劍派的結法。這守護靈曾是你們祠堂的護法，至今仍守著最後一道命令。'],
+            ['雲越', '那就讓這道命令，到此為止。'],
+        ],
+        bifang: [
+            ['畢方', '又有火星子爬上來了。他吞下的光灼燒著他，小火星……一如灼燒著我。熄了一團火，另一團只會燒得更旺。'],
+            ['青璇', '畢方。此鳥現世，必有大災將至。真教人「歡喜」。'],
+            ['墨璃', '「他吞下的光」——火鳥！究竟是誰，吞下了劍光？！'],
+            ['畢方', '那個一邊流淚、一邊動手的人。燒吧！'],
+        ],
+        gonggong: [
+            ['共工', '旱地的孩子們。他把劍光溺入自己心中，只為藏起你們、避開噬魂之目——你們卻要把光重新舉上天空？'],
+            ['雲越', '噬魂。石靈、火鳥，如今是你。說出他的名字。'],
+            ['共工', '你早已知道，劍客。你為他燒過空棺。來吧——大河，從不讓路。'],
+        ],
+        jianling: [
+            ['？？？', '……回來了？買酒回來了嗎，小越。爐火……爐火怎麼熄了……'],
+            ['雲越', '師父？！不——你死在祠堂那夜。你不在這裡。你<b>不該</b>在這裡。'],
+            ['墨璃', '雲越，穩住！那是外洩的劍靈聚成的殘影——它借了你最深的記憶成形！'],
+            ['殘影', '劍呢……劍在哪裡？！把劍……還給山門——'],
+            ['青璇', '它不會聽的，小劍客。斬斷它。有時候，放下，就是一劍。'],
+        ],
+        xuanyuan_w: [
+            ['玄淵', '雲越。買酒的那個。天意果然愛開小玩笑——劍派最不成器的弟子，捧著劍派最重的寶物。'],
+            ['雲越', '是你毀了軒轅劍。是你讓六十位同門，為早已死去的殘片送命。'],
+            ['玄淵', '我給了他們痛快。而幽都之下甦醒的東西——蚩尤殘魂、噬魂——不會給。自黃帝於涿鹿拔劍那日起，它便追逐著劍光。它再度尋到我們那夜，我聽見它，醒了。'],
+            ['玄淵', '所以我親手毀劍，吞其劍靈。沒有劍光的世界，是一個<b>不被看見</b>的世界。黑暗、腐爛，卻——<i>活著</i>。'],
+            ['墨璃', '前輩……看看你的手。那光，正把你燒成空殼。'],
+            ['玄淵', '是。哪怕燒上一萬年，我也甘願。回頭吧，孩子們。不要在一個靠遺忘才得以倖存的世界上空，點起烽火。'],
+            ['雲越', '遍地墳塚與妖物的世界，不叫倖存，玄淵——那只是在黑暗裡，慢慢地死。家師說過：劍無黑暗，黑暗只在握劍的手。如今握著這柄劍的，是三隻手。'],
+            ['玄淵', '三隻手……你說話的樣子，和他一模一樣。拔劍吧，雲越。證明給我看。'],
+        ],
+    };
+    const CRYSTAL_VISIONS = {
+        earth: [
+            ['', '守護靈崩解——第一片劍魄在你掌中甦醒。'],
+            ['', '<i>幻象湧入腦海：一名披袍的劍客跪在祠堂中，面對灼灼發光的軒轅劍。他在低聲致歉。他將劍光吸入胸膛，如同吞嚥濃煙——劍身轉為死灰，寸寸龜裂。</i>'],
+            ['墨璃', '軒轅劍不是被外敵所毀。它是<b>在祠堂之內，被人親手解開的</b>。雲越——那袍上，繡著你們劍派的山紋。'],
+            ['雲越', '……穩住。還剩兩片。劍會告訴我們剩下的事。'],
+            ['', '✨ 取得第一片<b>劍魄</b>！⚔️'],
+        ],
+        fire: [
+            ['', '火鳥燃盡熄滅——第二片劍魄重新亮起，溫潤而安定。'],
+            ['', '<i>又一段幻象：同一個披袍的身影，年輕了許多，站在演武場上——他耐心地扶正一個小男孩握木劍的手，任由其他弟子在旁笑鬧。</i>'],
+            ['雲越', '……那是我。那個笨小子是<b>我</b>，而那位是玄淵師公。我的啟蒙恩師。我們為他燒過空棺！'],
+            ['墨璃', '那麼，我們追殺的人，正是你們哀悼過的人。毀劍的是玄淵。毀掉這個世界的，也是玄淵。'],
+            ['青璇', '沒有人會無緣無故燒掉自己一生的心血，小劍客。我倒想知道——是什麼東西，嚇住了<i>他</i>。'],
+            ['', '✨ 取得第二片<b>劍魄</b>！⚔️'],
+        ],
+        water: [
+            ['', '河伯化作漫天水霧消散——最後一片、也是最古老的一片劍魄，如眼睛般睜開。'],
+            ['', '<i>它讓你看見玄淵當年所見：幽都之下、黃帝封印的至暗深處，一頭生著千隻蒼白眼睛的飢餓之物——蚩尤殘魂、噬魂——正緩緩轉向每一絲劍光的微芒。</i>'],
+            ['青璇', '所以他藏起了你們。他吞下劍光，讓整個世界隱形。他毀掉軒轅劍，是為了<i>保住</i>劍所守護的一切。'],
+            ['墨璃', '而那光正在殺死他。整整一年，孤身一人，把神劍之靈鎖在一顆凡人的心裡……'],
+            ['雲越', '我的六十位同門，依然死了，墨璃。但——也許兩件事都是真的。我們去幽都之門，做個了結。所有的了結。'],
+            ['', '✨ 取得第三片<b>劍魄</b>！⚔️'],
+        ],
+    };
+
+    // =========================================================================
+    //  TOWNS
+    // =========================================================================
+    // ---- side quests ----
+    let questBattle = null;
+    function nestEvent() {
+        const q = S.flags.quests;
+        if (q.nest >= 1) return say([['', '巨大的蛛網已被斬破，林間又聽得見鳥聲了。']]);
+        say([
+            ['', '林緣掛滿了層層疊疊的蛛網——網心深處，傳來孩子微弱的哭聲。'],
+            ['', '<b class="bad">網的主人，回來了。</b>'],
+        ], () => { questBattle = 'nest'; startBattle(['zhuyao', 'zhuyao', 'zhuyao'], false); });
+    }
+    function caravanEvent() {
+        if (S.flags.quests.caravan >= 1) return say([['', '商隊早已啟程，車轍漸被風沙掩去。']]);
+        say([
+            ['', '沙丘之間，一支商隊被妖物團團圍住，貨車傾覆，駝鈴亂響。'],
+            ['商隊首領', '救、救命啊——！'],
+        ], () => { questBattle = 'caravan'; startBattle(['shaxie', 'shaxie', 'hanba'], false); });
+    }
+    function questReward(q) {
+        if (q === 'nest') {
+            S.flags.quests.nest = 1;
+            say([
+                ['', '你們劈開網繭，抱出瑟瑟發抖的孩子。'],
+                ['孩子', '嗚……我要回家……回桃源村……'],
+                ['', '<i>（送孩子回桃源村，找村長覆命吧。）</i>'],
+            ]);
+        } else if (q === 'caravan') {
+            S.flags.quests.caravan = 1;
+            S.gold += 300;
+            S.inv.fu_shui = (S.inv.fu_shui || 0) + 1;
+            say([
+                ['商隊首領', '多謝各位俠士相救！這點謝儀，還望收下——還有這張祖傳的水靈符！'],
+                ['', '<b class="gold">獲得 白銀 300 兩、五行符・水 ×1！</b>'],
+            ]);
+        }
+        save();
+    }
+
+    let townId = null;
+    function openTown(id) {
+        townId = id;
+        mode = 'town';
+        startTrack('town');
+        const T = TOWNS[id];
+        $('townEmoji').textContent = T.emoji;
+        $('townName').textContent = T.name;
+        $('townText').textContent = T.flavor;
+        const box = $('townBtns');
+        box.innerHTML = '';
+        const add = (label, fn, cls) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', fn);
+            box.appendChild(b);
+        };
+        add('🛏️ 客棧——休息並存檔（' + T.inn + ' 兩）', () => innRest(T));
+        add('🛒 商店', () => openShop(T.tier));
+        add('💬 與村民交談', () => townTalk(id));
+        add('🚪 離開村子', leaveTown, 'primary');
+        $('town').classList.add('open');
+    }
+    function leaveTown() {
+        $('town').classList.remove('open');
+        mode = 'world';
+        startTrack('overworld');
+        draw();
+    }
+    function innRest(T) {
+        if (S.gold < T.inn) return say([['店家', '客官，沒錢沒床。']]);
+        S.gold -= T.inn;
+        S.party.forEach(fullHeal);
+        sfx('heal');
+        const c = S.flags.crystals;
+        const crystalCount = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        if (crystalCount >= 2 && !S.flags.dream) {
+            S.flags.dream = true;
+            save();
+            startTrack('memory');
+            say([
+                ['', '<i>當夜，你夢見師門祠堂——屋頂已失，頭上是無星的天。</i>'],
+                ['？？？', '……我心頭的兩片碎片，正在你行囊裡嗡鳴，買酒的。你以為，我聽不見它們喚我嗎？'],
+                ['？？？', '你們每走近一步，劍光便亮一分。每亮一分，幽都之下的那東西，便游近一寸。快些來吧。你我之中，總該有一個能如願。'],
+                ['', '<i>你在溫暖的房裡醒來，被褥上卻結著霜。（隊伍已恢復——進度已存檔）</i>'],
+            ]);
+        } else {
+            save();
+            say([['店家', '客官安歇。<i>（隊伍已完全恢復——進度已存檔）</i>']]);
+        }
+        updateHud();
+    }
+    function townTalk(id) {
+        const c = S.flags.crystals;
+        if (id === 1) {
+            if (!S.flags.recruited.lyra) {
+                S.flags.recruited.lyra = true;
+                S.party.push({ id: 'lyra', lv: Math.max(1, S.party[0].lv), xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
+                fullHeal(S.party[S.party.length - 1]);
+                save();
+                return say([
+                    ['村長', '雲越啊。劍派最後的傳人……你這倔強的下巴，跟你師父一個模樣。'],
+                    ['村長', '東邊神農洞中沉睡著一片劍魄。只是洞裡的守護靈……變了。任何靠近殘片的活物，都會被它殺死。'],
+                    ['墨璃', '那你需要我。墨家，墨璃——我的機關能縫合血肉，也能擋開刀劍。墨者，不會眼看天下焚而袖手。'],
+                    ['墨璃', '兼愛，非攻。不過……你們的玄淵長老，曾對家師說過一句話：「有些東西，必先毀之，方能存之。」這句話，我想了一整年。'],
+                    ['雲越', '……玄淵。這名字，我早已隨空棺埋了。罷了，墨家的，跟緊我。'],
+                    ['', '<b class="good">墨璃加入了隊伍！</b> 👷‍♀️'],
+                ]);
+            }
+            if (S.flags.quests.nest === 1) {
+                S.flags.quests.nest = 2;
+                S.gold += 200;
+                S.inv.neidan = (S.inv.neidan || 0) + 1;
+                save();
+                return say([
+                    ['村長', '娃兒！我的天，你們把娃兒帶回來了！大恩不言謝——這是村裡湊的謝儀，還有祖上傳下的一顆內丹！'],
+                    ['', '<b class="gold">獲得 白銀 200 兩、內丹 ×1！</b>'],
+                ]);
+            }
+            if (!c.earth) return say([
+                ['村長', '神農洞在平原以東。洞中之物並非生於彼處——而是被<i>安置</i>在那裡的。保重。'],
+                ['村長', '……對了，獵戶家的娃兒在西南方林緣失蹤了。若見到大片蛛網 🕸️，千萬當心。'],
+            ]);
+            if (!c.fire) return say([
+                ['村長', '一片殘魄重鳴，田野已見生機。只是你們說的幻象，教老朽心驚……劍派中人，親手<i>解劍</i>？'],
+                ['墨璃', '袍上繡的是劍派山紋，村長。我們親眼所見。'],
+                ['村長', '那就往西北去吧，穿過竹海，到青丘寨。那一夜，狐仙們在山上看著。火，是記得人臉的。'],
+            ]);
+            if (!c.water) return say([['村長', '兩片劍魄了。望川鎮的商旅說，河伯的水府從荒漠沙中升起，還在滴著水。去做個了斷吧，孩子們。']]);
+            return say([['村長', '果真如此。玄淵未死，噬魂真有其物，兩者都在北方隘口的幽都之門等著。雲越——無論他曾是你的什麼人，切莫遲疑。他，不會遲疑。']]);
+        }
+        if (id === 2) {
+            if (!S.flags.recruited.zephyr) {
+                S.flags.recruited.zephyr = true;
+                S.party.push({ id: 'zephyr', lv: Math.max(1, S.party[0].lv), xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
+                fullHeal(S.party[S.party.length - 1]);
+                save();
+                return say([
+                    ['寨民', '外鄉人！祝融火窟燒了一整年——竹海都成了灰。還有那位狐仙娘子……她整日盯著那座山。'],
+                    ['青璇', '因為那晚我就在山上，小矮子。——喂，帶劍的。你身上，有斷劍之光的味道。'],
+                    ['青璇', '青丘，青璇。九條尾巴，九樁恩怨。軒轅劍崩碎那夜，火窟上空的天裂開了，我族一半的靈燈就此熄滅。'],
+                    ['青璇', '沒有什麼東西襲擊了你們的劍。是有什麼東西，<b>藏進了劍的死亡背後</b>。我跟你們走。敢說個「不」字，就請你進我壺裡坐坐。'],
+                    ['', '<b class="good">青璇加入了隊伍！</b> 🦊'],
+                ]);
+            }
+            if (!c.fire) return say([['寨民', '祝融火窟在寨子南邊，焦竹林深處。守著它的那團火……獵戶說，它一邊燃燒，一邊<i>哭泣</i>。小心。']]);
+            if (!c.water) return say([['青璇的族人', '她一直說，那場噴發不是暴怒——是<i>高燒</i>。一座山想把體內的什麼東西燒出去。河伯或許知道更多。望川鎮在遙遠的南方。']]);
+            return say([['寨民', '灰燼裡冒出新筍了……無論你們三位在做什麼——去幽都之門，做個了結吧。']]);
+        }
+        if (id === 3) {
+            if (!c.water) return say([
+                ['船夫', '河伯水府從東南方的沙地裡升起來了，滴著水，像是大河把它吐了回來。'],
+                ['船夫', '我祖母侍奉過劍派祠堂。她說水之劍魄最為古老——它還記得軒轅劍鑄成的真正緣由：不是為了<i>揮舞</i>那道光，而是為了<b>把整個世界藏在光的背後</b>。'],
+            ]);
+            if (!(c.earth && c.fire && c.water)) return say([['船夫', '還缺一片劍魄？回頭找找吧，朋友——洞窟不會弄丟托付給它的東西。']]);
+            return say([['船夫', '三片都齊了？！那就去幽都之門吧——大門藏在北方山隘裡。喂，朋友。若老故事是真的，劍光會引來那個……<i>東西</i>……你可要想清楚了，英雄。']]);
+        }
+    }
+
+    // =========================================================================
+    //  SHOP
+    // =========================================================================
+    function openShop(tier) {
+        mode = 'shop';
+        $('town').classList.remove('open');
+        $('shop').classList.add('open');
+        renderShop(tier);
+    }
+    let shopTier = 1;
+    function renderShop(tier) {
+        shopTier = tier;
+        $('shopGold').textContent = '💰 白銀 ' + S.gold + ' 兩';
+        const box = $('shopItems');
+        box.innerHTML = '';
+        const add = (label, cost, fn, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = '<span class="shopItem"><span>' + label + '</span><span class="gold">' + cost + ' 兩</span></span>';
+            b.disabled = disabled || S.gold < cost;
+            b.addEventListener('click', () => { S.gold -= cost; fn(); sfx('item'); save(); renderShop(shopTier); updateHud(); });
+            box.appendChild(b);
+        };
+        for (const key of SHOP_ITEMS) {
+            const it = ITEMS[key];
+            const minTier = { jinchuang: 1, dahuan: 2, juqi: 2, huanhun: 3 }[key];
+            if (tier >= minTier) add(it.e + ' ' + it.name + ' <small>(' + it.desc + ')</small>', it.cost,
+                () => { S.inv[key] = (S.inv[key] || 0) + 1; });
+        }
+        for (const h of S.party) {
+            const wlist = WEAPONS[h.id];
+            const next = h.weapon + 1;
+            if (next < wlist.length && next <= tier) {
+                const w = wlist[next];
+                add('⚔️ ' + w.name + ' <small>（' + HEROES[h.id].name + '）</small>', w.cost, () => { h.weapon = next; });
+            }
+            const anext = h.armor + 1;
+            if (anext < ARMORS.length && anext <= tier) {
+                const a = ARMORS[anext];
+                add('🛡️ ' + a.name + ' <small>（' + HEROES[h.id].name + '）</small>', a.cost, () => { h.armor = anext; });
+            }
+        }
+    }
+    $('shopLeave').addEventListener('click', () => {
+        $('shop').classList.remove('open');
+        if (townId) { mode = 'town'; $('town').classList.add('open'); }
+        else { mode = 'world'; draw(); }
+    });
+
+    // =========================================================================
+    //  MENU (items / status / save)
+    // =========================================================================
+    function openMenu() {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        prevMode = mode;
+        mode = 'menu';
+        $('menu').classList.add('open');
+        renderMenu();
+    }
+    function renderMenu() {
+        const body = $('menuBody');
+        let html = '';
+        for (const h of S.party) {
+            const st = heroStats(h);
+            const H = HEROES[h.id];
+            html += '<div class="heroCard' + (h.hp <= 0 ? ' ko' : '') + '" style="margin:5px auto;max-width:300px">' +
+                '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv ' + h.lv + ' ' + H.cls + '</small></div>' +
+                '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
+                '氣血 ' + h.hp + '/' + st.maxhp + ' · 真氣 ' + h.mp + '/' + st.maxmp +
+                '<div style="color:#95a5a6">⚔️' + st.atk + ' 🛡️' + st.def + ' ✨' + st.mag +
+                ' · ' + WEAPONS[h.id][h.weapon].name + ', ' + ARMORS[h.armor].name +
+                '<br>修為 ' + h.xp + '/' + xpNext(h.lv) + '</div></div>';
+        }
+        body.innerHTML = html;
+        const btns = $('menuBtns');
+        btns.innerHTML = '';
+        const add = (label, fn, cls) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', fn);
+            btns.appendChild(b);
+        };
+        for (const key of ALL_ITEM_IDS) {
+            if ((S.inv[key] || 0) <= 0) continue;
+            if (ITEMS[key].use === 'atkAll') continue; // talismans are battle-only
+            add(ITEMS[key].e + ' ' + ITEMS[key].name + ' ×' + S.inv[key], () => useItemMenu(key));
+        }
+        add('🏺 煉妖壺', openHu);
+        if (prevMode === 'world') add('💾 存檔', () => { save(); say([['', '進度已存檔 ✅']]); closeMenu(); });
+        add('↩️ 關閉', closeMenu, 'primary');
+    }
+    function useItemMenu(key) {
+        // apply to first hero who benefits
+        const it = ITEMS[key];
+        let target = null;
+        if (it.use === 'heal') target = S.party.find(h => h.hp > 0 && h.hp < heroStats(h).maxhp);
+        else if (it.use === 'mp') target = S.party.find(h => h.hp > 0 && h.mp < heroStats(h).maxmp);
+        else if (it.use === 'revive') target = S.party.find(h => h.hp <= 0);
+        else if (it.use === 'permHp' || it.use === 'healAllCure') target = S.party.find(h => h.hp > 0);
+        if (!target) return;
+        S.inv[key]--;
+        applyItem(it, target);
+        sfx(it.use === 'heal' ? 'heal' : 'item');
+        save();
+        renderMenu();
+        updateHud();
+    }
+    function applyItem(it, h) {
+        const st = heroStats(h);
+        if (it.use === 'heal') h.hp = Math.min(st.maxhp, h.hp + it.power);
+        else if (it.use === 'mp') h.mp = Math.min(st.maxmp, h.mp + it.power);
+        else if (it.use === 'revive') h.hp = Math.floor(st.maxhp / 2);
+        else if (it.use === 'permHp') { h.bonushp = (h.bonushp || 0) + it.power; h.hp += it.power; }
+        else if (it.use === 'healAllCure') {
+            for (const p of S.party) if (p.hp > 0) p.hp = Math.min(heroStats(p).maxhp, p.hp + it.power);
+        }
+    }
+    function closeMenu() {
+        $('menu').classList.remove('open');
+        mode = prevMode;
+        draw();
+    }
+    $('btnMenu').addEventListener('click', openMenu);
+
+    // =========================================================================
+    //  BATTLE SYSTEM
+    // =========================================================================
+    function startBattle(troopIds, isBoss) {
+        mode = 'battle';
+        startTrack(isBoss ? 'boss' : 'battle');
+        B = {
+            enemies: troopIds.map((id, i) => {
+                const M = BOSSES[id] || MON[id];
+                return { ...M, id, hp: M.hp, maxhp: M.hp, idx: i, turn: 0 };
+            }),
+            isBoss,
+            heroIdx: 0,
+            actions: [],
+            phase: 'command',
+            defending: {},
+            status: {},   // heroIdx -> { poison, sleep, protect }
+            fxq: [],
+        };
+        $('battle').classList.add('open');
+        bMsg(isBoss ? '☠️ ' + B.enemies[0].name + '擋住了去路！' : '妖怪來襲！');
+        renderBattle();
+        promptHero();
+    }
+    function bMsg(t) { $('bMsg').innerHTML = t; }
+    function aliveHeroes() { return S.party.filter(h => h.hp > 0); }
+    function aliveEnemies() { return B.enemies.filter(e => e.hp > 0); }
+
+    function renderBattle() {
+        const row = $('enemyRow');
+        row.innerHTML = '';
+        B.enemies.forEach(e => {
+            const d = document.createElement('div');
+            d.className = 'enemy' + (e.hp <= 0 ? ' dead' : '');
+            d.id = 'en-' + e.idx;
+            d.dataset.idx = e.idx;
+            d.innerHTML = '<div class="sprite">' + e.e + '</div><div class="ehp">' + e.name +
+                (e.elem ? ' <b style="color:' + ELEM_COLOR[e.elem] + '">' + e.elem + '</b>' : '') +
+                (e.boss ? '<br>' + Math.max(0, e.hp) + '/' + e.maxhp : '') + '</div>';
+            d.addEventListener('click', () => enemyClicked(e.idx));
+            row.appendChild(d);
+        });
+        const pp = $('partyPanel');
+        pp.innerHTML = '';
+        S.party.forEach((h, i) => {
+            const st = heroStats(h);
+            const H = HEROES[h.id];
+            const stt = B.status[i] || {};
+            const icons = (stt.poison ? '☠️' : '') + (stt.sleep ? '💤' : '') + (stt.protect ? '🛡️' : '');
+            const d = document.createElement('div');
+            d.id = 'hc-' + i;
+            d.className = 'heroCard' + (h.hp <= 0 ? ' ko' : '') + (B.phase === 'command' && i === B.heroIdx ? ' active' : '');
+            d.innerHTML = '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv' + h.lv + '</small> ' + icons + '</div>' +
+                '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
+                '<div class="mini"><div class="mpf" style="width:' + Math.max(0, h.mp / st.maxmp * 100) + '%"></div></div>' +
+                '氣血 ' + Math.max(0, h.hp) + ' · 真氣 ' + h.mp;
+            pp.appendChild(d);
+        });
+    }
+
+    // Deferred visual effects: applied after renderBattle rebuilds the DOM
+    function queueFx(sel, cls, text, color) {
+        if (B) B.fxq.push({ sel, cls, text, color });
+    }
+    function flushFx() {
+        if (!B) return;
+        for (const f of B.fxq) {
+            const el = document.querySelector(f.sel);
+            if (!el) continue;
+            if (f.cls) { el.classList.remove(f.cls); void el.offsetWidth; el.classList.add(f.cls); }
+            if (f.text) {
+                const s = document.createElement('span');
+                s.className = 'dmgFloat';
+                s.textContent = f.text;
+                s.style.color = f.color || '#fff';
+                s.style.left = (25 + Math.random() * 35) + '%';
+                el.appendChild(s);
+                setTimeout(() => s.remove(), 950);
+            }
+        }
+        B.fxq = [];
+    }
+    function flash(color) {
+        const f = $('flashFx');
+        f.style.background = color;
+        f.classList.remove('flashAnim'); void f.offsetWidth; f.classList.add('flashAnim');
+    }
+    const ELEM_FLASH = { '火': 'rgba(230,80,30,0.4)', '水': 'rgba(120,200,255,0.4)',
+                         '木': 'rgba(140,255,140,0.4)', '金': 'rgba(255,235,150,0.45)',
+                         '土': 'rgba(200,150,80,0.4)', none: 'rgba(200,160,255,0.4)' };
+
+    let pendingAction = null;
+    function promptHero() {
+        // skip dead heroes
+        while (B.heroIdx < S.party.length && S.party[B.heroIdx].hp <= 0) B.heroIdx++;
+        if (B.heroIdx >= S.party.length) return resolveRound();
+        // sleeping heroes lose their turn (40% chance to wake each round)
+        const stt = B.status[B.heroIdx] || {};
+        if (stt.sleep) {
+            if (Math.random() < 0.4) {
+                stt.sleep = false;
+                bMsg(HEROES[S.party[B.heroIdx].id].name + '醒來了！');
+            } else {
+                bMsg(HEROES[S.party[B.heroIdx].id].name + '沉睡不醒……💤');
+                renderBattle();
+                $('cmds').innerHTML = '';
+                B.heroIdx++;
+                return setTimeout(promptHero, 700);
+            }
+        }
+        B.phase = 'command';
+        const h = S.party[B.heroIdx];
+        const H = HEROES[h.id];
+        renderBattle();
+        bMsg('<b>' + H.name + '</b>——請下指令。');
+        const c = $('cmds');
+        c.innerHTML = '';
+        const add = (label, fn, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            b.disabled = !!disabled;
+            b.addEventListener('click', fn);
+            c.appendChild(b);
+        };
+        add('⚔️ 攻擊', () => { pendingAction = { kind: 'attack', hero: B.heroIdx }; targetMode(); });
+        const spells = knownSpells(h);
+        if (spells.length) {
+            add('✨ 法術', () => showSpellMenu(h, spells));
+        }
+        add('🎒 物品', () => showItemMenu());
+        add('🛡️ 防禦', () => queueAction({ kind: 'defend', hero: B.heroIdx }));
+        if (!B.isBoss) {
+            add('🏺 收妖', () => { pendingAction = { kind: 'capture', hero: B.heroIdx }; targetMode(); });
+            add('🏃 逃跑', () => queueAction({ kind: 'flee', hero: B.heroIdx }));
+        }
+    }
+    function showSpellMenu(h, spells) {
+        const c = $('cmds');
+        c.innerHTML = '';
+        for (const sid of spells) {
+            const sp = SPELLS[sid];
+            const b = document.createElement('button');
+            b.innerHTML = sp.name + ' <small>' + sp.mp + 'MP · ' + sp.desc + '</small>';
+            b.disabled = h.mp < sp.mp;
+            b.addEventListener('click', () => {
+                pendingAction = { kind: 'spell', hero: B.heroIdx, spell: sid };
+                const k = sp.kind;
+                if (k === 'dmg') targetMode();
+                else if (k === 'heal' || k === 'protect') allyTargetMode(false);
+                else if (k === 'revive') allyTargetMode(true);
+                else queueAction(pendingAction);
+            });
+            c.appendChild(b);
+        }
+        backBtn(c);
+    }
+    function showItemMenu() {
+        const c = $('cmds');
+        c.innerHTML = '';
+        let any = false;
+        for (const key of ALL_ITEM_IDS) {
+            if ((S.inv[key] || 0) <= 0) continue;
+            const it = ITEMS[key];
+            if (it.use === 'permHp') continue; // menu-only
+            any = true;
+            const b = document.createElement('button');
+            b.innerHTML = it.e + ' ' + it.name + ' ×' + S.inv[key] + ' <small>' + it.desc + '</small>';
+            b.addEventListener('click', () => {
+                pendingAction = { kind: 'item', hero: B.heroIdx, item: key };
+                if (it.use === 'atkAll' || it.use === 'healAllCure') queueAction(pendingAction);
+                else allyTargetMode(it.use === 'revive');
+            });
+            c.appendChild(b);
+        }
+        if (!any) {
+            const d = document.createElement('div');
+            d.style.cssText = 'font-size:13px;color:#95a5a6;align-self:center';
+            d.textContent = '沒有物品！';
+            c.appendChild(d);
+        }
+        backBtn(c);
+    }
+    function backBtn(c) {
+        const b = document.createElement('button');
+        b.textContent = '↩️ 返回';
+        b.className = 'danger';
+        b.addEventListener('click', promptHero);
+        c.appendChild(b);
+    }
+    function targetMode() {
+        bMsg('選擇目標！🎯');
+        $('cmds').innerHTML = '';
+        backBtn($('cmds'));
+        document.querySelectorAll('.enemy:not(.dead)').forEach(d => d.classList.add('target'));
+    }
+    function enemyClicked(idx) {
+        if (!pendingAction || B.phase !== 'command') return;
+        if (B.enemies[idx].hp <= 0) return;
+        pendingAction.target = idx;
+        document.querySelectorAll('.enemy').forEach(d => d.classList.remove('target'));
+        queueAction(pendingAction);
+    }
+    function allyTargetMode(wantDead) {
+        const c = $('cmds');
+        c.innerHTML = '';
+        S.party.forEach((h, i) => {
+            const ok = wantDead ? h.hp <= 0 : h.hp > 0;
+            if (!ok) return;
+            const b = document.createElement('button');
+            b.textContent = HEROES[h.id].e + ' ' + HEROES[h.id].name;
+            b.addEventListener('click', () => { pendingAction.target = i; queueAction(pendingAction); });
+            c.appendChild(b);
+        });
+        backBtn(c);
+    }
+    function queueAction(a) {
+        B.actions.push(a);
+        pendingAction = null;
+        B.heroIdx++;
+        promptHero();
+    }
+
+    function resolveRound() {
+        B.phase = 'resolve';
+        $('cmds').innerHTML = '';
+        B.defending = {};
+        // build full action list: heroes + enemies, sort by speed
+        const acts = [];
+        for (const a of B.actions) {
+            const h = S.party[a.hero];
+            acts.push({ ...a, spd: heroStats(h).spd + Math.random() * 3, side: 'hero' });
+        }
+        for (const e of aliveEnemies()) {
+            acts.push({ kind: 'enemyAct', enemy: e.idx, spd: e.spd + Math.random() * 3, side: 'enemy' });
+        }
+        acts.sort((a, b2) => b2.spd - a.spd);
+        B.actions = [];
+        runActions(acts, 0);
+    }
+
+    function runActions(acts, i) {
+        if (!B) return;
+        if (checkBattleEnd()) return;
+        if (i >= acts.length) {
+            // 玄淵's lingering will intervenes once in the final battle
+            const e0 = B.enemies[0];
+            if (!B.xuHelp && e0 && e0.id === 'shihun' && e0.hp > 0 && e0.hp < e0.maxhp * 0.4) {
+                B.xuHelp = true;
+                for (const h of aliveHeroes()) {
+                    const st2 = heroStats(h);
+                    const heal = Math.round(st2.maxhp * 0.45);
+                    h.hp = Math.min(st2.maxhp, h.hp + heal);
+                    queueFx('#hc-' + S.party.indexOf(h), null, '+' + heal, '#2ecc71');
+                }
+                sfx('heal');
+                bMsg('玄淵殘存的意志，攥住了噬魂：「孩子們——就是現在！」全隊氣血大幅回復！');
+                renderBattle();
+                flushFx();
+            }
+            // end of round: poison ticks
+            let anyPoison = false;
+            S.party.forEach((h, idx) => {
+                if (h.hp > 0 && B.status[idx] && B.status[idx].poison) {
+                    const dmg = Math.max(1, Math.ceil(heroStats(h).maxhp * 0.06));
+                    h.hp -= dmg;
+                    queueFx('#hc-' + idx, 'shake', '-' + dmg, '#9b59b6');
+                    anyPoison = true;
+                }
+            });
+            B.heroIdx = 0;
+            if (anyPoison) {
+                bMsg('毒素正在蔓延……☠️');
+                renderBattle();
+                flushFx();
+                if (checkBattleEnd()) return;
+                return setTimeout(promptHero, 750);
+            }
+            return promptHero();
+        }
+        const a = acts[i];
+        const delay = performAction(a);
+        renderBattle();
+        flushFx();
+        if (checkBattleEnd()) return;
+        setTimeout(() => runActions(acts, i + 1), delay);
+    }
+
+    const rnd = v => Math.round(v * (0.85 + Math.random() * 0.3));
+    function performAction(a) {
+        if (a.side === 'hero') {
+            const h = S.party[a.hero];
+            if (h.hp <= 0) return 80;
+            const H = HEROES[h.id];
+            const st = heroStats(h);
+            if (a.kind === 'attack') {
+                let t = B.enemies[a.target];
+                if (t.hp <= 0) t = aliveEnemies()[0];
+                if (!t) return 80;
+                const dmg = Math.max(1, rnd(st.atk * 2 - t.def));
+                t.hp -= dmg;
+                sfx('hit');
+                queueFx('#en-' + t.idx, 'shake', '-' + dmg, '#f1c40f');
+                bMsg(H.name + '攻擊' + t.name + '——<b>' + dmg + '</b> 點傷害！' + (t.hp <= 0 ? ' 💥 擊敗！' : ''));
+                return 750;
+            }
+            if (a.kind === 'defend') {
+                B.defending[a.hero] = true;
+                h.mp = Math.min(st.maxmp, h.mp + 2);
+                bMsg(H.name + '嚴陣防禦。🛡️（真氣 +2）');
+                return 550;
+            }
+            if (a.kind === 'flee') {
+                if (Math.random() < 0.6) {
+                    bMsg('成功脫離了戰鬥！🏃');
+                    setTimeout(endBattle, 600);
+                    return 9999;
+                }
+                bMsg(H.name + '想要脫身……卻沒能逃掉！');
+                return 700;
+            }
+            if (a.kind === 'capture') {
+                let t = B.enemies[a.target];
+                if (!t || t.hp <= 0) t = aliveEnemies()[0];
+                if (!t) return 80;
+                if (t.boss) { bMsg('煉妖壺劇烈震顫——此妖太過強大，收不得！'); return 700; }
+                const p = Math.min(0.85, Math.max(0.08, 0.9 * (1 - t.hp / t.maxhp)));
+                if (Math.random() < p) {
+                    t.hp = 0;
+                    t.captured = true;
+                    S.hu[t.id] = (S.hu[t.id] || 0) + 1;
+                    sfx('chest');
+                    queueFx('#en-' + t.idx, 'shake', '🏺', '#f1c40f');
+                    bMsg(H.name + '高舉煉妖壺——' + t.name + '被吸入壺中！🏺');
+                } else {
+                    sfx('blip');
+                    bMsg(t.name + '掙脫了煉妖壺！（先削弱它——成功率 ' + Math.round(p * 100) + '%）');
+                }
+                return 800;
+            }
+            if (a.kind === 'item') {
+                if ((S.inv[a.item] || 0) <= 0) return 80;
+                const it = ITEMS[a.item];
+                S.inv[a.item]--;
+                if (it.use === 'atkAll') {
+                    sfx('spell');
+                    flash(ELEM_FLASH[it.elem] || ELEM_FLASH.none);
+                    let total = 0;
+                    for (const t of aliveEnemies()) {
+                        let mult = 1;
+                        if (t.elem && KE[it.elem] === t.elem) mult = 1.75;
+                        else if (t.elem && KE[t.elem] === it.elem) mult = 0.6;
+                        const dmg = Math.max(1, rnd((it.power - t.def * 0.4) * mult));
+                        t.hp -= dmg;
+                        total += dmg;
+                        queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : '#f1c40f');
+                    }
+                    bMsg(H.name + '祭出' + it.name + '！共 ' + total + ' 點傷害！' + it.e);
+                    return 850;
+                }
+                if (it.use === 'healAllCure') {
+                    sfx('heal');
+                    flash('rgba(120,255,160,0.3)');
+                    S.party.forEach((t, idx) => {
+                        if (t.hp <= 0) return;
+                        t.hp = Math.min(heroStats(t).maxhp, t.hp + it.power);
+                        B.status[idx] = {};
+                        queueFx('#hc-' + idx, null, '+' + it.power, '#2ecc71');
+                    });
+                    bMsg(H.name + '誦讀清心符——清光滌盪全隊。📜');
+                    return 800;
+                }
+                applyItem(it, S.party[a.target]);
+                sfx(it.use === 'heal' ? 'heal' : 'item');
+                if (it.use === 'heal') queueFx('#hc-' + a.target, null, '+' + it.power, '#2ecc71');
+                bMsg(H.name + '對' + HEROES[S.party[a.target].id].name + '使用了' + it.name + '。' + it.e);
+                return 700;
+            }
+            if (a.kind === 'spell') {
+                const sp = SPELLS[a.spell];
+                if (h.mp < sp.mp) return 80;
+                h.mp -= sp.mp;
+                if (sp.kind === 'dmg' || sp.kind === 'dmgAll' || sp.kind === 'physAll') {
+                    sfx('spell');
+                    flash(ELEM_FLASH[sp.elem] || ELEM_FLASH.none);
+                    const power = sp.kind === 'physAll' ? st.atk * sp.mult : sp.power + st.mag * 1.6;
+                    const targets = (sp.kind === 'dmg')
+                        ? [B.enemies[a.target] && B.enemies[a.target].hp > 0 ? B.enemies[a.target] : aliveEnemies()[0]]
+                        : aliveEnemies();
+                    let total = 0, note = '';
+                    for (const t of targets.filter(Boolean)) {
+                        let mult = 1;
+                        if (sp.elem && t.elem && KE[sp.elem] === t.elem) { mult = 1.75; note = ' <i class="good">五行相剋!</i>'; }
+                        else if (sp.elem && t.elem && KE[t.elem] === sp.elem) { mult = 0.6; note = ' <i style="color:#95a5a6">…被剋制。</i>'; }
+                        const dmg = Math.max(1, rnd((power - t.def * 0.5) * mult));
+                        t.hp -= dmg;
+                        total += dmg;
+                        queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : mult < 1 ? '#95a5a6' : '#f1c40f');
+                    }
+                    bMsg(H.name + '施展《<b>' + sp.name + '</b>》！共 ' + total + ' 點傷害！✨' + note);
+                    return 800;
+                }
+                if (sp.kind === 'heal') {
+                    const t = S.party[a.target];
+                    const heal = rnd(sp.power + st.mag * 1.6);
+                    t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                    if (B.status[a.target]) B.status[a.target].poison = false;
+                    sfx('heal');
+                    queueFx('#hc-' + a.target, null, '+' + heal, '#2ecc71');
+                    bMsg(H.name + '施展《<b>' + sp.name + '</b>》——' + HEROES[t.id].name + '回復 ' + heal + ' 點氣血！💚');
+                    return 750;
+                }
+                if (sp.kind === 'healAll') {
+                    sfx('heal');
+                    flash('rgba(120,255,160,0.3)');
+                    for (const t of aliveHeroes()) {
+                        const idx = S.party.indexOf(t);
+                        const heal = rnd(sp.power + st.mag * 1.2);
+                        t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                        if (B.status[idx]) B.status[idx].poison = false;
+                        queueFx('#hc-' + idx, null, '+' + heal, '#2ecc71');
+                    }
+                    bMsg(H.name + '施展《<b>' + sp.name + '</b>》——柔光沐浴全隊！💚');
+                    return 800;
+                }
+                if (sp.kind === 'protect') {
+                    B.status[a.target] = { ...(B.status[a.target] || {}), protect: true };
+                    sfx('heal');
+                    queueFx('#hc-' + a.target, null, '🛡️', '#3498db');
+                    bMsg(H.name + '施展《<b>機關盾</b>》——' + HEROES[S.party[a.target].id].name + '獲得了守護！');
+                    return 750;
+                }
+                if (sp.kind === 'revive') {
+                    const t = S.party[a.target];
+                    if (t.hp <= 0) {
+                        t.hp = Math.floor(heroStats(t).maxhp / 2);
+                        sfx('heal');
+                        queueFx('#hc-' + a.target, null, '🌟', '#f1c40f');
+                        bMsg(H.name + '施展《<b>起死回生</b>》——' + HEROES[t.id].name + '重新站了起來！🌟');
+                    }
+                    return 800;
+                }
+            }
+            return 80;
+        }
+        // enemy action
+        const e = B.enemies[a.enemy];
+        if (!e || e.hp <= 0) return 80;
+        e.turn++;
+        const heroes = aliveHeroes();
+        if (!heroes.length) return 80;
+        queueFx('#en-' + e.idx, 'lunge');
+        if (e.spell && e.turn % 3 === 0) {
+            const sp = ENEMY_SPELLS[e.spell];
+            sfx('spell');
+            flash('rgba(160,40,60,0.45)');
+            for (const h of heroes) {
+                const idx = S.party.indexOf(h);
+                const st = heroStats(h);
+                let dmg = Math.max(1, rnd(sp.power + e.atk * 0.6 - st.def * 0.4));
+                if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
+                if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
+                h.hp -= dmg;
+                if (B.status[idx]) B.status[idx].sleep = false;
+                queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
+            }
+            bMsg(e.name + '施展《<b>' + sp.name + '</b>》，席捲全隊！🔥');
+            return 900;
+        }
+        const h = heroes[Math.floor(Math.random() * heroes.length)];
+        const idx = S.party.indexOf(h);
+        const st = heroStats(h);
+        let dmg = Math.max(1, rnd(e.atk * 2 - st.def));
+        if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
+        if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
+        h.hp -= dmg;
+        sfx('hurt');
+        queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
+        let suffix = h.hp <= 0 ? ' 😵' : '';
+        const stt = B.status[idx] = B.status[idx] || {};
+        if (stt.sleep) { stt.sleep = false; suffix += '（驚醒了！）'; }
+        else if (h.hp > 0 && e.inflict && !stt[e.inflict] && Math.random() < 0.28) {
+            stt[e.inflict] = true;
+            suffix += e.inflict === 'poison' ? ' <b style="color:#9b59b6">☠️ 中毒了！</b>' : ' <b style="color:#8ea6c9">💤 睡著了！</b>';
+        }
+        bMsg(e.name + '攻擊' + HEROES[h.id].name + '——<b>' + dmg + '</b> 點傷害！' + suffix);
+        return 750;
+    }
+
+    function checkBattleEnd() {
+        if (!aliveEnemies().length) { setTimeout(victory, 700); return true; }
+        if (!aliveHeroes().length) { setTimeout(defeat, 700); return true; }
+        return false;
+    }
+
+    let lastBoss = null;
+    function victory() {
+        const q = questBattle;
+        questBattle = null;
+        lastBoss = B.enemies[0].id;
+        const xp = B.enemies.reduce((s, e) => s + (e.captured ? Math.floor(e.xp / 2) : e.xp), 0);
+        const gold = B.enemies.reduce((s, e) => s + (e.captured ? 0 : e.gold), 0);
+        S.gold += gold;
+        sfx('fanfare');
+        const msgs = ['<b class="good">戰鬥勝利！</b>修為 +' + xp + ' · <span class="gold">白銀 +' + gold + ' 兩</span>'];
+        for (const h of aliveHeroes()) {
+            h.xp += xp;
+            while (h.lv < MAXLV && h.xp >= xpNext(h.lv)) {
+                h.xp -= xpNext(h.lv);
+                h.lv++;
+                const st = heroStats(h);
+                h.hp = st.maxhp; h.mp = st.maxmp;
+                const newSpell = HEROES[h.id].spells.find(s => s.lv === h.lv);
+                msgs.push('⬆️ <b>' + HEROES[h.id].name + '</b>升至 ' + h.lv + ' 級！' +
+                    (newSpell ? ' 習得《<b>' + SPELLS[newSpell.id].name + '</b>》！✨' : ''));
+            }
+        }
+        const wasBoss = B.isBoss;
+        endBattle();
+        say(msgs.map(m => ['', m]), wasBoss ? () => bossVictory() : (q ? () => questReward(q) : null));
+        save();
+    }
+    function bossVictory() {
+        const D = DUNGEONS[dungeonId];
+        if (D.crystal) {
+            S.flags.crystals[D.crystal] = true;
+            sfx('crystal');
+            startTrack('memory');
+            say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('劍魄之力，載著你回到了洞外。'));
+            save();
+        } else if (dungeonId === 'tomb') {
+            S.flags.reforged = true;
+            S.party[0].weapon = WEAPONS.auron.length - 1;
+            sfx('crystal');
+            say([
+                ['', '殘影散作點點劍光，沒入爐膛——沉寂一年的劍爐，轟然重燃。'],
+                ['雲越', '（將三片劍魄置入爐心。）師父……看著吧。'],
+                ['', '<i>爐火徹夜不熄。出爐之劍，劍身完整如初，卻依舊黯淡如夜——它的「魂」，還鎖在另一個人的胸膛裡。</i>'],
+                ['墨璃', '重鑄完成了。但劍魂仍在玄淵體內。去幽都之門吧——去把它，要回來。'],
+                ['', '⚔️ <b>雲越的佩劍重鑄為「軒轅・殘鋒」！</b>（攻擊大幅提升）'],
+            ], () => exitDungeon('你握著重鑄的殘鋒，步出劍塚。'));
+            save();
+        } else if (lastBoss === 'xuanyuan_w') {
+            // Phase 2: the 噬魂 seizes his hollow body
+            S.party.forEach(h => { const st = heroStats(h); h.hp = st.maxhp; h.mp = st.maxmp; });
+            save();
+            say([
+                ['', '<i>玄淵墜下。被吞的劍光開始離體歸鞘——就在此刻，幽都深處，千隻蒼白的眼睛，同時睜開。</i>'],
+                ['噬魂', '（無數聲音疊在一起）終於……亮起來了。多謝你們，替我把「門」，打開。'],
+                ['青璇', '那東西——它抓住了他的軀殼！'],
+                ['', '<i>黑暗如潮，湧入玄淵空洞的身體。他的影子自地上站起，眼中燃著千點白芒。</i>'],
+                ['噬魂・借體', '這具殼，還盛得下一點光。正好——連你們的，一併吃了。'],
+                ['', '<b class="good">歸來的劍光護住眾人——全隊氣血、真氣完全恢復！</b>'],
+            ], () => startBattle(['shihun'], true));
+        } else {
+            S.flags.malachorDown = true;
+            save();
+            say([
+                ['', '<i>三人同握殘鋒，一劍劈落——千眼崩碎，黑潮退散，湧回幽都深處。玄淵的身軀輕輕跪倒，如釋重負。</i>'],
+                ['玄淵', '……好亮。原來三隻手同握……便不灼人了……'],
+                ['', '<i>被吞噬的光自他體內奔流而出，歸向劍身。一年以來，軒轅劍第一次完整地亮於黑暗之中。剎那間，他的面容變回了演武場上那位長老。而後，他消散了。</i>'],
+                ['玄淵', '<i>雲越，我最不成器的弟子。噬魂仍在幽都之下游弋。同持此劍，勿使一人獨擔……如此，這道光在深淵眼中，便如一柄已然出鞘的劍，懸於一片已然敗亡的戰場。</i>'],
+                ['墨璃', '同持。兼愛——劍，本就該這樣握。'],
+                ['雲越', '……安息吧，師公。接下來，換我們守夜。'],
+            ], showEnding);
+        }
+    }
+    // ---- 煉妖壺：收妖、煉化、合成 ----
+    let fuseSel = null;
+    function openHu() {
+        $('menu').classList.remove('open');
+        mode = 'hu';
+        fuseSel = null;
+        $('huMsg').textContent = '';
+        $('hu').classList.add('open');
+        renderHu();
+    }
+    function renderHu() {
+        const list = $('huList');
+        list.innerHTML = '';
+        const ids = Object.keys(S.hu).filter(k => S.hu[k] > 0);
+        if (!ids.length) {
+            list.innerHTML = '<div style="color:#95a5a6;font-size:13px">壺中空空如也。先在戰鬥中削弱妖怪，再「收妖」！</div>';
+            return;
+        }
+        for (const id of ids) {
+            const m = MON[id];
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:6px;align-items:center;justify-content:space-between;' +
+                'background:#1a2230;border:1px solid ' + (fuseSel === id ? '#f1c40f' : '#2c3e50') +
+                ';border-radius:8px;padding:6px 10px;font-size:13px';
+            row.innerHTML = '<span>' + m.e + ' ' + m.name + ' <b style="color:' + ELEM_COLOR[m.elem] + '">' +
+                m.elem + '</b> ×' + S.hu[id] + '</span>';
+            const btns = document.createElement('span');
+            btns.style.cssText = 'display:flex;gap:6px';
+            const rb = document.createElement('button');
+            rb.textContent = '煉化→' + ITEMS[m.refine].name;
+            rb.style.fontSize = '12px';
+            rb.addEventListener('click', () => refineMon(id));
+            const fb = document.createElement('button');
+            fb.textContent = fuseSel === id ? '已選' : '合成';
+            fb.style.fontSize = '12px';
+            fb.addEventListener('click', () => fusePick(id));
+            btns.appendChild(rb); btns.appendChild(fb);
+            row.appendChild(btns);
+            list.appendChild(row);
+        }
+    }
+    function takeMon(id) {
+        S.hu[id]--;
+        if (S.hu[id] <= 0) delete S.hu[id];
+    }
+    function refineMon(id) {
+        const m = MON[id];
+        takeMon(id);
+        S.inv[m.refine] = (S.inv[m.refine] || 0) + 1;
+        sfx('item');
+        $('huMsg').textContent = '煉化成功：' + m.name + ' → ' + ITEMS[m.refine].e + ' ' + ITEMS[m.refine].name;
+        if (fuseSel && !S.hu[fuseSel]) fuseSel = null;
+        save();
+        renderHu();
+    }
+    function fusePick(id) {
+        if (!fuseSel) {
+            fuseSel = id;
+            $('huMsg').textContent = '已選 ' + MON[id].name + '——再選一隻妖靈合成。';
+            renderHu();
+            return;
+        }
+        const a = fuseSel, b = id;
+        if (a === b && (S.hu[a] || 0) < 2) {
+            $('huMsg').textContent = '同種妖靈，需要兩隻！';
+            return;
+        }
+        const eA = MON[a].elem, eB = MON[b].elem;
+        let result;
+        if (eA === eB) result = 'neidan';
+        else if (SHENG[eA] === eB) result = ELEM_FU[eB];
+        else if (SHENG[eB] === eA) result = ELEM_FU[eA];
+        else result = 'qingxin';
+        takeMon(a); takeMon(b);
+        S.inv[result] = (S.inv[result] || 0) + 1;
+        fuseSel = null;
+        sfx('crystal');
+        const rel = eA === eB ? '同屬' : (SHENG[eA] === eB || SHENG[eB] === eA) ? '相生' : '相剋';
+        $('huMsg').textContent = '合成（' + eA + '＋' + eB + ' ' + rel + '）：' +
+            ITEMS[result].e + ' ' + ITEMS[result].name + '！';
+        save();
+        renderHu();
+    }
+    $('huLeave').addEventListener('click', () => {
+        $('hu').classList.remove('open');
+        mode = prevMode;
+        draw();
+    });
+
+    function defeat() {
+        sfx('gameover');
+        startTrack(null);
+        // Respawn: revive party at the starting village shrine, lose half gold
+        say([
+            ['', '<b class="bad">隊伍全滅……</b>'],
+            ['', '你在桃源村的祠堂中醒來。半數銀兩，交給了藥師。'],
+        ], () => {
+            S.gold = Math.floor(S.gold / 2);
+            S.party.forEach(fullHeal);
+            // move to town1 position
+            outer: for (let y = 0; y < WORLD.length; y++)
+                for (let x = 0; x < WORLD[0].length; x++)
+                    if (WORLD[y][x] === '1') { S.x = x; S.y = y + 1; break outer; }
+            endBattle(true);
+            mode = 'world';
+            dungeonId = null;
+            startTrack('overworld');
+            save();
+            draw();
+        });
+    }
+    function endBattle(silent) {
+        $('battle').classList.remove('open');
+        B = null;
+        if (!silent) {
+            mode = dungeonId ? 'dungeon' : 'world';
+            startTrack(dungeonId ? 'dungeon' : 'overworld');
+        }
+        updateHud();
+        draw();
+    }
+
+    function showEnding() {
+        mode = 'ending';
+        $('battle').classList.remove('open');
+        startTrack('memory');
+        const lead = S.party[0];
+        const epilogue = {
+            auron: '重建了劍派。開派石碑上刻著六十一個名字——最後一個，是他親手刻上的。',
+            lyra: '帶著證據回到墨家：縱是破碎的世界也能修補，只要眾人共持其光。兼愛。',
+            zephyr: '帶著新的靈燈回到青丘——順便，帶走了某人的酒。',
+        };
+        $('endText').innerHTML =
+            '重鑄的軒轅劍燃起<b>三道意志編成的一束光</b>——在幽都之下那千隻蒼白眼睛看來，恰似一柄早已出鞘的劍，' +
+            '懸於一片早已敗亡的戰場之上。噬魂調轉目光，離開了這個「早已被征服」的世界。<br><br>' +
+            '玄淵的守望結束了。他們的，才剛開始。<br><br>' +
+            S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> (Lv ' + h.lv + ') ' + epilogue[h.id]).join('<br><br>') +
+            '<br><br>💰 白銀 ' + S.gold + ' 兩 · 感謝遊玩！';
+        $('ending').classList.add('open');
+    }
+    $('btnEndTitle').addEventListener('click', () => {
+        $('ending').classList.remove('open');
+        showTitle();
+    });
+
+    // =========================================================================
+    //  SAVE / LOAD / TITLE
+    // =========================================================================
+    function save() {
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch {}
+    }
+    function load() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            const s = JSON.parse(raw);
+            if (!(s && s.party && s.party.length)) return null;
+            s.hu = s.hu || {};
+            s.flags.quests = s.flags.quests || { nest: 0, caravan: 0 };
+            return s;
+        } catch { return null; }
+    }
+    function showTitle() {
+        mode = 'title';
+        startTrack('town');
+        $('btnContinue').disabled = !load();
+        $('title').classList.add('open');
+    }
+    function startNew() {
+        S = newState();
+        // find start
+        for (let y = 0; y < WORLD.length; y++)
+            for (let x = 0; x < WORLD[0].length; x++)
+                if (WORLD[y][x] === 'S') { S.x = x; S.y = y; }
+        S.party.forEach(fullHeal);
+        $('title').classList.remove('open');
+        mode = 'world';
+        startTrack('overworld');
+        draw();
+        say([
+            ['雲越', '一夜之間。只需一夜——軒轅劍在祠中崩裂，幽都封印鬆動，滿門師兄弟為守護早已黯淡的殘片而死。'],
+            ['雲越', '六十位同門。而我那晚，下山買酒去了。'],
+            ['雲越', '如今我身上只剩師門最後的寶物——煉妖壺，還有桃源村捎來的口信：東邊洞窟裡，有一片「劍魄」甦醒了。'],
+            ['', '<i>先去北邊的村子。戰鬥中削弱妖怪後可用「收妖」收入壺中，再到選單裡煉化或合成。</i>'],
+        ]);
+        S.flags.intro = true;
+        save();
+    }
+    $('btnNew').addEventListener('click', startNew);
+    $('btnContinue').addEventListener('click', () => {
+        const s = load();
+        if (!s) return;
+        S = s;
+        $('title').classList.remove('open');
+        mode = 'world';
+        dungeonId = null;
+        startTrack('overworld');
+        draw();
+    });
+
+    // =========================================================================
+    //  INPUT
+    // =========================================================================
+    const DIRS = {
+        ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
+        ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
+    };
+    const held = {};
+    document.addEventListener('keydown', e => {
+        if (mode === 'dialog' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return nextDialog(); }
+        if (DIRS[e.key]) {
+            e.preventDefault();
+            stopAutoWalk();
+            held[e.key] = true;
+            if (!e.repeat) tryMove(...DIRS[e.key]);
+        } else if (e.key === 'm' || e.key === 'Escape') openMenu();
+    });
+    document.addEventListener('keyup', e => { delete held[e.key]; });
+    window.addEventListener('blur', () => { for (const k in held) delete held[k]; });
+    setInterval(() => {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        for (const k in held) if (DIRS[k]) { tryMove(...DIRS[k]); return; }
+    }, 150);
+
+    // ---- click / tap to walk: BFS pathfinding ----
+    let walkPath = [], walkTimer = null;
+    walkTarget = null;
+    function walkableTile(x, y) { return !BLOCKED[mapAt(x, y)]; }
+    function pathTo(tx, ty) {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        const p = curPos();
+        if ((tx === p.x && ty === p.y) || !walkableTile(tx, ty)) return;
+        const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
+        const W = m[0].length, H = m.length;
+        const key = (x, y) => y * W + x;
+        const prev = new Map([[key(p.x, p.y), null]]);
+        const q = [[p.x, p.y]];
+        let found = false;
+        while (q.length && !found) {
+            const [cx, cy] = q.shift();
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = cx + dx, ny = cy + dy;
+                if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                if (!walkableTile(nx, ny) || prev.has(key(nx, ny))) continue;
+                prev.set(key(nx, ny), [cx, cy]);
+                if (nx === tx && ny === ty) { found = true; break; }
+                q.push([nx, ny]);
+            }
+        }
+        if (!found) return;
+        const path = [];
+        let cur = [tx, ty];
+        while (cur && !(cur[0] === p.x && cur[1] === p.y)) {
+            path.unshift(cur);
+            cur = prev.get(key(cur[0], cur[1]));
+        }
+        walkPath = path;
+        walkTarget = { x: tx, y: ty };
+        clearInterval(walkTimer);
+        walkTimer = setInterval(stepAutoWalk, 150);
+        sfx('blip');
+    }
+    function stepAutoWalk() {
+        if (mode !== 'world' && mode !== 'dungeon') return stopAutoWalk();
+        if (!walkPath.length) return stopAutoWalk();
+        const p = curPos();
+        const [nx, ny] = walkPath[0];
+        if (Math.abs(nx - p.x) + Math.abs(ny - p.y) !== 1) return stopAutoWalk();
+        walkPath.shift();
+        tryMove(nx - p.x, ny - p.y);
+    }
+    function stopAutoWalk() {
+        walkPath = [];
+        walkTarget = null;
+        clearInterval(walkTimer);
+    }
+    function canvasTile(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        const vx = Math.floor((clientX - r.left) * (canvas.width / r.width) / TILE);
+        const vy = Math.floor((clientY - r.top) * (canvas.height / r.height) / TILE);
+        const p = curPos();
+        return [p.x - Math.floor(VW / 2) + vx, p.y - Math.floor(VH / 2) + vy];
+    }
+    canvas.addEventListener('click', e => {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        pathTo(...canvasTile(e.clientX, e.clientY));
+    });
+    let tX = 0, tY = 0;
+    canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        tX = e.touches[0].clientX; tY = e.touches[0].clientY;
+    });
+    canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        const dx = e.changedTouches[0].clientX - tX, dy = e.changedTouches[0].clientY - tY;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) {
+            if (mode === 'world' || mode === 'dungeon') pathTo(...canvasTile(tX, tY));
+            return;
+        }
+        stopAutoWalk();
+        if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
+        else tryMove(0, dy > 0 ? 1 : -1);
+    });
+
+    // =========================================================================
+    //  DEBUG HOOKS (used by automated tests)
+    // =========================================================================
+    window.DBG = {
+        state: () => ({ mode, dungeonId, S, B }),
+        tp(x, y) { const p = curPos(); p.x = x; p.y = y; draw(); },
+        buff(lv) { S.party.forEach(h => { h.lv = lv; fullHeal(h); }); updateHud(); },
+        gold(g) { S.gold = g; updateHud(); },
+        crystals() { S.flags.crystals = { earth: true, fire: true, water: true }; updateHud(); },
+        noEnc() { stepCount = -1e9; },
+        boss(id) { dungeonId = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id) || dungeonId; startBattle([id], true); },
+        troop(ids) { startBattle(ids, false); },
+        track: () => track,
+        weaken() { if (B) for (const e of B.enemies) if (e.hp > 0) e.hp = 1; },
+        give(id, n) { S.hu[id] = (S.hu[id] || 0) + (n || 1); },
+        troop(ids) { startBattle(ids, false); },
+        maps: { WORLD, DMAPS },
+    };
+
+    // Boot
+    showTitle();
+    </script>
+</body>
+</html>
