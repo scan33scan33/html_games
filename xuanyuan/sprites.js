@@ -37,6 +37,16 @@
         o: '#8a3b2e', O: '#6e2c22', y: '#d9c9a8', d: '#3a2d1e', L: '#e74c3c',
         // water
         u: '#2e5d7d', U: '#8fc4e6',
+        // creatures & party
+        a: '#c0392b', A: '#7f2418',   // imp red / dark
+        c: '#7a7f88', C: '#565b63',   // wolf grey / dark
+        n: '#e8e6df',                 // bone
+        p: '#9b59b6', P: '#6b4a8a',   // purple / dark purple
+        v: '#e8622a', V: '#f1c40f',   // fire orange / yellow
+        j: '#8a8578', J: '#615d52',   // stone / stone dark
+        D: '#2a2440',                 // dark navy
+        Y: '#b5892f', Z: '#8a6522',   // ochre / ochre dark (墨璃)
+        W: '#f4f4f4',                 // fox white (青璇)
     };
 
     // ---- sprite grids (16x16 unless noted) ----
@@ -117,6 +127,209 @@
             '.......L........',
             '................',
         ],
+        // ---- party members (battle portraits) ----
+        // 墨璃 — Mohist artisan, ochre robes, holding a mechanism bolt
+        muli: [
+            '................',
+            '.....hhhh.......',
+            '....hhhhhh......',
+            '...hhssssh h....',
+            '...hsesesh.h....',
+            '...hSssssS......',
+            '....kbbbk.......',
+            '...YZYYYZY......',
+            '..YZYYYYYZY.g...',
+            '..YZYYYYYZY.k...',
+            '..YZYYYYYZY.....',
+            '...YZYYYZY......',
+            '...YZY.YZY......',
+            '...kk...kk......',
+            '................',
+            '................',
+        ],
+        // 青璇 — nine-tailed fox spirit, white robes, orange ears & tail
+        qingxuan: [
+            '................',
+            '...v......v.....',
+            '...vk....kv.....',
+            '....khhhhk......',
+            '...khssssh......',
+            '...hsesesh......',
+            '...hSssssS......',
+            '....kWWWk.......',
+            '...WWWWWWW..vv..',
+            '..WWWWWWWWW.vvv.',
+            '..WWWWWWWWW.vv..',
+            '..WWWWWWWWW.....',
+            '...WWW.WWW......',
+            '...kk...kk......',
+            '................',
+            '................',
+        ],
+        // ---- monsters (tier 1) ----
+        shanxiao: [
+            '................',
+            '....a....a......',
+            '...aaAAAAaa.....',
+            '..aAAAAAAAAa....',
+            '..aAeAAAAeAa....',
+            '..aAAAwwAAAa....',
+            '..aAAwwwwAAa....',
+            '...aAAAAAAAa....',
+            '....aAAAAa......',
+            '...aa.aa.aa.....',
+            '..aa..aa..aa....',
+            '................',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        fuyao: [
+            '................',
+            '................',
+            '.h............h.',
+            '.hh..hhhh..hh.h.',
+            '.hhhhhCCCChhhhh.',
+            '..hhhCC..CChhh..',
+            '...hhC.ee.Chh...',
+            '....hCCCCCCh....',
+            '.....hCCCCh.....',
+            '......h..h......',
+            '................',
+            '................',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        yaolang: [
+            '................',
+            '..c..........c..',
+            '..cc........cc..',
+            '..cCc......cCc..',
+            '..cCCcccccccCc..',
+            '.cCCeCCCCCCeCCc.',
+            '.cCCCCwwwwCCCCc.',
+            '.cCCCCCCCCCCCCc.',
+            '..CCCCCCCCCCCC..',
+            '..C.CC.CC.CC.C..',
+            '..k..k..k..k....',
+            '................',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        shijing: [
+            '................',
+            '................',
+            '...jjjjjjjj.....',
+            '..jJjjjjjjJj....',
+            '..jjeJjjJejj....',
+            '..jJjjjjjjJj....',
+            '..jjJwwwwJjj....',
+            '..jJjjjjjjJj....',
+            '..jjJjjjjJjj....',
+            '...jjjjjjjj.....',
+            '...jj....jj.....',
+            '..jj......jj....',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        // ---- bosses ----
+        tubo: [
+            '................',
+            '...jjjjjjjjjj...',
+            '..jJJJJJJJJJJj..',
+            '.jJJjjjjjjjjJJj.',
+            '.jJjeJjjjjJejJj.',
+            '.jJjjjjjjjjjjJj.',
+            '.jJJjwwwwwwjJJj.',
+            '.jJjjwJJJJwjjJj.',
+            '.jJJjjjjjjjjJJj.',
+            '..jJJJJJJJJJJj..',
+            '..jj.jjjj.jj.j..',
+            '.jj..jj.jj..jj..',
+            '................',
+            '................',
+            '................',
+            '................',
+        ],
+        bifang: [
+            '................',
+            '.......VV.......',
+            '......VvvV......',
+            '.....VvaavV.....',
+            '....VvaeaavV....',
+            '...VvaaaaaavV...',
+            '..VvaaaAAaaavV..',
+            '.VvaaaAAAAaaavV.',
+            '..VvaaAAAAaavV..',
+            '...VvaaaaaavV...',
+            '....Vva..avV....',
+            '.....v....v.....',
+            '....vv....vv....',
+            '................',
+            '................',
+            '................',
+        ],
+        gonggong: [
+            '................',
+            '..UU........UU..',
+            '.UuuU......UuuU.',
+            '.Uuru......uruU.',
+            '..Uuu......uuU..',
+            '...UuuUUUUuuU...',
+            '..UuuruuuuruuU..',
+            '.UuueuuuuuueUuU.',
+            '.UuuuuwwwwuuuuU.',
+            '..UuuuuuuuuuuU..',
+            '...UuuuuuuuuU...',
+            '....UUuuuuUU....',
+            '......UUUU......',
+            '................',
+            '................',
+            '................',
+        ],
+        xuanyuan_w: [
+            '................',
+            '.....DDDDDD.....',
+            '....DPPPPPPD....',
+            '...DPphhhhpPD...',
+            '...DPhehhehpD...',
+            '...DPhhhhhhpD...',
+            '...DPpggggpPD...',
+            '..DPPphhhhpPPD..',
+            '..DPphhhhhhpPD..',
+            '..DPphhhhhhpPD..',
+            '..DPphh..hhpPD..',
+            '...Dph....hpD...',
+            '...DD......DD...',
+            '................',
+            '................',
+            '................',
+        ],
+        shihun: [
+            '................',
+            '...DDDDDDDDDD...',
+            '..DDpPppPpPpDD..',
+            '.DDpPpWWWWpPpDD.',
+            '.DpPpWWWWWWpPpD.',
+            '.DpPWWWppWWWPpD.',
+            '.DpPWWpaapWWPpD.',
+            '.DpPWWpaapWWPpD.',
+            '.DpPWWWppWWWPpD.',
+            '.DpPpWWWWWWpPpD.',
+            '.DDpPpWWWWpPpDD.',
+            '..DDpPppPpPpDD..',
+            '...DDDDDDDDDD...',
+            '................',
+            '................',
+            '................',
+        ],
         // water sparkle (drawn atop the water-coloured tile)
         wave: [
             '................',
@@ -174,8 +387,17 @@
         blitCenter(ctx, name, cxp, cyp, size) {
             this.blit(ctx, name, cxp - size / 2, cyp - size / 2, size);
         },
+        // return an <img> HTML string (cached data-URL) for use in innerHTML —
+        // handy for the DOM-based battle UI. Falls back to '' if no such sprite.
+        tag(name, size) {
+            if (!SPRITES[name]) return '';
+            if (!tagCache[name]) tagCache[name] = (cache[name] || build(name)).toDataURL();
+            return '<img class="pixspr" width="' + size + '" height="' + size +
+                '" src="' + tagCache[name] + '" alt="">';
+        },
         list() { return Object.keys(SPRITES); },
     };
+    const tagCache = {};
 
     window.SPR = SPR;
 })();

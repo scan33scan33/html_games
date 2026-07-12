@@ -54,7 +54,8 @@
         #enemyRow { display: flex; gap: 18px; justify-content: center; margin: 18px 0 6px; flex-wrap: wrap; }
         .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; position: relative; }
         .enemy:hover { transform: scale(1.1); }
-        .enemy .sprite { font-size: 46px; }
+        .enemy .sprite { font-size: 46px; line-height: 1; }
+        .pixspr { image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
         .enemy .ehp { font-size: 10px; color: #bdc3c7; }
         .enemy.target .sprite { filter: drop-shadow(0 0 6px #f1c40f); }
         .enemy.dead { opacity: 0.15; pointer-events: none; }
@@ -718,6 +719,19 @@
     // common terrain features rendered as procedural pixel sprites (sprites.js);
     // tiles not listed here fall back to the emoji in TEMOJI
     const TILE_SPRITE = { f: 'tree', '^': 'peak', 1: 'house', 2: 'house', 3: 'house', w: 'wave' };
+    // battle sprites: party members and the monsters/bosses that have pixel art
+    // (unlisted foes fall back to their emoji e)
+    const HERO_SPRITE = { auron: 'player', lyra: 'muli', zephyr: 'qingxuan' };
+    const MON_SPRITE = { shanxiao: 'shanxiao', fuyao: 'fuyao', yaolang: 'yaolang', shijing: 'shijing',
+                         tubo: 'tubo', bifang: 'bifang', gonggong: 'gonggong', xuanyuan_w: 'xuanyuan_w', shihun: 'shihun' };
+    function enemyGlyph(e, size) {
+        const n = MON_SPRITE[e.id];
+        return (n && window.SPR) ? SPR.tag(n, size) : '<span style="font-size:' + size + 'px;line-height:1">' + e.e + '</span>';
+    }
+    function heroGlyph(id, size) {
+        const n = HERO_SPRITE[id];
+        return (n && window.SPR) ? SPR.tag(n, size) : HEROES[id].e;
+    }
 
     function mapAt(x, y) {
         const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
@@ -1484,7 +1498,7 @@
             d.className = 'enemy' + (e.hp <= 0 ? ' dead' : '');
             d.id = 'en-' + e.idx;
             d.dataset.idx = e.idx;
-            d.innerHTML = '<div class="sprite">' + e.e + '</div><div class="ehp">' + e.name +
+            d.innerHTML = '<div class="sprite">' + enemyGlyph(e, 48) + '</div><div class="ehp">' + e.name +
                 (e.elem ? ' <b style="color:' + ELEM_COLOR[e.elem] + '">' + e.elem + '</b>' : '') +
                 (e.boss ? '<br>' + Math.max(0, e.hp) + '/' + e.maxhp : '') + '</div>';
             d.addEventListener('click', () => enemyClicked(e.idx));
@@ -1500,7 +1514,7 @@
             const d = document.createElement('div');
             d.id = 'hc-' + i;
             d.className = 'heroCard' + (h.hp <= 0 ? ' ko' : '') + (B.phase === 'command' && i === B.heroIdx ? ' active' : '');
-            d.innerHTML = '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv' + h.lv + '</small> ' + icons + '</div>' +
+            d.innerHTML = '<div class="nm">' + heroGlyph(h.id, 18) + ' ' + H.name + ' <small>Lv' + h.lv + '</small> ' + icons + '</div>' +
                 '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
                 '<div class="mini"><div class="mpf" style="width:' + Math.max(0, h.mp / st.maxmp * 100) + '%"></div></div>' +
                 '氣血 ' + Math.max(0, h.hp) + ' · 真氣 ' + h.mp;
