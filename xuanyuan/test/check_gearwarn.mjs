@@ -47,6 +47,11 @@ await page.evaluate(() => {
     S.flags.recruited.lyra = true;
     S.party.push({ id: 'lyra', lv: 6, xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
     S.party.forEach(fullHeal);
+    // Persist the setup NOW. Otherwise the reload in check 3 restores the save
+    // written by startNew() — which predates 墨璃 joining — and the warning then
+    // stays silent because she isn't in the party, not because the flag stuck.
+    // That passes the check for entirely the wrong reason.
+    save();
 });
 
 // 1. carrying the starting sword -> warned
@@ -55,8 +60,9 @@ check((await enterAndRead()).includes('先回鎮上換兵器'), 'warns at the do
 // 2. it is a one-time thing, not a nag
 check(!(await enterAndRead()).includes('先回鎮上換兵器'), 'does not repeat on the next dungeon entry');
 
-// 3. the flag must survive a save/reload
-await page.evaluate(() => save());
+// 3. The flag must survive a reload — WITHOUT us calling save() by hand. The
+// game has to persist it itself at the moment it warns; calling save() here
+// would only prove the flag serialises, which is not the thing that matters.
 await page.reload();
 await page.waitForTimeout(300);
 await page.click('#btnContinue');
