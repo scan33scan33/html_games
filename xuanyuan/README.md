@@ -119,10 +119,11 @@ against 16-bit console RPGs, not against anything in this folder:
   tiles (cliff edges, shorelines) would do more.
 
 The battle screen is **DOM, not canvas**, which sounds like a limitation and
-mostly isn't: it already does hit shake, attacker lunge, element-coloured screen
-flashes and floating damage numbers, all in CSS (`queueFx`/`flushFx`). What it
-can't do is animate the sprites themselves — `SPR.tag()` bakes frame 0 into a
-data-URL — so a hurt frame would need the `<img src>` swapped on hit.
+mostly isn't: it does hit shake, a white-out flash on the struck sprite,
+attacker lunge, element-coloured screen flashes and floating damage numbers —
+all CSS (`queueFx`/`flushFx`). What it can't do is play *sprite frames*:
+`SPR.tag()` bakes frame 0 into a data-URL, so a real hurt/attack pose would need
+the `<img src>` swapped on hit, or the row moved to canvas.
 
 ### Roadmap for sprites
 Everything on the original roadmap is now pixel art: terrain, the three party
@@ -148,7 +149,9 @@ renderBattle();
 flushFx();                                     // now apply them
 ```
 
-- `shake` — the thing that got hit
+- `shake` — the thing that got hit. It also whites out the sprite inside it
+  (`.shake .pixspr` → `hitFlashA`), so a hit tell comes free with the shake and
+  there's nothing extra to queue.
 - `lunge` / `lungeUp` — the attacker moves toward its target (the enemy row is
   above the party, so each side lunges the other way)
 - `dmgFloat` — the floating number/emoji, auto-removed after ~1s

@@ -74,6 +74,11 @@
         @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-34px); } }
         @keyframes shakeX { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .shake { animation: shakeX 0.28s; }
+        /* The struck sprite whites out — the classic 16-bit hit tell. Keyed off
+           .shake, which already means "this one got hit", so it covers heroes and
+           enemies alike without any extra plumbing. */
+        @keyframes hitFlashA { 0%, 100% { filter: none; } 15%, 55% { filter: brightness(3.2) saturate(0.15); } }
+        .shake .pixspr { animation: hitFlashA 0.28s; }
         /* the enemy row is above the party, so each side lunges toward the other */
         @keyframes lungeA { 0%, 100% { transform: none; } 40% { transform: translateY(9px) scale(1.12); } }
         .lunge { animation: lungeA 0.32s; }

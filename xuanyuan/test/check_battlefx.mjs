@@ -34,7 +34,7 @@ await drain();
 
 // record peak fx across every frame — they last ~300ms and a poll would miss them
 await page.evaluate(() => {
-    window.__fx = { shake: 0, lunge: 0, lungeUp: 0, floats: new Set(), flash: 0 };
+    window.__fx = { shake: 0, lunge: 0, lungeUp: 0, floats: new Set(), flash: 0, hitFlash: false };
     const tick = () => {
         const f = window.__fx;
         f.shake = Math.max(f.shake, document.querySelectorAll('.shake').length);
@@ -42,6 +42,12 @@ await page.evaluate(() => {
         f.lungeUp = Math.max(f.lungeUp, document.querySelectorAll('.lungeUp').length);
         document.querySelectorAll('.dmgFloat').forEach(d => f.floats.add(d.textContent));
         if (document.getElementById('flashFx').classList.contains('flashAnim')) f.flash++;
+        // the struck sprite should white out — read the computed filter, since a
+        // class landing on the card proves nothing about the img inside it
+        document.querySelectorAll('.shake .pixspr').forEach(img => {
+            const fl = getComputedStyle(img).filter;
+            if (fl && fl !== 'none' && !/brightness\(1\)/.test(fl)) f.hitFlash = true;
+        });
         requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -60,9 +66,10 @@ await page.waitForTimeout(2500);
 
 const fx = await page.evaluate(() => ({
     shake: window.__fx.shake, lunge: window.__fx.lunge, lungeUp: window.__fx.lungeUp,
-    floats: [...window.__fx.floats], flash: window.__fx.flash,
+    floats: [...window.__fx.floats], flash: window.__fx.flash, hitFlash: window.__fx.hitFlash,
 }));
 check(fx.shake > 0, `the struck target shakes (peak ${fx.shake})`);
+check(fx.hitFlash, 'the struck sprite whites out (computed filter on .shake .pixspr)');
 check(fx.lungeUp > 0, `the attacking hero lunges (peak ${fx.lungeUp})`);
 check(fx.floats.some(t => /^-\d+$/.test(t)), `damage numbers float: ${JSON.stringify(fx.floats.slice(0, 4))}`);
 
