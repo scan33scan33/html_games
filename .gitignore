@@ -1,0 +1,5 @@
+# The games themselves are zero-build and ship as-is. This is only for the
+# headless test harness (xuanyuan/test), which needs playwright-core.
+node_modules/
+package.json
+package-lock.json
