@@ -214,16 +214,48 @@ they'd walk over with a better sword and a full bag. Two signposts now say so:
 Both are gated so they stay quiet when they'd be noise; see
 `test/check_shophint.mjs` and `test/check_quests.mjs`.
 
-Two things soften the finale specifically: phase 2 full-heals the party before
-噬魂, and 玄淵's intervention heals 45% once it drops below 40%. MAXLV is 22, and
-a critical-path player arrives around lv13 — i.e. **below** the level at which an
-unhealed party wins, by design.
+### Simulated with healing — both ends of the game
 
-**Whether that lands as tense or as unfair is a judgement call this document
-can't make for you.** The model says a lv13 party must heal well to take the
-finale; it doesn't say how that *feels*. Nobody has played this end to end at
-natural level — the bot in `test/` is far too poor a player to stand in for one
-(see its README).
+`report_curve.mjs` models no healing, so its ✗ cells are a floor. Healing is the
+mechanic, though, so `report_fights.mjs` Monte-Carlos the real fights with the
+game's own `rnd()`/damage/potion numbers.
+
+**The shop gate bites from the very first boss.** 土伯, fought with two heroes and
+金創藥 (+50), the only medicine 桃源村 sells:
+
+| lv | gear | 0 潛 | 3 金創藥 | 8 金創藥 |
+|---|---|---|---|---|
+| 4 | 鏽劍/布衣 | **0%** | 0% | 15% |
+| 4 | 青銅劍/皮甲 | 0% | 23% | **100%** |
+| 5 | 青銅劍/皮甲 | 1% | **100%** | 100% |
+| 7 | 鏽劍/布衣 | 83% | 100% | 100% |
+
+At lv5 it's 1% with the starting kit and 100% with a bronze sword and three
+potions. That's an equipment wall two steps out of the opening village — which is
+exactly why 墨璃 speaks in the shop, and why she names the rusty sword.
+
+**And the finale**, at **lv13** where the critical path leaves you:
+
+| gear at lv13 | 0 潛 | 10 大還丹 | 20 大還丹 |
+|---|---|---|---|
+| 百煉劍/鎖子甲 | 0% | 0% | **0%** |
+| 湛盧/軟蝟甲 | 0% | 0% | **96%** (≈18 spent) |
+
+Second-tier gear loses at *any* potion count. The finale wants **the best gear in
+the game and a bag of ~20 大還丹**, and the purse just covers it: 9,090兩 of gear
++ ~2,400兩 of medicine against ~12,600兩 of income. About 1,100兩 of slack.
+
+That is razor-thin, and it's why the two signposts above are load-bearing: the
+game requires ~20 大還丹 and never used to mention the item existed.
+
+The sim leaves out everything that favours the player — the free full-heal
+entering phase 2, 玄淵's one-time 45% rescue, 防禦, the 五行符, 回春術/兼愛無疆,
+and every buff — so real play is kinder than the table. Treat it as the shape of
+the curve, not a verdict.
+
+**Whether that reads as a tense last stand or as unfair is a judgement call this
+document can't make.** Nobody has played it end to end at natural level; the bot
+in `test/` is far too poor a player to stand in for one (see its README).
 
 XP is **not split** — every *alive* hero gets the full amount. A hero who is KO'd
 when the fight ends gets nothing and falls behind permanently.

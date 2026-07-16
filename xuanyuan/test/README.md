@@ -33,6 +33,7 @@ node test/check_quests.mjs                      # both side quests: rescue -> re
 node test/check_battlefx.mjs                    # hit shake, attacker lunge, damage floats, element flash
 node test/report_curve.mjs                      # (report) gear/level vs each boss
 node test/report_gold.mjs                       # (report) does the path pay for the gear?
+node test/report_fights.mjs                     # (report) win-rate by gear+potions, first boss and finale
 node test/check_save.mjs                        # save round-trip, legacy backfill, corrupt save
 WEAKEN=1 BUFF=22 node test/playthrough.mjs      # smoke test: the progression chain, start -> ending
 node test/playthrough.mjs                       # observation: how a naive player actually fares
