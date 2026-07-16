@@ -562,6 +562,81 @@
             bass: [48, 45, 41, 43, 48, 45, 40, 43],
             chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
                      [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]] },
+
+        // ------------------------------------------------------------------
+        // The five tracks below are ORIGINAL melodies written in the Taiwanese
+        // folk/ballad idiom. Nothing here is transcribed from a real song —
+        // 《望春風》《雨夜花》《魯冰花》 and the like are studied for their
+        // *devices*, which are then applied to new tunes:
+        //   · anhemitonic pentatonic — 宮商角徵羽 only, no 4th/7th (fa/ti)
+        //   · 起承轉合 — four two-bar phrases: open, answer, turn, resolve.
+        //     The 轉 (bars 5-6) is where the mode darkens or the register jumps.
+        //   · stepwise descent into the cadence, tonic landed on a long note
+        //   · 羽 mode (minor pentatonic on la) for grief, 宮 (do) for warmth
+        //   · wide opening leap answered by a slow climb down — the Hengchun
+        //     恆春民謠 gesture, used here for the desert
+        // ------------------------------------------------------------------
+
+        // 序曲 — title. Stately and open; the game opened on the town theme before.
+        // 宮 mode on C. 起 rises through the pentatonic, 轉 drops to 羽 for shade.
+        title: { step: 0.26, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [72, 0, 0, 76, 0, 0, 79, 0], [81, 0, 79, 0, 76, 0, 0, 0],
+                [74, 0, 0, 76, 0, 0, 79, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [69, 0, 0, 72, 0, 0, 74, 0], [76, 0, 74, 0, 72, 0, 69, 0],
+                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 79, 0, 76, 74, 72, 0]],
+            bass: [48, 45, 50, 48, 45, 43, 48, 48],
+            chords: [[60, 64, 67], [57, 60, 64], [62, 67, 69], [60, 64, 67],
+                     [57, 60, 64], [55, 62, 67], [60, 64, 67], [60, 64, 67]] },
+
+        // 青丘 — the fox village (青丘寨). 徵 mode on G, lilting and playful:
+        // repeated-note upbeats and quick turns, the liveliness of a work song.
+        fox: { step: 0.17, bassEvery: 4, arpEvery: 1, drums: '--h--h--',
+            lead: [
+                [79, 79, 0, 81, 0, 76, 0, 74], [72, 0, 74, 76, 0, 79, 0, 0],
+                [81, 81, 0, 84, 0, 79, 0, 76], [79, 0, 76, 74, 0, 72, 0, 0],
+                [76, 0, 79, 0, 81, 0, 84, 0], [86, 0, 84, 0, 81, 79, 0, 0],
+                [74, 74, 0, 76, 0, 79, 0, 81], [79, 0, 76, 0, 72, 0, 0, 0]],
+            bass: [55, 60, 57, 55, 52, 55, 50, 55],
+            chords: [[55, 62, 67], [60, 64, 67], [57, 60, 64], [55, 62, 67],
+                     [64, 67, 72], [62, 67, 69], [57, 60, 64], [55, 62, 67]] },
+
+        // 望川 — the desert trade town (望川鎮). 羽 mode on A, sparse and arid:
+        // each phrase opens on a bare leap and walks back down alone.
+        desert: { step: 0.23, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [69, 0, 0, 0, 76, 0, 0, 0], [74, 0, 72, 0, 69, 0, 0, 0],
+                [72, 0, 0, 0, 79, 0, 0, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [81, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 72, 0, 0, 69, 0],
+                [67, 0, 69, 0, 72, 0, 74, 0], [69, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [45, 41, 40, 45, 43, 40, 38, 45],
+            chords: [[57, 60, 64], [53, 60, 65], [52, 57, 64], [57, 60, 64],
+                     [57, 64, 69], [53, 60, 65], [55, 62, 67], [57, 60, 64]] },
+
+        // 劍爐 — the sword-tomb forge (劍塚). 羽 mode, low and ritual; the kick
+        // on 1 and 5 is the hammer. 轉 flares as the forge relights, then falls.
+        forge: { step: 0.2, bassEvery: 2, arpEvery: 2, drums: 'k---k---',
+            lead: [
+                [57, 0, 0, 0, 60, 0, 0, 0], [62, 0, 0, 0, 64, 0, 0, 0],
+                [69, 0, 0, 67, 0, 0, 64, 0], [60, 0, 0, 0, 0, 0, 0, 0],
+                [57, 0, 60, 0, 64, 0, 67, 0], [69, 0, 0, 72, 0, 0, 76, 0],
+                [79, 0, 76, 0, 72, 0, 69, 0], [69, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [33, 33, 36, 36, 33, 33, 40, 33],
+            chords: [[45, 52, 57], [48, 55, 60], [45, 52, 57], [48, 52, 55],
+                     [45, 52, 57], [57, 60, 64], [52, 57, 64], [45, 52, 57]] },
+
+        // 終曲 — the ending. Opens on 憶's exact first phrase (G-A-C) so the
+        // callback is unmistakable, then refuses its falling cadence and climbs
+        // an octave instead: the same memory, finally resolved.
+        ending: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
+                [69, 0, 72, 0, 76, 0, 0, 0], [74, 0, 72, 0, 69, 0, 0, 0],
+                [72, 0, 76, 0, 79, 0, 0, 0], [81, 0, 79, 0, 76, 0, 74, 0],
+                [76, 0, 79, 0, 84, 0, 0, 0], [84, 0, 0, 0, 79, 0, 72, 0]],
+            bass: [48, 45, 41, 43, 48, 45, 43, 48],
+            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
+                     [60, 64, 67], [57, 60, 64], [55, 62, 67], [60, 64, 67]] },
     };
     function ensureAudio() {
         if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
@@ -648,6 +723,9 @@
             src.start(t); src.stop(t + 0.07);
         }
     }
+    // the ambient track for whichever map you're standing on. The sword-tomb is a
+    // forge rather than a monster den, so it gets its own theme.
+    const mapTrack = () => !dungeonId ? 'overworld' : dungeonId === 'tomb' ? 'forge' : 'dungeon';
     function startTrack(name) {
         track = name;
         if (!audio) return;
@@ -710,15 +788,70 @@
     const ctx = canvas.getContext('2d');
     const $ = id => document.getElementById(id);
     const TCOLORS = { '.': '#4f7249', f: '#33582f', '^': '#7a7469', '~': '#2e5d7d', s: '#c9b077',
-                      '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#241a2e',
+                      '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#33582f',
                       1: '#4f7249', 2: '#33582f', 3: '#c9b077', A: '#4f7249', K: '#7a7469', C: '#c9b077',
                       J: '#33582f', n: '#33582f', x: '#c9b077',
                       d: '#8d6e4b' };
+    // Each dungeon gets its own floor; TCOLORS is shared with the world map, whose
+    // grass green has no business inside a volcano. Covers the tiles that are
+    // "floor with something standing on it" — plain floor, the exit, chests, the
+    // boss's ground — so they don't punch coloured boxes into the room.
+    const DFLOOR = { earth: '#6b563c', fire: '#4a2a22', water: '#38566b', castle: '#2f2a3f' };
+    const DFLOOR_TILES = { '.': 1, S: 1, T: 1, B: 1 };
+    function tileBase(ch) {
+        if (mode === 'dungeon' && DFLOOR_TILES[ch]) return DFLOOR[dungeonId] || '#4a4038';
+        return TCOLORS[ch] || '#4f7249';
+    }
+    // Terrain of different colours meets in a hard rectangular seam, which is the
+    // main thing that reads as "flat squares" rather than landscape. Bleed the
+    // neighbour's colour a few px over the shared edge and scatter a couple of
+    // dither pixels past it, so the boundary breaks up. Walls/water keep their
+    // hard edge — there the crisp line is correct.
+    const NO_BLEND = { '#': 1, '~': 1, w: 1 };
+    function blendEdges(ch, x, y, px0, py0, base) {
+        if (NO_BLEND[ch]) return;
+        const EDGES = [[1, 0, TILE - 3, 0, 3, TILE], [-1, 0, 0, 0, 3, TILE],
+                       [0, 1, 0, TILE - 3, TILE, 3], [0, -1, 0, 0, TILE, 3]];
+        for (let i = 0; i < 4; i++) {
+            const [dx, dy, ox, oy, w, h] = EDGES[i];
+            const nch = mapAt(x + dx, y + dy);
+            if (NO_BLEND[nch]) continue;
+            const nc = tileBase(nch);
+            if (nc === base) continue;
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = nc;
+            ctx.fillRect(px0 + ox, py0 + oy, w, h);
+            ctx.globalAlpha = 0.75;
+            for (let k = 0; k < 3; k++) {
+                const t = th(x, y, i * 4 + k);
+                const jx = dx ? (dx > 0 ? TILE - 6 : 4) : t * (TILE - 4) + 2;
+                const jy = dy ? (dy > 0 ? TILE - 6 : 4) : t * (TILE - 4) + 2;
+                ctx.fillRect(px0 + jx, py0 + jy, 2, 2);
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
     const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑', J: '🛕', n: '🕸️', x: '🏕️',
                      l: '🔥', w: '🌊', T: '📦', '~': null };
-    // common terrain features rendered as procedural pixel sprites (sprites.js);
-    // tiles not listed here fall back to the emoji in TEMOJI
+    // Terrain rendered as procedural pixel sprites (sprites.js); tiles not listed
+    // fall back to the emoji in TEMOJI. Two chars mean different things depending
+    // on the map — 'B' is a volcano outdoors but a boss underground, and 'S' is the
+    // start clearing outdoors but the exit door underground — so the lookup is
+    // split by mode rather than keyed on the char alone.
     const TILE_SPRITE = { f: 'tree', '^': 'peak', 1: 'house', 2: 'house', 3: 'house', w: 'wave' };
+    const WORLD_SPRITE = { A: 'shrine', B: 'volcano', C: 'pagoda', J: 'tomb', K: 'gate',
+                           n: 'nest', x: 'camp' };
+    const DUNGEON_SPRITE = { T: 'chest', S: 'door', l: 'lava' };
+    const tileSprite = ch => TILE_SPRITE[ch] ||
+        (mode === 'dungeon' ? DUNGEON_SPRITE[ch] : WORLD_SPRITE[ch]);
+    // terrain that tiles in bulk and so gets mirrored per-tile to hide the grid
+    const FLIPPABLE = { f: 1, '^': 1, w: 1, l: 1 };
+    // Walk cycle: the player sprite's frames are [stood, left foot up, right foot
+    // up], so stepping through 0,1,0,2 reads as a stride. WALK_HOLD is how long
+    // after a step he keeps walking — a touch longer than the 150ms key repeat,
+    // so held movement animates continuously instead of stuttering.
+    const WALK_SEQ = [0, 1, 0, 2], WALK_HOLD = 260;
+    let lastMoveAt = -1e9, facing = 1;
     // battle sprites: party members and the monsters/bosses that have pixel art
     // (unlisted foes fall back to their emoji e)
     const HERO_SPRITE = { auron: 'player', lyra: 'muli', zephyr: 'qingxuan' };
@@ -740,18 +873,27 @@
     }
     function curPos() { return mode === 'dungeon' ? S.dpos : S; }
 
-    // deterministic per-tile hash for texture details
+    // Deterministic per-tile hash in [0,1) for texture details and tile variants.
+    // Uses Math.imul and unsigned shifts on purpose: plain `h * 1103515245` on a
+    // 32-bit-sized h overflows 2^53, so the low bits are rounded away before the
+    // shift-xor can mix them and the output comes out badly skewed (it returned
+    // <0.5 for literally every tile, which silently made variant selection and
+    // mirroring do nothing).
     function th(x, y, n) {
-        let h = (x * 374761393 + y * 668265263) ^ (n * 1274126177);
-        h = (h ^ (h >> 13)) * 1103515245;
-        return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+        let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) ^ Math.imul(n, 1274126177);
+        h = Math.imul(h ^ (h >>> 13), 1103515245);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
     }
     // ambient particles per area
     let particles = [], pKind = null;
     var walkTarget = null;
+    // Ambient particles follow the terrain you're standing on: cherry petals over
+    // the plains and woods, but blown sand in the southern desert — petals drifting
+    // over the dunes looked absurd.
+    const SANDY = { s: 1, 3: 1, x: 1, C: 1 };
     function particleKind() {
         if (mode === 'dungeon') return { earth: 'dust', fire: 'ember', water: 'bubble', castle: 'mist' }[dungeonId] || 'dust';
-        return 'petal';
+        return SANDY[mapAt(S.x, S.y)] ? 'dust' : 'petal';
     }
     function initParticles(kind) {
         pKind = kind;
@@ -818,8 +960,10 @@
                 if (mode === 'dungeon' && ch === 'T' && S.flags.chests[dungeonId + ':' + x + ',' + y]) ch = '.';
                 if (mode === 'dungeon' && ch === 'B' && bossDown(dungeonId)) ch = '.';
                 const px0 = vx * TILE, py0 = vy * TILE;
-                ctx.fillStyle = TCOLORS[ch] || '#4f7249';
+                const base = tileBase(ch);
+                ctx.fillStyle = base;
                 ctx.fillRect(px0, py0, TILE, TILE);
+                blendEdges(ch, x, y, px0, py0, base);
 
                 // -------- textured details --------
                 if (ch === '.' || ch === 'S' || '123AC'.includes(ch)) {
@@ -866,19 +1010,27 @@
                     ctx.fillRect(px0 + 1, py0 + TILE - 3, TILE - 2, 2);
                 }
 
-                // procedural pixel sprites for the common terrain features,
-                // emoji fallback for the rarer special tiles (see sprites.js)
-                const sprName = TILE_SPRITE[ch];
+                // procedural pixel sprites for terrain, emoji fallback if sprites.js
+                // failed to load or the tile has no art yet (see sprites.js).
+                // Repeated terrain is mirrored and (for forest) picked from two
+                // grids on a per-tile hash, so a big forest or ridge doesn't read
+                // as one stamp in a grid.
+                let sprName = tileSprite(ch);
+                if (sprName === 'tree' && th(x, y, 7) < 0.42) sprName = 'tree2';
+                else if (sprName === 'peak' && th(x, y, 7) < 0.38) sprName = 'peak2';
                 if (sprName && window.SPR) {
-                    if (ch === 'w') SPR.blit(ctx, 'wave', px0, py0, TILE);
-                    else SPR.blit(ctx, sprName, px0, py0, TILE);
+                    // Animated terrain runs off the clock, offset by a per-tile hash
+                    // so a lake ripples rather than pulsing in lockstep.
+                    const nf = SPR.frames(sprName);
+                    const fr = nf > 1 ? Math.floor(t / 220 + th(x, y, 6) * nf) : 0;
+                    SPR.blit(ctx, sprName, px0, py0, TILE, FLIPPABLE[ch] && th(x, y, 3) < 0.5, fr);
                 } else {
                     ctx.font = '20px serif';
                     const em = TEMOJI[ch];
                     if (em) ctx.fillText(em, px0 + TILE / 2, py0 + TILE / 2 + 1);
                 }
+                // the waiting boss still shows as its emoji atop the dungeon floor
                 if (ch === 'B' && mode === 'dungeon') { ctx.font = '20px serif'; ctx.fillText(BOSSES[DUNGEONS[dungeonId].boss].e, px0 + TILE / 2, py0 + TILE / 2); }
-                if (ch === 'S' && mode === 'dungeon') { ctx.font = '20px serif'; ctx.fillText('🚪', px0 + TILE / 2, py0 + TILE / 2); }
             }
         }
         drawParticles(t);
@@ -894,15 +1046,19 @@
                 ctx.stroke();
             }
         }
-        // player: soft shadow + gentle bob
+        // player: soft shadow, gentle bob, and a walk cycle while he's moving
         const px = (p.x - camX) * TILE + TILE / 2;
-        const py = (p.y - camY) * TILE + TILE / 2 + Math.sin(t / 320) * 1.6;
+        const walking = t - lastMoveAt < WALK_HOLD;
+        // stand still and he breathes; move and the bob tightens into a stride
+        const py = (p.y - camY) * TILE + TILE / 2 +
+            (walking ? Math.sin(t / 90) * 0.9 : Math.sin(t / 320) * 1.6);
         ctx.fillStyle = 'rgba(0,0,0,0.25)';
         ctx.beginPath();
         ctx.ellipse(px, (p.y - camY) * TILE + TILE - 4, 9, 3, 0, 0, Math.PI * 2);
         ctx.fill();
         if (window.SPR) {
-            SPR.blitCenter(ctx, 'player', px, py, 26);
+            const fr = walking ? WALK_SEQ[Math.floor(t / 110) % WALK_SEQ.length] : 0;
+            SPR.blitCenter(ctx, 'player', px, py, 26, facing < 0, fr);
         } else {
             ctx.font = '22px serif';
             ctx.fillText('🤺', px, py);
@@ -993,6 +1149,8 @@
         if (BLOCKED[ch]) return;
         p.x = nx; p.y = ny;
         stepCount++;
+        lastMoveAt = performance.now();
+        facing = dx ? (dx > 0 ? 1 : -1) : facing;
         enterTile(ch, nx, ny);
         draw();
     }
@@ -1087,7 +1245,7 @@
             for (let xx = 0; xx < m[0].length; xx++)
                 if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
         say([['', '你踏入<b>' + D.name + '</b>……' + (D.boss === 'xuanyuan_w' ? '黑暗中，傳來一聲冰冷而熟悉的嘆息。' : '')]]);
-        startTrack('dungeon');
+        startTrack(mapTrack());
         draw();
     }
     function exitDungeon(msg) {
@@ -1219,10 +1377,13 @@
     }
 
     let townId = null;
+    // 桃源村 keeps the homely town theme; the fox village and the desert town
+    // get their own so the three don't blur together
+    const TOWN_TRACK = { 2: 'fox', 3: 'desert' };
     function openTown(id) {
         townId = id;
         mode = 'town';
-        startTrack('town');
+        startTrack(TOWN_TRACK[id] || 'town');
         const T = TOWNS[id];
         $('townEmoji').textContent = T.emoji;
         $('townName').textContent = T.name;
@@ -1334,7 +1495,13 @@
                 ['船夫', '我祖母侍奉過劍派祠堂。她說水之劍魄最為古老——它還記得軒轅劍鑄成的真正緣由：不是為了<i>揮舞</i>那道光，而是為了<b>把整個世界藏在光的背後</b>。'],
             ]);
             if (!(c.earth && c.fire && c.water)) return say([['船夫', '還缺一片劍魄？回頭找找吧，朋友——洞窟不會弄丟托付給它的東西。']]);
-            return say([['船夫', '三片都齊了？！那就去幽都之門吧——大門藏在北方山隘裡。喂，朋友。若老故事是真的，劍光會引來那個……<i>東西</i>……你可要想清楚了，英雄。']]);
+            // Also the one place the game says out loud that the late game is an
+            // inventory gate: the tier-4 bosses out-damage 金創藥 (+50) outright,
+            // and nothing else ever mentions 大還丹 exists.
+            return say([
+                ['船夫', '三片都齊了？！那就去幽都之門吧——大門藏在北方山隘裡。喂，朋友。若老故事是真的，劍光會引來那個……<i>東西</i>……你可要想清楚了，英雄。'],
+                ['船夫', '還有一句實在話：別捨不得銀子。前頭那幾場，金創藥止得住刀傷，止不住<i>那種</i>東西——去備足<b>大還丹 ⚗️</b>，能買多少買多少。省下的那點銀兩，買不回一條命。'],
+            ]);
         }
     }
 
@@ -2144,7 +2311,7 @@
         B = null;
         if (!silent) {
             mode = dungeonId ? 'dungeon' : 'world';
-            startTrack(dungeonId ? 'dungeon' : 'overworld');
+            startTrack(mapTrack());
         }
         updateHud();
         draw();
@@ -2153,7 +2320,7 @@
     function showEnding() {
         mode = 'ending';
         $('battle').classList.remove('open');
-        startTrack('memory');
+        startTrack('ending');
         const lead = S.party[0];
         const epilogue = {
             auron: '重建了劍派。開派石碑上刻著六十一個名字——最後一個，是他親手刻上的。',
@@ -2192,7 +2359,7 @@
     }
     function showTitle() {
         mode = 'title';
-        startTrack('town');
+        startTrack('title');
         $('btnContinue').disabled = !load();
         $('title').classList.add('open');
     }
@@ -2342,12 +2509,24 @@
         gold(g) { S.gold = g; updateHud(); },
         crystals() { S.flags.crystals = { earth: true, fire: true, water: true }; updateHud(); },
         noEnc() { stepCount = -1e9; },
-        boss(id) { dungeonId = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id) || dungeonId; startBattle([id], true); },
+        // Jump straight to a boss fight. Also places you on that dungeon's entry
+        // tile: setting dungeonId alone leaves S.dpos null, and the draw after the
+        // battle then throws in curPos().
+        boss(id) {
+            const d = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id);
+            if (d) {
+                dungeonId = d;
+                const m = DMAPS[d];
+                if (m && !S.dpos) for (let yy = 0; yy < m.length; yy++)
+                    for (let xx = 0; xx < m[0].length; xx++)
+                        if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
+            }
+            startBattle([id], true);
+        },
         troop(ids) { startBattle(ids, false); },
         track: () => track,
         weaken() { if (B) for (const e of B.enemies) if (e.hp > 0) e.hp = 1; },
         give(id, n) { S.hu[id] = (S.hu[id] || 0) + (n || 1); },
-        troop(ids) { startBattle(ids, false); },
         maps: { WORLD, DMAPS },
     };
 

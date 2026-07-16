@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>軒轅殘劍 — 圖素表 sprite sheet</title>
+<!-- Dev tool: renders every sprite in sprites.js at tile size and blown up, on
+     the backgrounds they actually sit on in game. Serve the folder over HTTP and
+     open this to eyeball art changes without playing to the tile in question. -->
+<style>
+  body { background:#10141f; color:#ecf0f1; font:13px/1.5 monospace; margin:0; padding:16px; }
+  h2 { font-size:13px; font-weight:normal; color:#f1c40f; margin:18px 0 6px; letter-spacing:.1em; }
+  .row { display:flex; flex-wrap:wrap; gap:4px; padding:8px; border-radius:6px; }
+  .grass { background:#4f7249; } .forest { background:#33582f; } .sand { background:#c9b077; }
+  .rock  { background:#7a7469; } .cave { background:#4a2a22; } .void { background:#242c3a; }
+  figure { margin:0; padding:4px; text-align:center; }
+  canvas { image-rendering:pixelated; display:block; }
+  figcaption { margin-top:3px; font-size:10px; color:#ecf0f1; text-shadow:0 1px 2px #000; }
+</style>
+</head>
+<body>
+<div id="out"></div>
+<script src="sprites.js"></script>
+<script>
+    // group -> [background class, sprite names]; anything not listed lands in "other"
+    const GROUPS = [
+        ['地形 terrain',    'grass',  ['tree', 'tree2', 'peak', 'peak2', 'house', 'wave']],
+        ['地標 landmarks',  'forest', ['shrine', 'volcano', 'pagoda', 'tomb', 'gate', 'nest']],
+        ['沙漠 desert',     'sand',   ['camp']],
+        ['洞窟 dungeon',    'cave',   ['chest', 'door', 'lava']],
+        ['隊伍 party',      'void',   ['player', 'muli', 'qingxuan']],
+    ];
+    const out = document.getElementById('out');
+    const seen = new Set();
+
+    function section(title, bg, names) {
+        if (!names.length) return;
+        const h = document.createElement('h2'); h.textContent = title; out.appendChild(h);
+        const row = document.createElement('div'); row.className = 'row ' + bg;
+        for (const n of names) {
+            seen.add(n);
+            const nf = SPR.frames(n);
+            // an animated sprite gets one column per frame, plus a live preview
+            for (let fr = 0; fr < nf; fr++) {
+                const f = document.createElement('figure');
+                for (const size of [32, 64]) {
+                    const c = document.createElement('canvas');
+                    c.width = c.height = size;
+                    c.style.margin = '0 auto 2px';
+                    SPR.blit(c.getContext('2d'), n, 0, 0, size, false, fr);
+                    f.appendChild(c);
+                }
+                const cap = document.createElement('figcaption');
+                cap.textContent = nf > 1 ? n + ' #' + fr : n;
+                f.appendChild(cap); row.appendChild(f);
+            }
+            if (nf > 1) {
+                const f = document.createElement('figure');
+                const c = document.createElement('canvas');
+                c.width = c.height = 64;
+                c.style.margin = '32px auto 2px';   // line up with the 64px row
+                const cx = c.getContext('2d');
+                const SEQ = [0, 1, 0, 2];
+                setInterval(() => {
+                    cx.clearRect(0, 0, 64, 64);
+                    SPR.blit(cx, n, 0, 0, 64, false, SEQ[(Date.now() / 110 | 0) % SEQ.length]);
+                }, 60);
+                const cap = document.createElement('figcaption');
+                cap.textContent = n + ' (live)';
+                f.appendChild(c); f.appendChild(cap); row.appendChild(f);
+            }
+        }
+        out.appendChild(row);
+    }
+
+    for (const [title, bg, names] of GROUPS) section(title, bg, names);
+    section('其他 other (monsters & bosses)', 'void', SPR.list().filter(n => !seen.has(n)));
+</script>
+</body>
+</html>
