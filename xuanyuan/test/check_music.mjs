@@ -52,27 +52,39 @@ for (const t of report) {
         `range=${String(t.range).padEnd(7)} pentatonic-on: ${t.collection} ` +
         `${t.offScale.length ? 'OFF-SCALE pcs:' + t.offScale : ''}`);
 }
-console.log(bad ? `\n${bad} malformed` : `\nall ${report.length} tracks well-formed and pentatonic`);
+console.log(bad ? `\n${bad} malformed` : `${report.length} tracks well-formed and pentatonic`);
 
-// now confirm the game actually selects the new tracks
-async function trackAt(label, fn) {
-    await fn();
+// Confirm the game actually SELECTS each track. This half used to only print
+// what it found, so re-pointing the title screen at the town theme sailed
+// straight through — a check that can't fail is worse than no check.
+async function trackAt(label, want, fn) {
+    if (fn) await fn();
     await page.waitForTimeout(150);
-    console.log(label.padEnd(24), '->', await page.evaluate(() => DBG.track()));
+    const got = await page.evaluate(() => DBG.track());
+    const ok = got === want;
+    if (!ok) bad++;
+    console.log(`${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(22)} -> ${got}${ok ? '' : '  (expected ' + want + ')'}`);
 }
 await page.evaluate(() => localStorage.removeItem('xuanyuanSave'));
 await page.reload();
 await page.waitForTimeout(200);
 console.log('\n--- which track plays where ---');
-console.log('title screen'.padEnd(24), '->', await page.evaluate(() => DBG.track()));
+await trackAt('title screen', 'title', null);
 await page.click('#btnNew');
 await page.waitForTimeout(200);
 for (let i = 0; i < 30; i++) {
     if (!(await page.isVisible('#dialog'))) break;
     await page.keyboard.press('Enter'); await page.waitForTimeout(60);
 }
-await trackAt('overworld', async () => {});
-await trackAt('town 1 桃源村', () => page.evaluate(() => openTown(1)));
-await trackAt('town 2 青丘寨', () => page.evaluate(() => openTown(2)));
-await trackAt('town 3 望川鎮', () => page.evaluate(() => openTown(3)));
+await trackAt('overworld', 'overworld', async () => {});
+await trackAt('town 1 桃源村', 'town', () => page.evaluate(() => openTown(1)));
+await trackAt('town 2 青丘寨', 'fox', () => page.evaluate(() => openTown(2)));
+await trackAt('town 3 望川鎮', 'desert', () => page.evaluate(() => openTown(3)));
+await trackAt('劍塚 (forge)', 'forge', () => page.evaluate(() => {
+    $('town').classList.remove('open');
+    S.flags.crystals = { earth: true, fire: true, water: true };
+    tryEnterDungeon('tomb');
+}));
+console.log(bad ? `\n${bad} problem(s)` : '\nall tracks well-formed, pentatonic, and wired to the right places');
 await browser.close();
+process.exit(bad ? 1 : 0);

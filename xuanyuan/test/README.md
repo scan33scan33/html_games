@@ -68,6 +68,20 @@ gives you a coin flip that reports "the game is broken" half the time.
 See the "Testing" section of the parent README for the traps this harness had to
 work around.
 
+## A check that can't fail is worse than none
+
+Three of these checks (`check_defeat`, `check_music`'s wiring half, `check_guard`)
+originally only `console.log`'d what they found and never asserted — so they sat
+in `run_all.sh` looking like coverage while passing unconditionally. You could
+point the title screen at the wrong track, or delete the whole defeat-respawn
+behaviour, and they stayed green. They exit non-zero now.
+
+They were caught by **mutation testing**, which is the only honest way to trust a
+check: break the thing it covers and confirm it goes red. Every `check_*.mjs`
+here has been verified to fail against a deliberate mutation of its target — if
+you add one, do the same, or you don't actually know it works. (`report_*.mjs`
+are exempt: they're reports, not checks, and always exit 0 by design.)
+
 ## Read the bot's losses sceptically — but not indefinitely
 
 **Six times running, this bot "found a balance problem" and the bug was in the

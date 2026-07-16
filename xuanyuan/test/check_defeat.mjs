@@ -35,15 +35,25 @@ for (let i = 0; i < 12; i++) {
     await page.waitForTimeout(250);
     if (await vis('#dialog')) break;
 }
+let bad = 0;
+const check = (ok, msg) => { console.log((ok ? 'ok   ' : 'FAIL ') + msg); if (!ok) bad++; };
+
 const dlg = await page.locator('#dialogBox').innerText().catch(() => '(none)');
-console.log('dialogue on wipe:', JSON.stringify(dlg.split('\n')[0]));
-console.log('title screen shown?', await vis('#title'), '  <- if false, there is no game over');
+check(dlg.includes('隊伍全滅'), `a wipe announces itself: ${JSON.stringify(dlg.split('\n')[0])}`);
+check(!(await vis('#title')), 'no game over — the title screen is NOT shown');
 await drain();
 const after = await page.evaluate(() => {
     const s = DBG.state();
     const t1 = (() => { const W = DBG.maps.WORLD; for (let y = 0; y < W.length; y++) { const x = W[y].indexOf('1'); if (x >= 0) return { x, y }; } })();
-    return { gold: s.S.gold, x: s.S.x, y: s.S.y, mode: s.mode, town1: t1 };
+    return { gold: s.S.gold, x: s.S.x, y: s.S.y, mode: s.mode, town1: t1,
+             alive: s.S.party.every(h => h.hp > 0) };
 });
-console.log('gold before/after:', before.gold, '->', after.gold);
-console.log('position after:', { x: after.x, y: after.y }, ' 桃源村 at:', after.town1, ' mode:', after.mode);
+check(after.gold === Math.floor(before.gold / 2), `half the gold is taken: ${before.gold} -> ${after.gold}`);
+check(after.mode === 'world', `back on the world map (mode: ${after.mode})`);
+check(after.town1 && after.x === after.town1.x && after.y === after.town1.y + 1,
+    `respawned at 桃源村: ${JSON.stringify({ x: after.x, y: after.y })} vs town ${JSON.stringify(after.town1)}`);
+check(after.alive, 'the party is revived, not left at 0hp');
+
+console.log(bad ? `\n${bad} check(s) failed` : '\na wipe costs half your gold and sends you home — it is not a game over');
 await browser.close();
+process.exit(bad ? 1 : 0);
