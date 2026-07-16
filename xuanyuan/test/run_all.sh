@@ -28,6 +28,7 @@ run "music: tracks + triggers"            node xuanyuan/test/check_music.mjs
 run "defeat: respawn, no game over"       node xuanyuan/test/check_defeat.mjs
 run "save: round-trip + legacy + corrupt" node xuanyuan/test/check_save.mjs
 run "quests: both side quests"            node xuanyuan/test/check_quests.mjs
+run "battle fx: shake/lunge/float/flash"  node xuanyuan/test/check_battlefx.mjs
 run "finale: two phases -> ending"        node xuanyuan/test/check_finale.mjs
 
 # The slow one (~10 min): full critical path, start -> ending. WEAKEN makes the

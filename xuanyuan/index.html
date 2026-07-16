@@ -74,8 +74,11 @@
         @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-34px); } }
         @keyframes shakeX { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .shake { animation: shakeX 0.28s; }
+        /* the enemy row is above the party, so each side lunges toward the other */
         @keyframes lungeA { 0%, 100% { transform: none; } 40% { transform: translateY(9px) scale(1.12); } }
         .lunge { animation: lungeA 0.32s; }
+        @keyframes lungeUpA { 0%, 100% { transform: none; } 40% { transform: translateY(-7px) scale(1.06); } }
+        .lungeUp { animation: lungeUpA 0.32s; }
         #flashFx { position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: 8px; z-index: 40; }
         @keyframes flashA { from { opacity: 0.6; } to { opacity: 0; } }
         #flashFx.flashAnim { animation: flashA 0.4s; }
@@ -1930,6 +1933,9 @@
                 const dmg = Math.max(1, rnd(st.atk * 2 - t.def));
                 t.hp -= dmg;
                 sfx('hit');
+                // the attacker moves too — enemies already lunge on their turn,
+                // heroes used to just stand there while the target shook
+                queueFx('#hc-' + a.hero, 'lungeUp');
                 queueFx('#en-' + t.idx, 'shake', '-' + dmg, '#f1c40f');
                 bMsg(H.name + '攻擊' + t.name + '——<b>' + dmg + '</b> 點傷害！' + (t.hp <= 0 ? ' 💥 擊敗！' : ''));
                 return 750;
@@ -2013,6 +2019,7 @@
                 if (sp.kind === 'dmg' || sp.kind === 'dmgAll' || sp.kind === 'physAll') {
                     sfx('spell');
                     flash(ELEM_FLASH[sp.elem] || ELEM_FLASH.none);
+                    queueFx('#hc-' + a.hero, 'lungeUp');
                     const power = sp.kind === 'physAll' ? st.atk * sp.mult : sp.power + st.mag * 1.6;
                     const targets = (sp.kind === 'dmg')
                         ? [B.enemies[a.target] && B.enemies[a.target].hp > 0 ? B.enemies[a.target] : aliveEnemies()[0]]

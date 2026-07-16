@@ -114,11 +114,15 @@ against 16-bit console RPGs, not against anything in this folder:
 
 - **animation is thin** — the player has a walk cycle and water ripples, but the
   party members, monsters and torches are all still single frames, and there are
-  no attack/hurt frames.
+  no attack/hurt *sprite* frames (the battle moves the whole card instead).
 - **no autotiling** — `blendEdges()` dithers terrain seams, but real transition
   tiles (cliff edges, shorelines) would do more.
-- **battle is DOM**, so it can't do sprite motion, hit flashes, or screen shake.
-  This is the biggest one: it's where the player spends ~35 of the ~60 minutes.
+
+The battle screen is **DOM, not canvas**, which sounds like a limitation and
+mostly isn't: it already does hit shake, attacker lunge, element-coloured screen
+flashes and floating damage numbers, all in CSS (`queueFx`/`flushFx`). What it
+can't do is animate the sprites themselves — `SPR.tag()` bakes frame 0 into a
+data-URL — so a hurt frame would need the `<img src>` swapped on hit.
 
 ### Roadmap for sprites
 Everything on the original roadmap is now pixel art: terrain, the three party
@@ -130,6 +134,25 @@ The engine now supports animation frames (see above); `player` and `wave` use
 them. Natural next additions: walk frames for 墨璃/青璇, attack/hurt frames for
 the monsters, animated lava and torches, and interior tiles for the towns (which
 are still menu screens rather than walkable maps).
+
+## Battle effects
+
+The battle UI is DOM, and its feedback is CSS classes toggled from JS. Effects
+are **queued during action resolution and flushed after the re-render**, because
+`renderBattle()` rebuilds the rows and would otherwise blow away any class you'd
+just set:
+
+```js
+queueFx('#en-3', 'shake', '-42', '#f1c40f');  // selector, class, float text, colour
+renderBattle();
+flushFx();                                     // now apply them
+```
+
+- `shake` — the thing that got hit
+- `lunge` / `lungeUp` — the attacker moves toward its target (the enemy row is
+  above the party, so each side lunges the other way)
+- `dmgFloat` — the floating number/emoji, auto-removed after ~1s
+- `flash(colour)` — full-screen tint, keyed by element via `ELEM_FLASH`
 
 ## Balance note
 
@@ -247,6 +270,11 @@ Things that bite when scripting a playthrough — all learned the hard way:
   for probing a single fight — walk in properly to test post-victory flow.
 - **Ally targeting renders into `#cmds`**, not `#partyPanel` — so does the item
   menu. Clicking a hero *card* selects nothing and hangs the turn.
+- **Battle effects last ~300ms and `renderBattle()` wipes them**, which is why
+  they're queued and flushed *after* the re-render. Polling for them races —
+  sample every animation frame instead (see `test/check_battlefx.mjs`). And
+  don't probe them with trash mobs: they die, the battle ends, and the check
+  skips while still reporting green.
 - **Party roster and `flags.recruited` are separate.** `townTalk()` branches on
   the flag, so a test that pushes a hero onto `S.party` without setting the flag
   gets re-recruited and never reaches the later dialogue branches.

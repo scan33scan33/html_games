@@ -30,6 +30,7 @@ node test/check_music.mjs                       # tracks well-formed + pentatoni
 node test/check_defeat.mjs                      # a wipe respawns at 桃源村, no game over, half gold
 node test/check_finale.mjs                      # 玄淵 -> 噬魂 handoff fires and reaches the ending
 node test/check_quests.mjs                      # both side quests: rescue -> report -> payout
+node test/check_battlefx.mjs                    # hit shake, attacker lunge, damage floats, element flash
 node test/check_save.mjs                        # save round-trip, legacy backfill, corrupt save
 WEAKEN=1 BUFF=22 node test/playthrough.mjs      # smoke test: the progression chain, start -> ending
 node test/playthrough.mjs                       # observation: how a naive player actually fares
