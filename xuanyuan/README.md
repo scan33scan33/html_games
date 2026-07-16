@@ -208,6 +208,9 @@ they'd walk over with a better sword and a full bag. Two signposts now say so:
 - **墨璃 in the shop** (`shopHint()`) — she's a Mohist engineer, so "tools over
   talent" is her whole worldview. She speaks only when you can actually afford an
   upgrade, and names the rusty sword while you're still carrying it.
+- **墨璃 at the dungeon door** — the shop hint only reaches players who open the
+  shop; this one catches the player who walks straight out of 桃源村 into a fight
+  they'll lose six times in seven. Once only, and only while it's true.
 - **the 船夫 at 望川鎮** names 大還丹 when the third 劍魄 lands — the last town
   visit before the tier-4 spike.
 

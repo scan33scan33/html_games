@@ -29,6 +29,7 @@ run "defeat: respawn, no game over"       node xuanyuan/test/check_defeat.mjs
 run "save: round-trip + legacy + corrupt" node xuanyuan/test/check_save.mjs
 run "quests: both side quests"            node xuanyuan/test/check_quests.mjs
 run "shop hint: gear signpost"            node xuanyuan/test/check_shophint.mjs
+run "door warning: under-geared"          node xuanyuan/test/check_gearwarn.mjs
 run "battle fx: shake/lunge/float/flash"  node xuanyuan/test/check_battlefx.mjs
 run "finale: two phases -> ending"        node xuanyuan/test/check_finale.mjs
 

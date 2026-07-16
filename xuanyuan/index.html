@@ -1266,7 +1266,18 @@
         for (let yy = 0; yy < m.length; yy++)
             for (let xx = 0; xx < m[0].length; xx++)
                 if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
-        say([['', '你踏入<b>' + D.name + '</b>……' + (D.boss === 'xuanyuan_w' ? '黑暗中，傳來一聲冰冷而熟悉的嘆息。' : '')]]);
+        // The shop hint only reaches players who open the shop. Someone who walks
+        // straight out of 桃源村 with the starting sword is facing roughly a 1-in-7
+        // fight at 土伯 (test/report_fights.mjs) and has no way to know why they
+        // keep losing — so 墨璃 says it once, at the door, where it still helps.
+        const lines = [['', '你踏入<b>' + D.name + '</b>……' +
+            (D.boss === 'xuanyuan_w' ? '黑暗中，傳來一聲冰冷而熟悉的嘆息。' : '')]];
+        if (!S.flags.gearWarned && S.flags.recruited.lyra && S.party.some(h => h.weapon === 0)) {
+            S.flags.gearWarned = true;
+            lines.push(['墨璃', '（低聲）等等——你們還提著初出茅廬的家伙。<b>先回鎮上換兵器、帶足傷藥</b>，' +
+                        '再進去。這裡頭的東西，不會因為你劍鈍就手下留情。']);
+        }
+        say(lines);
         startTrack(mapTrack());
         draw();
     }
