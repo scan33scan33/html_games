@@ -27,6 +27,12 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            /* When an overlay's content is taller than the panel, plain `center`
+               centres the overflow too and clips the top off — the title scrolls
+               out of reach. `safe center` falls back to flex-start in that case.
+               Kept as a second declaration so browsers without `safe` just use
+               the line above. */
+            justify-content: safe center;
             text-align: center;
             padding: 14px;
             border-radius: 8px;
@@ -122,6 +128,13 @@
         #quest b { color: #f1c40f; }
         #controls { display: flex; gap: 8px; margin: 6px 0; }
         .shopItem { display: flex; justify-content: space-between; gap: 14px; width: 100%; }
+        /* 墨璃's nudge toward the gear the difficulty curve quietly assumes.
+           flex-shrink:0 matters: the shop overflows its panel, and a column flex
+           container will otherwise squash this to zero height and "hide" it. */
+        #shopHint { font-size: 12px; color: #7fd0c0; max-width: 300px; margin: 4px auto 2px;
+                    line-height: 1.5; flex-shrink: 0; }
+        #shopHint:empty { display: none; }
+        #shopHint b { color: #f1c40f; }
         #screenList { width: 100%; max-width: 360px; }
         a.back { color: #7f8c8d; font-size: 12px; margin: 8px 0 14px; }
         .gold { color: #f1c40f; }
@@ -163,6 +176,7 @@
         <div class="overlay" id="shop">
             <h2 id="shopTitle">🛒 雜貨舖</h2>
             <div style="font-size:13px" class="gold" id="shopGold"></div>
+            <div id="shopHint"></div>
             <div class="btncol" id="shopItems" style="min-width:280px"></div>
             <div class="btnrow"><button id="shopLeave">↩️ 離開</button></div>
         </div>
@@ -1523,9 +1537,31 @@
         renderShop(tier);
     }
     let shopTier = 1;
+    // The difficulty curve is gated on gear far more than on levels — 鏽劍 is +2
+    // atk and 湛盧 is +30, against ~2 atk per level — but nothing in the game ever
+    // said so, so a player could grind for hours and still lose to a boss they'd
+    // walk over with a better sword. 墨璃 (a Mohist engineer: tools over talent)
+    // says it, once it's actually actionable.
+    function shopHint(tier) {
+        if (!S.flags.recruited.lyra) return '';        // she isn't with us yet
+        const affordable = [];
+        for (const h of S.party) {
+            const w = WEAPONS[h.id][h.weapon + 1];
+            if (w && h.weapon + 1 <= tier && S.gold >= w.cost) affordable.push('⚔️');
+            const a = ARMORS[h.armor + 1];
+            if (a && h.armor + 1 <= tier && S.gold >= a.cost) affordable.push('🛡️');
+        }
+        if (!affordable.length) return '';
+        const stillRusty = S.party.some(h => h.weapon === 0);
+        return '<b>墨璃：</b>' + (stillRusty
+            ? '「你還提著那把鏽劍？別省這個錢。<b>一把好劍抵得上苦練十年</b>——修為長得慢，兵器長得快。」'
+            : '「趁有銀子，換裝備。前頭的東西，可不會等你把修為練上來。」');
+    }
+
     function renderShop(tier) {
         shopTier = tier;
         $('shopGold').textContent = '💰 白銀 ' + S.gold + ' 兩';
+        $('shopHint').innerHTML = shopHint(tier);
         const box = $('shopItems');
         box.innerHTML = '';
         const add = (label, cost, fn, disabled) => {

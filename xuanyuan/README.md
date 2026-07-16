@@ -169,6 +169,65 @@ appeared exactly once in the source, in the shop list, and no character mentione
 it. The 船夫 now spells it out when the third crystal lands, which is the last
 town visit before the spike.
 
+### Healing is mandatory, and gear beats levels
+
+**The damage formula doubles the attacker on both sides**: `rnd(atk * 2 - def)`
+(`index.html:1974` for heroes, `:2151` for enemies). That is the single most
+important number in the game, and it is easy to half by accident when reasoning
+about it — doing so makes every boss look about twice as friendly as it is.
+土伯 hits a lv4 hero for **35**, not 11: a three-hit kill.
+
+Modelled as a race (`test/report_curve.mjs`, 3 heroes, **no healing**), the ✗
+cells are losses:
+
+| | 土伯 | 共工 | 噬魂・借體 |
+|---|---|---|---|
+| lv4, starting kit | 4v7 (tight — and you face 土伯 with only **two** heroes, which loses) | ✗ | ✗ |
+| lv10, 百煉劍/鎖子甲 | 2v30 | 5v8 | ✗10v5 |
+| lv14, 湛盧/軟蝟甲 | 1v627 | 3v14 | 6v8 |
+| lv20, 湛盧/軟蝟甲 | 1v861 | 3v24 | 5v12 |
+
+Read that as: **an unhealed party loses the finale until roughly lv14 in the best
+gear in the game.** Healing isn't a safety net here, it's the mechanic — which is
+why the two signposts below are load-bearing rather than flavour.
+
+**Gear beats levels.** 鏽劍 is +2 atk and 湛盧 is +30, against a curve that adds
+~2 atk per level, so a geared lv10 party outfights an ungeared lv16 one. The
+question is whether the path pays for it:
+
+| | 兩 |
+|---|---|
+| critical-path income (~42 encounters + chests 3870 + bosses 3000 + 150 start) | **~12,600** |
+| full gear for 3 heroes, buying every tier | 9,090 |
+| left over | ~3,500 ≈ 29 大還丹 |
+
+It pays — the gold is there for both gear and medicine. But the game used to keep
+that entirely to itself: a player could grind for hours and still lose to a boss
+they'd walk over with a better sword and a full bag. Two signposts now say so:
+
+- **墨璃 in the shop** (`shopHint()`) — she's a Mohist engineer, so "tools over
+  talent" is her whole worldview. She speaks only when you can actually afford an
+  upgrade, and names the rusty sword while you're still carrying it.
+- **the 船夫 at 望川鎮** names 大還丹 when the third 劍魄 lands — the last town
+  visit before the tier-4 spike.
+
+Both are gated so they stay quiet when they'd be noise; see
+`test/check_shophint.mjs` and `test/check_quests.mjs`.
+
+Two things soften the finale specifically: phase 2 full-heals the party before
+噬魂, and 玄淵's intervention heals 45% once it drops below 40%. MAXLV is 22, and
+a critical-path player arrives around lv13 — i.e. **below** the level at which an
+unhealed party wins, by design.
+
+**Whether that lands as tense or as unfair is a judgement call this document
+can't make for you.** The model says a lv13 party must heal well to take the
+finale; it doesn't say how that *feels*. Nobody has played this end to end at
+natural level — the bot in `test/` is far too poor a player to stand in for one
+(see its README).
+
+XP is **not split** — every *alive* hero gets the full amount. A hero who is KO'd
+when the fight ends gets nothing and falls behind permanently.
+
 Two things worth knowing if you tune this:
 
 - **The endgame's nearest town is the one that can't equip you for it.** The map

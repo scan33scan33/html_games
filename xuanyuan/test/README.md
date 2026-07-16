@@ -31,6 +31,8 @@ node test/check_defeat.mjs                      # a wipe respawns at 桃源村, 
 node test/check_finale.mjs                      # 玄淵 -> 噬魂 handoff fires and reaches the ending
 node test/check_quests.mjs                      # both side quests: rescue -> report -> payout
 node test/check_battlefx.mjs                    # hit shake, attacker lunge, damage floats, element flash
+node test/report_curve.mjs                      # (report) gear/level vs each boss
+node test/report_gold.mjs                       # (report) does the path pay for the gear?
 node test/check_save.mjs                        # save round-trip, legacy backfill, corrupt save
 WEAKEN=1 BUFF=22 node test/playthrough.mjs      # smoke test: the progression chain, start -> ending
 node test/playthrough.mjs                       # observation: how a naive player actually fares
@@ -63,29 +65,51 @@ gives you a coin flip that reports "the game is broken" half the time.
 See the "Testing" section of the parent README for the traps this harness had to
 work around.
 
-**Read the bot's losses sceptically.** It plays badly on purpose (attack, heal
-only under 45%, never casts). Two rounds of its "findings" turned out to be its
-own bugs:
+## Read the bot's losses sceptically — but not indefinitely
 
-- it couldn't heal at all — the hero card renders `氣血 45 · 真氣 12` with no
-  maximum, so scraping `45/120` out of the DOM silently yielded "always full
-  health", and it died to 師尊殘影 at max level. It reads `heroStats(h).maxhp`
-  via the page globals now.
-- then it hung instead: `allyTargetMode()` renders hero buttons into `#cmds`,
-  not `#partyPanel`, so clicking a hero *card* selected nothing and it sat in
-  target mode forever.
+**Six times running, this bot "found a balance problem" and the bug was in the
+bot.** Then on the seventh it was telling the truth, and the broken instrument
+was the *model I was checking it against* — `report_curve.mjs` had the enemy
+hitting for `atk - def` when the game does `atk * 2 - def`, which halves every
+incoming hit and makes every boss look twice as friendly as it is. The bot's
+wipes had been real signal for hours while that error kept explaining them away.
 
-- and then it lost anyway, because it was buying 金創藥 (+50) while the tier-4
-  bosses hit for 52–66 — it was healing slower than it was being hit, which
-  looked exactly like "the tomb boss is overtuned". Giving it 大還丹 (+150,
-  stocked from tier 2) turned a 2-in-3 wipe rate into 3-for-3 clean kills. It
-  buys the biggest heal first now.
+So: check the bot's plumbing first (below), but if it keeps reporting the same
+loss after you've fixed the plumbing, **believe it** and go re-read the formula
+in `index.html`, not the bot. A hypothesis that's been right six times is exactly
+the one you'll forget to re-test.
 
-So: if a boss "wipes a level-22 party", suspect the bot before the balance —
-check `potionsUsed`/`potionsBought` and `stuckBattles` in the STATS line first.
-`stuckBattles` counts only battles the turn cap ran out on; don't re-implement
-it as "is `#battle` visible afterwards", because draining the phase-1 victory
-dialogue is what *starts* the finale's phase 2, and that reads as a false hang.
+The six real bot bugs, each of which looked exactly like "the game is too hard":
 
-The bot still never casts, never defends, and never revives, so it remains a
-floor on the game's difficulty, not a measure of it.
+1. **It couldn't heal.** The hero card renders `氣血 45 · 真氣 12` with no
+   maximum, so scraping `45/120` out of the DOM silently yielded "always full
+   health" — it never once drank a potion, and died to 師尊殘影 at max level. It
+   reads `heroStats(h).maxhp` via the page globals now.
+2. **Then it hung instead.** `allyTargetMode()` renders hero buttons into
+   `#cmds`, not `#partyPanel`, so clicking a hero *card* selected nothing and it
+   sat in target mode forever — which then poisoned every later stage with
+   "mode=battle".
+3. **Then it lost anyway**, because it bought 金創藥 (+50) while the tier-4
+   bosses hit for 52–66. It was healing slower than it was being hit. 大還丹
+   (+150) turned a 2-in-3 wipe rate into 3-for-3 clean kills.
+4. **And the real one: it bought no equipment at all.** 鏽劍 is +2 atk, 湛盧 is
+   +30, and the level curve only adds ~2 atk a level — gear swings these fights
+   far harder than levels do. An unequipped bot losing says nothing about the
+   balance. It buys gear before potions now.
+5. **Then the fix for (4) didn't fire.** A flat 400兩 "keep some money for
+   potions" float can never be cleared by the opening 150兩 purse, so it bought
+   nothing, all game, and the run looked like evidence when it was a no-op. The
+   float scales with the purse now (`floatFor`). Check `gearBought` is non-zero
+   before believing any unbuffed run.
+
+So if a boss "wipes a level-22 party": suspect the bot first, and check
+`gearBought` / `potionsBought` / `potionsUsed` / `stuckBattles` in the STATS line
+before touching a single stat. `stuckBattles` counts only battles the turn cap
+ran out on — don't re-implement it as "is `#battle` visible afterwards", because
+draining the phase-1 victory dialogue is what *starts* the finale's phase 2, and
+that reads as a false hang.
+
+The bot casts heals, revives and buys gear now, but still never defends, never
+uses the 五行符, and never captures monsters. It is a **floor** on the difficulty,
+not a measure of it. `report_curve.mjs` and `report_gold.mjs` are the honest way
+to reason about balance; the bot is only good for "does the chain still hold".
