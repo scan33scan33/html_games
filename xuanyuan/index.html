@@ -62,6 +62,21 @@
         .enemy:hover { transform: scale(1.1); }
         .enemy .sprite { font-size: 46px; line-height: 1; }
         .pixspr { image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
+        /* Monsters breathe. The battle screen is where most of the game is spent
+           and the sprites are single frames, so without this nothing on it moves
+           until something gets hit. Animate the img, not .enemy — that element's
+           transform is already spoken for by :hover and .shake. */
+        @keyframes idleBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+        .enemy .pixspr { animation: idleBob 2.6s ease-in-out infinite; }
+        /* negative delays stagger the row so three monsters don't breathe in unison */
+        .enemy:nth-child(2) .pixspr { animation-delay: -0.9s; }
+        .enemy:nth-child(3) .pixspr { animation-delay: -1.7s; }
+        .enemy.dead .pixspr { animation: none; }   /* the dead don't breathe */
+        /* Must out-specify the stagger above (.enemy:nth-child(n) .pixspr is
+           0-3-0, `.shake .pixspr` is only 0-2-0) — otherwise that -0.9s delay
+           lands on the 0.28s hit flash instead, and monsters 2 and 3 silently
+           never flash when hit. Re-declares the animation wholesale to reset it. */
+        .enemy.shake .pixspr { animation: hitFlashA 0.28s 0s; }
         .enemy .ehp { font-size: 10px; color: #bdc3c7; }
         .enemy.target .sprite { filter: drop-shadow(0 0 6px #f1c40f); }
         .enemy.dead { opacity: 0.15; pointer-events: none; }

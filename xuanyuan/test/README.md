@@ -32,6 +32,7 @@ node test/check_finale.mjs                      # 玄淵 -> 噬魂 handoff fires
 node test/check_quests.mjs                      # both side quests: rescue -> report -> payout
 node test/check_gearwarn.mjs                    # 墨璃 warns once at the dungeon door if under-geared
 node test/check_battlefx.mjs                    # hit shake, attacker lunge, damage floats, element flash
+node test/check_idle.mjs                        # monsters breathe between hits, staggered, dead stop
 node test/report_curve.mjs                      # (report) gear/level vs each boss
 node test/report_gold.mjs                       # (report) does the path pay for the gear?
 node test/report_fights.mjs                     # (report) win-rate by gear+potions, first boss and finale

@@ -31,6 +31,7 @@ run "quests: both side quests"            node xuanyuan/test/check_quests.mjs
 run "shop hint: gear signpost"            node xuanyuan/test/check_shophint.mjs
 run "door warning: under-geared"          node xuanyuan/test/check_gearwarn.mjs
 run "battle fx: shake/lunge/float/flash"  node xuanyuan/test/check_battlefx.mjs
+run "battle idle: monsters breathe"       node xuanyuan/test/check_idle.mjs
 run "finale: two phases -> ending"        node xuanyuan/test/check_finale.mjs
 
 # The slow one (~10 min): full critical path, start -> ending. WEAKEN makes the
