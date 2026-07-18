@@ -44,6 +44,20 @@ game canvas, driven by story state (`colorFilter()` in `index.html`):
 It's cheap (the filter string is only written when it changes) and it makes story
 progress *visible*: the world you're saving literally comes back to life around you.
 
+## Combat — visible D20 dice
+
+Every **weapon attack rolls a d20**, shown on screen (a tumbling die that settles
+on its face). It replaces the old hidden ±15% damage roll:
+
+- **nat 1** → a miss (0 damage),
+- **nat 20** → a critical hit (×2 damage),
+- everything between scales damage with the roll.
+
+The average multiplier is ≈ 1.0, so the tuned balance is intact — this only makes
+the randomness *visible*, D&D-style. Both heroes and the Faded roll. Spells stay
+magic and don't roll (as in D&D, where weapon attacks roll to hit and many spells
+don't). See `attackRoll()` / `showDie()` in `index.html`.
+
 ## Cast & systems
 
 - **Party**: Wren (dyer's apprentice, physical), Ochre (muralist — tank, wards &
@@ -51,6 +65,13 @@ progress *visible*: the world you're saving literally comes back to life around 
 - **Elements**: a five-hue color wheel — ember / azure / verd / gold / ash — with
   a one-way advantage cycle (`KE`) and a harmony cycle (`SHENG`). Ash is the color
   of the Faded.
+- **Structure**: a single **linear journey** to the Wellspring that passes through
+  three regions — not a collect-a-thon. There's no prism counter in the HUD;
+  instead a mood read ("the world lies grey" → "color stirs" → "the road's end")
+  tracks how much color the world has back, in step with the on-screen
+  desaturation. The three Prisms remain in the *story* (they're what the twist
+  turns on — the last wild color you unknowingly carry to the Wellspring), but
+  they read as beats on a road, not a checklist to fill.
 - **Bosses**: the Wightoak (Ashwood), Slag the Last Flame (Emberhollow), the
   Curator (Sunken Gallery), the Warden of Hues (optional Palette Vault), and the
   two-phase finale.

@@ -108,6 +108,23 @@
         #flashFx { position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: 8px; z-index: 40; }
         @keyframes flashA { from { opacity: 0.6; } to { opacity: 0; } }
         #flashFx.flashAnim { animation: flashA 0.4s; }
+        /* the D20 — every weapon attack rolls one, shown on screen (D&D-style) */
+        #dieRoll { position: absolute; top: 30%; left: 50%; z-index: 50; display: none;
+            width: 58px; height: 58px; transform: translate(-50%, -50%);
+            align-items: center; justify-content: center; pointer-events: none;
+            font: bold 30px/1 system-ui, sans-serif; color: #eef2f8;
+            /* a hexagon-ish d20 silhouette */
+            clip-path: polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
+            background: linear-gradient(150deg, #33415f, #1a2334);
+            box-shadow: 0 6px 22px rgba(0,0,0,0.55); text-shadow: 0 1px 2px #000; }
+        #dieRoll.show { display: flex; }
+        #dieRoll #dieLbl { position: absolute; bottom: -19px; left: -20px; right: -20px;
+            text-align: center; font-size: 12px; font-weight: bold; text-shadow: 0 1px 3px #000; }
+        @keyframes dieTumble {
+            0%   { transform: translate(-50%,-50%) rotate(-40deg) scale(0.5); }
+            55%  { transform: translate(-50%,-50%) rotate(20deg)  scale(1.2); }
+            100% { transform: translate(-50%,-50%) rotate(0)      scale(1); } }
+        #dieRoll.rolling { animation: dieTumble 0.42s cubic-bezier(.2,1.3,.5,1); }
         .heroCard.active { border-color: #f1c40f; }
         .heroCard.ko { opacity: 0.4; }
         .heroCard .nm { font-weight: bold; font-size: 13px; }
@@ -177,6 +194,7 @@
         </div>
 
         <div class="overlay" id="battle">
+            <div id="dieRoll"><span id="dieNum">20</span><span id="dieLbl"></span></div>
             <div id="enemyRow"></div>
             <div id="bMsg"></div>
             <div id="cmds"></div>
@@ -232,7 +250,7 @@
     </div>
     <div id="hud">
         <span class="chip">💰 <b id="hGold">0</b></span>
-        <span class="chip" id="hCrystals">Prisms: —</span>
+        <span class="chip" id="hCrystals" title="how much of the world has its color back"></span>
         <span class="chip" id="hParty"></span>
     </div>
     <div id="quest"><span id="questText">Goal: cross to the village of Marrow's End</span></div>
@@ -1166,19 +1184,24 @@
         const c = S.flags.crystals, f = S.flags;
         const n = ['earth', 'fire', 'water'].filter(k => c[k]).length;
         if (f.malachorDown) return 'Color floods back into the world. Wander freely, or press the last of the Faded.';
-        if (n === 3) return 'All three Prisms are gathered — carry them north to <b>the Wellspring 🌀</b>.';
+        if (n === 3) return 'The road’s end — follow the last of the color north to <b>the Wellspring 🌀</b>.';
         if (!f.recruited || !f.recruited.lyra) return 'Cross to <b>Marrow’s End 🏚️</b> and speak with the elder.';
-        if (!c.earth) return 'Enter <b>the Ashwood 🌲</b> to the east and recover the <b>Prism of Dawn</b>.';
-        if (!c.fire) return 'Rest at <b>Hollowmere 🏘️</b>, then climb to <b>the Emberhollow 🌋</b> for the <b>Prism of Noon</b>.';
-        if (!c.water) return 'Go south to the drowned <b>Sunken Gallery 🏛️</b> for the <b>Prism of Dusk</b>.';
-        return 'Gather the three Prisms.';
+        if (!c.earth) return 'Follow the greying east into <b>the Ashwood 🌲</b>.';
+        if (!c.fire) return 'Rest at <b>Hollowmere 🏘️</b>, then climb on to <b>the Emberhollow 🌋</b>.';
+        if (!c.water) return 'The road runs south, to the drowned <b>Sunken Gallery 🏛️</b>.';
+        return 'Follow the road on toward the Wellspring.';
     }
     function updateHud() {
         if (!S) return;
         $('questText').innerHTML = 'Goal: ' + objectiveText();
         $('hGold').innerHTML = S.gold;
+        // Not a collection counter — a mood read on how much color the world has
+        // back, in step with the desaturation you can see on screen.
         const c = S.flags.crystals;
-        $('hCrystals').innerHTML = 'Prisms: ' + (['earth', 'fire', 'water'].map(k => c[k] ? '🔶' : '▫️').join(''));
+        const n = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        const mood = S.flags.color && S.flags.color.full ? 'the world in color'
+            : ['the world lies grey', 'color stirs', 'color spreading', "the road's end"][n];
+        $('hCrystals').innerHTML = '🎨 ' + mood;
         $('hParty').innerHTML = S.party.map(h => {
             const st = heroStats(h);
             return HEROES[h.id].e + ' ' + h.hp + '/' + st.maxhp;
@@ -2010,6 +2033,46 @@
     }
 
     const rnd = v => Math.round(v * (0.85 + Math.random() * 0.3));
+
+    // ---- the D20 (D&D-style visible dice) ----
+    // Every weapon attack rolls a d20 shown on screen. It replaces the old hidden
+    // ±15% roll for attacks: nat-1 misses, nat-20 crits (×2), and the roll scales
+    // damage in between. Average multiplier ≈ 1.0, so the tuned balance is intact —
+    // this only makes the randomness visible (spells stay magic; they don't roll).
+    function d20result(roll) {
+        if (roll === 1) return { mult: 0, label: 'MISS', color: '#e05a5a' };
+        if (roll === 20) return { mult: 2, label: 'CRIT!', color: '#f1c40f' };
+        return { mult: 0.7 + roll * 0.03, label: '', color: '#eef2f8' };
+    }
+    let dieTimer = null, dieHide = null;
+    function showDie(roll) {
+        const el = $('dieRoll'), num = $('dieNum'), lbl = $('dieLbl');
+        if (!el) return;
+        clearInterval(dieTimer); clearTimeout(dieHide);
+        const res = d20result(roll);
+        el.classList.add('show');
+        el.classList.remove('rolling'); void el.offsetWidth; el.classList.add('rolling');
+        el.style.color = '#eef2f8'; lbl.textContent = '';
+        // tumble: flash random faces for ~320ms, then settle on the real roll
+        let ticks = 0;
+        dieTimer = setInterval(() => {
+            if (ticks++ < 7) { num.textContent = 1 + Math.floor(Math.random() * 20); return; }
+            clearInterval(dieTimer);
+            num.textContent = roll;
+            el.style.color = res.color;
+            lbl.style.color = res.color;
+            lbl.textContent = res.label;
+            if (roll === 20) sfx('crystal'); else if (roll === 1) sfx('hurt');
+        }, 42);
+        dieHide = setTimeout(() => el.classList.remove('show'), 1100);
+    }
+    // roll a d20, show it, and return {roll,res}
+    function attackRoll() {
+        const roll = 1 + Math.floor(Math.random() * 20);
+        showDie(roll);
+        return { roll, res: d20result(roll) };
+    }
+
     function performAction(a) {
         if (a.side === 'hero') {
             const h = S.party[a.hero];
@@ -2020,15 +2083,19 @@
                 let t = B.enemies[a.target];
                 if (t.hp <= 0) t = aliveEnemies()[0];
                 if (!t) return 80;
-                const dmg = Math.max(1, rnd(st.atk * 2 - t.def));
+                const { roll, res } = attackRoll();
+                queueFx('#hc-' + a.hero, 'lungeUp');   // the attacker lunges either way
+                if (res.mult <= 0) {   // nat 1 — a miss
+                    bMsg('🎲 <b>' + roll + '</b> — ' + H.name + ' swings at ' + t.name + ' and <b style="color:#e05a5a">misses!</b>');
+                    return 800;
+                }
+                const dmg = Math.max(1, Math.round((st.atk * 2 - t.def) * res.mult));
                 t.hp -= dmg;
                 sfx('hit');
-                // the attacker moves too — enemies already lunge on their turn,
-                // heroes used to just stand there while the target shook
-                queueFx('#hc-' + a.hero, 'lungeUp');
-                queueFx('#en-' + t.idx, 'shake', '-' + dmg, '#f1c40f');
-                bMsg(H.name + ' strikes ' + t.name + ' — <b>' + dmg + '</b> damage!' + (t.hp <= 0 ? ' 💥 down!' : ''));
-                return 750;
+                queueFx('#en-' + t.idx, 'shake', '-' + dmg, roll === 20 ? '#f1c40f' : '#eef2f8');
+                const crit = roll === 20 ? ' <b style="color:#f1c40f">CRITICAL!</b>' : '';
+                bMsg('🎲 <b>' + roll + '</b> — ' + H.name + ' strikes ' + t.name + ' for <b>' + dmg + '</b>!' + crit + (t.hp <= 0 ? ' 💥 down!' : ''));
+                return 850;
             }
             if (a.kind === 'defend') {
                 B.defending[a.hero] = true;
@@ -2197,21 +2264,26 @@
         const h = heroes[Math.floor(Math.random() * heroes.length)];
         const idx = S.party.indexOf(h);
         const st = heroStats(h);
-        let dmg = Math.max(1, rnd(e.atk * 2 - st.def));
+        const { roll, res } = attackRoll();
+        if (res.mult <= 0) {   // the Faded roll a nat 1 too
+            bMsg('🎲 <b>' + roll + '</b> — ' + e.name + ' lunges at ' + HEROES[h.id].name + ' and <b style="color:#8ea6c9">misses!</b>');
+            return 800;
+        }
+        let dmg = Math.max(1, Math.round((e.atk * 2 - st.def) * res.mult));
         if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
         if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
         h.hp -= dmg;
         sfx('hurt');
         queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
-        let suffix = h.hp <= 0 ? ' 😵' : '';
+        let suffix = (roll === 20 ? ' <b style="color:#f1c40f">CRIT!</b>' : '') + (h.hp <= 0 ? ' 😵' : '');
         const stt = B.status[idx] = B.status[idx] || {};
         if (stt.sleep) { stt.sleep = false; suffix += ' (jolted awake!)'; }
         else if (h.hp > 0 && e.inflict && !stt[e.inflict] && Math.random() < 0.28) {
             stt[e.inflict] = true;
             suffix += e.inflict === 'poison' ? ' <b style="color:#9b59b6">☠️ greyrot!</b>' : ' <b style="color:#8ea6c9">💤 lulled to sleep!</b>';
         }
-        bMsg(e.name + ' strikes ' + HEROES[h.id].name + ' — <b>' + dmg + '</b> damage!' + suffix);
-        return 750;
+        bMsg('🎲 <b>' + roll + '</b> — ' + e.name + ' strikes ' + HEROES[h.id].name + ' for <b>' + dmg + '</b>!' + suffix);
+        return 850;
     }
 
     function checkBattleEnd() {
