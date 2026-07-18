@@ -1,0 +1,2641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumenfall</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #10141f;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #ecf0f1;
+            touch-action: none;
+        }
+        h1 { margin: 10px 0 2px; font-size: 24px; }
+        p.sub { color: #7f8c8d; margin: 0 0 8px; font-size: 12px; text-align: center; }
+        #frame { position: relative; }
+        canvas { display: block; border-radius: 8px; background: #0a0d15; max-width: 96vw; }
+        .overlay {
+            position: absolute; inset: 0;
+            background: rgba(8, 10, 18, 0.93);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            /* When an overlay's content is taller than the panel, plain `center`
+               centres the overflow too and clips the top off — the title scrolls
+               out of reach. `safe center` falls back to flex-start in that case.
+               Kept as a second declaration so browsers without `safe` just use
+               the line above. */
+            justify-content: safe center;
+            text-align: center;
+            padding: 14px;
+            border-radius: 8px;
+            overflow-y: auto;
+        }
+        .overlay.open { display: flex; }
+        .overlay h2 { margin: 6px 0; }
+        .overlay .big { font-size: 46px; margin: 2px; }
+        button {
+            padding: 9px 16px; font-size: 14px; border-radius: 7px;
+            background: #2c3e50; color: #ecf0f1; cursor: pointer; border: 1px solid #3d4f63;
+        }
+        button:hover:not(:disabled) { background: #3d4f63; }
+        button:disabled { opacity: 0.45; cursor: default; }
+        button.primary { background: #2980b9; border-color: #3498db; }
+        button.danger { background: #922b21; border-color: #c0392b; }
+        .btncol { display: flex; flex-direction: column; gap: 8px; min-width: 230px; margin-top: 10px; }
+        .btnrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+        /* Battle */
+        #battle {
+            justify-content: flex-start;
+            background: radial-gradient(ellipse at 50% 22%, rgba(30, 38, 60, 0.96), rgba(8, 10, 18, 0.985));
+        }
+        h1 { text-shadow: 0 0 18px rgba(180, 200, 255, 0.25); }
+        #enemyRow { display: flex; gap: 18px; justify-content: center; margin: 18px 0 6px; flex-wrap: wrap; }
+        .enemy { cursor: pointer; text-align: center; transition: transform 0.1s; position: relative; }
+        .enemy:hover { transform: scale(1.1); }
+        .enemy .sprite { font-size: 46px; line-height: 1; }
+        .pixspr { image-rendering: pixelated; image-rendering: crisp-edges; vertical-align: middle; }
+        /* Monsters breathe. The battle screen is where most of the game is spent
+           and the sprites are single frames, so without this nothing on it moves
+           until something gets hit. Animate the img, not .enemy — that element's
+           transform is already spoken for by :hover and .shake. */
+        @keyframes idleBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+        .enemy .pixspr { animation: idleBob 2.6s ease-in-out infinite; }
+        /* negative delays stagger the row so three monsters don't breathe in unison */
+        .enemy:nth-child(2) .pixspr { animation-delay: -0.9s; }
+        .enemy:nth-child(3) .pixspr { animation-delay: -1.7s; }
+        .enemy.dead .pixspr { animation: none; }   /* the dead don't breathe */
+        /* Must out-specify the stagger above (.enemy:nth-child(n) .pixspr is
+           0-3-0, `.shake .pixspr` is only 0-2-0) — otherwise that -0.9s delay
+           lands on the 0.28s hit flash instead, and monsters 2 and 3 silently
+           never flash when hit. Re-declares the animation wholesale to reset it. */
+        .enemy.shake .pixspr { animation: hitFlashA 0.28s 0s; }
+        .enemy .ehp { font-size: 10px; color: #bdc3c7; }
+        .enemy.target .sprite { filter: drop-shadow(0 0 6px #f1c40f); }
+        .enemy.dead { opacity: 0.15; pointer-events: none; }
+        #bMsg { min-height: 40px; font-size: 14px; color: #f8f9fa; padding: 4px 10px; line-height: 1.5; }
+        #partyPanel { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+        .heroCard {
+            background: #1a2230; border: 1px solid #2c3e50; border-radius: 8px;
+            padding: 6px 10px; font-size: 12px; min-width: 118px; text-align: left;
+            position: relative;
+        }
+        .dmgFloat {
+            position: absolute; top: 2px; font-weight: bold; font-size: 17px;
+            pointer-events: none; text-shadow: 0 1px 3px #000; z-index: 5;
+            animation: floatUp 0.9s forwards;
+        }
+        @keyframes floatUp { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(-34px); } }
+        @keyframes shakeX { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .shake { animation: shakeX 0.28s; }
+        /* The struck sprite whites out — the classic 16-bit hit tell. Keyed off
+           .shake, which already means "this one got hit", so it covers heroes and
+           enemies alike without any extra plumbing. */
+        @keyframes hitFlashA { 0%, 100% { filter: none; } 15%, 55% { filter: brightness(3.2) saturate(0.15); } }
+        .shake .pixspr { animation: hitFlashA 0.28s; }
+        /* the enemy row is above the party, so each side lunges toward the other */
+        @keyframes lungeA { 0%, 100% { transform: none; } 40% { transform: translateY(9px) scale(1.12); } }
+        .lunge { animation: lungeA 0.32s; }
+        @keyframes lungeUpA { 0%, 100% { transform: none; } 40% { transform: translateY(-7px) scale(1.06); } }
+        .lungeUp { animation: lungeUpA 0.32s; }
+        #flashFx { position: absolute; inset: 0; pointer-events: none; opacity: 0; border-radius: 8px; z-index: 40; }
+        @keyframes flashA { from { opacity: 0.6; } to { opacity: 0; } }
+        #flashFx.flashAnim { animation: flashA 0.4s; }
+        .heroCard.active { border-color: #f1c40f; }
+        .heroCard.ko { opacity: 0.4; }
+        .heroCard .nm { font-weight: bold; font-size: 13px; }
+        .mini { height: 7px; border-radius: 3px; background: #0a0d15; overflow: hidden; margin: 3px 0; }
+        .mini > div { height: 100%; }
+        .mini .hpf { background: #e74c3c; }
+        .mini .mpf { background: #3498db; }
+        #cmds { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 10px 0; min-height: 40px; }
+        /* dialog */
+        #dialog { justify-content: flex-end; background: transparent; pointer-events: none; }
+        #dialogBox {
+            pointer-events: auto;
+            background: rgba(10, 13, 21, 0.95); border: 2px solid #3d4f63; border-radius: 10px;
+            padding: 12px 16px; margin-bottom: 12px; width: 92%; box-sizing: border-box;
+            text-align: left; font-size: 14px; line-height: 1.55; cursor: pointer;
+        }
+        #dialogBox .speaker { color: #f1c40f; font-weight: bold; }
+        #dialogBox .cont { color: #7f8c8d; font-size: 11px; text-align: right; }
+        #hud {
+            display: flex; gap: 10px; align-items: center; justify-content: center;
+            font-size: 13px; margin: 8px 0 4px; flex-wrap: wrap;
+        }
+        #hud .chip { background: #1a2230; border-radius: 6px; padding: 4px 10px; }
+        #hud b { color: #f1c40f; }
+        #quest {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            margin: 4px 0; font-size: 13px; color: #cdd6e0;
+            background: rgba(26, 34, 48, 0.85); border: 1px solid #2c3e50;
+            border-radius: 6px; padding: 5px 14px; max-width: 96vw; box-sizing: border-box;
+            text-align: center;
+        }
+        #quest::before { content: '🎯'; }
+        #quest b { color: #f1c40f; }
+        #controls { display: flex; gap: 8px; margin: 6px 0; }
+        .shopItem { display: flex; justify-content: space-between; gap: 14px; width: 100%; }
+        /* 墨璃's nudge toward the gear the difficulty curve quietly assumes.
+           flex-shrink:0 matters: the shop overflows its panel, and a column flex
+           container will otherwise squash this to zero height and "hide" it. */
+        #shopHint { font-size: 12px; color: #7fd0c0; max-width: 300px; margin: 4px auto 2px;
+                    line-height: 1.5; flex-shrink: 0; }
+        #shopHint:empty { display: none; }
+        #shopHint b { color: #f1c40f; }
+        #screenList { width: 100%; max-width: 360px; }
+        a.back { color: #7f8c8d; font-size: 12px; margin: 8px 0 14px; }
+        .gold { color: #f1c40f; }
+        .good { color: #2ecc71; }
+        .bad { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>🎨 Lumenfall</h1>
+    <p class="sub">A painterly RPG. A world draining to grey; three Prisms; the courage to choose a mortal, colorful life.</p>
+    <div id="frame">
+        <canvas id="gameCanvas" width="480" height="352"></canvas>
+
+        <div class="overlay" id="title">
+            <div class="big">🎨</div>
+            <h2>Lumenfall</h2>
+            <div style="font-size:13px;color:#95a5a6;max-width:340px">A year ago the Greydawn came, and the world began to
+                drain of color. Flowers ash over; the sky dims; and those whose color runs out become the Faded — hollow, restful,
+                gone. You are Wren, a dyer’s apprentice. When old Sable fades before your eyes, you set out to find the three
+                Prisms and carry them to the Wellspring, where color is born.</div>
+            <div class="btncol">
+                <button class="primary" id="btnNew">🎨 Begin</button>
+                <button id="btnContinue">📜 Continue</button>
+            </div>
+        </div>
+
+        <div class="overlay" id="battle">
+            <div id="enemyRow"></div>
+            <div id="bMsg"></div>
+            <div id="cmds"></div>
+            <div id="partyPanel"></div>
+        </div>
+
+        <div class="overlay" id="town">
+            <div class="big" id="townEmoji">🏘️</div>
+            <h2 id="townName"></h2>
+            <div id="townText" style="font-size:13px;color:#95a5a6"></div>
+            <div class="btncol" id="townBtns"></div>
+        </div>
+
+        <div class="overlay" id="shop">
+            <h2 id="shopTitle">🛒 Supplies</h2>
+            <div style="font-size:13px" class="gold" id="shopGold"></div>
+            <div id="shopHint"></div>
+            <div class="btncol" id="shopItems" style="min-width:280px"></div>
+            <div class="btnrow"><button id="shopLeave">↩️ Leave</button></div>
+        </div>
+
+        <div class="overlay" id="menu">
+            <h2>📜 Menu</h2>
+            <div id="menuBody" style="width:100%;max-width:380px"></div>
+            <div class="btnrow" id="menuBtns"></div>
+        </div>
+
+        <div class="overlay" id="hu">
+            <div class="big">🎨</div>
+            <h2>the Pigment Press</h2>
+            <div style="font-size:12px;color:#95a5a6;max-width:340px">“Press” a captured Faded into pigment. “Blend” two of them:
+                same hue → Core Pigment · harmony → a Hue Charm · clash → Clean Wash.</div>
+            <div id="huMsg" style="font-size:13px;color:#f1c40f;min-height:18px;margin:6px"></div>
+            <div class="btncol" id="huList" style="min-width:300px"></div>
+            <div class="btnrow"><button id="huLeave">↩️ Close</button></div>
+        </div>
+
+        <div class="overlay" id="dialog">
+            <div id="dialogBox">
+                <div><span class="speaker" id="dSpeaker"></span></div>
+                <div id="dText"></div>
+                <div class="cont">▼ click to continue</div>
+            </div>
+        </div>
+
+        <div class="overlay" id="ending">
+            <div class="big">🌅</div>
+            <h2>The First Spring</h2>
+            <div id="endText" style="font-size:14px;color:#bdc3c7;max-width:340px;line-height:1.6"></div>
+            <div class="btncol"><button class="primary" id="btnEndTitle">✨ back to the title</button></div>
+        </div>
+        <div id="flashFx"></div>
+    </div>
+    <div id="hud">
+        <span class="chip">💰 <b id="hGold">0</b></span>
+        <span class="chip" id="hCrystals">Prisms: —</span>
+        <span class="chip" id="hParty"></span>
+    </div>
+    <div id="quest"><span id="questText">Goal: cross to the village of Marrow's End</span></div>
+    <div id="controls">
+        <button id="btnMenu">📜 Menu</button>
+        <button id="btnEnc">⚔️ Encounters: Normal</button>
+        <button id="btnSound">🎵 Sound: On</button>
+    </div>
+    <p class="sub">Hold arrow keys to walk · <b>click the map to auto-path</b> · weaken a Faded, then “Capture” it · blend pigments at the Press</p>
+    <a class="back" href="../index.html">← all games</a>
+
+    <script src="sprites.js"></script>
+    <script>
+    'use strict';
+    // =========================================================================
+    //  DATA
+    // =========================================================================
+    const WORLD = [
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~ffffffffffff^^^^^^^^^^^^^^^^..ff....~~',
+        '~~f2ffffffffff^^^^^^^^^^^^^^^^.ff.....~~',
+        '~~ffffffffffff^^....K......^^........~~',
+        '~~ffffffffffff^^........^^.....ff.~~'.padEnd(38, '.') + '~~',
+        '~~fffBffffffff^^........^^....fff.~~'.padEnd(38, '.') + '~~',
+        '~~ffffffffffff^^........^^........~~'.padEnd(38, '.') + '~~',
+        '~~ffffffffffff^^^^^^^.^^^^^^^^........~~',
+        '~~ffffffffffff^^^^^^^.^^^^^^^^......ff~~',
+        '~~..ffff..............................~~',
+        '~~....................................~~',
+        '~~...ff......ff................ff.....~~',
+        '~~........1..........................~~'.slice(0, 38) + '~~',
+        '~~....................................~~',
+        '~~..f.....S...............f...........~~'.slice(0, 38) + '~~',
+        '~~..ff..............A.....ff..........~~'.slice(0, 38) + '~~',
+        '~~..........................ff........~~'.slice(0, 38) + '~~',
+        '~~....^^......................^^......~~'.slice(0, 38) + '~~',
+        '~~....^^......................^^......~~'.slice(0, 38) + '~~',
+        '~~..............ff....................~~'.slice(0, 38) + '~~',
+        '~~..............ff....................~~'.slice(0, 38) + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^ssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^ssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssss3sssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssCsssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssss^^^sssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~ssssssssssssssssssssssssssssssssss~~'.padEnd(38, 's') + '~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+        '~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~',
+    ].map(r => (r + '~'.repeat(40)).slice(0, 40));
+    // Act-2 and side-quest locations carved into the world:
+    // J 劍塚 (sword tomb, eastern woods) · n 蛛網 (spider nest) · x 商隊 (caravan)
+    WORLD[6] = WORLD[6].slice(0, 31) + 'J' + WORLD[6].slice(32);
+    WORLD[20] = WORLD[20].slice(0, 16) + 'n' + WORLD[20].slice(17);
+    WORLD[26] = WORLD[26].slice(0, 25) + 'x' + WORLD[26].slice(26);
+
+    const DMAPS = {
+        earth: [
+            '################',
+            '#S.....##....T.#',
+            '#..##..##..##..#',
+            '#..##......##..#',
+            '#......##......#',
+            '#.####.##.####.#',
+            '#......##......#',
+            '#..##..##..##..#',
+            '#T.##......##.B#',
+            '#......##......#',
+            '################',
+        ],
+        fire: [
+            '################',
+            '#S....ll.....T.#',
+            '#.....ll.......#',
+            '#..lll....lll..#',
+            '#..lll....lll..#',
+            '#......ll......#',
+            '#.....llll.....#',
+            '#..T..llll.....#',
+            '#......ll....B.#',
+            '#..............#',
+            '################',
+        ],
+        water: [
+            '################',
+            '#S...w....w..T.#',
+            '#....w....w....#',
+            '#..www....www..#',
+            '#..............#',
+            '#....wwwwww....#',
+            '#....w....w....#',
+            '#.T..w....w....#',
+            '#....w....w..B.#',
+            '#..............#',
+            '################',
+        ],
+        castle: [
+            '##################',
+            '#S..##......##.T.#',
+            '#...##..##..##...#',
+            '#.......##.......#',
+            '#.####......####.#',
+            '#.#..T.####......#',
+            '#.....####...##..#',
+            '#.##......##.##..#',
+            '#.##..##..##.....#',
+            '#.....##......#T.#',
+            '#..##....##..##..#',
+            '#..##...B##..##..#',
+            '##################',
+        ],
+    };
+
+    DMAPS.tomb = [
+        '################',
+        '#S.....##..T...#',
+        '#..##..##..##..#',
+        '#..##......##..#',
+        '#......##......#',
+        '#.####.##.####.#',
+        '#......##......#',
+        '#..##..##..##..#',
+        '#T.##......##.B#',
+        '#......##......#',
+        '################',
+    ];
+    // The three Prism regions + the Wellspring finale. Internal keys (earth/fire/
+    // water/castle) are kept from the engine and never shown; `crystal` names the
+    // prism flag each region grants. Recovering a prism floods that region's
+    // colorZone back to full saturation (see the color mechanic in RENDERING).
+    const DUNGEONS = {
+        earth: { name: 'the Ashwood', tier: 1, boss: 'tubo', crystal: 'earth', worldChar: 'A', colorZone: 'forest',
+                 chests: { '13,1': { gold: 120 }, '1,8': { item: 'jinchuang', n: 3 } } },
+        fire: { name: 'the Emberhollow', tier: 2, boss: 'bifang', crystal: 'fire', worldChar: 'B', colorZone: 'mountain',
+                chests: { '13,1': { gold: 350 }, '3,7': { item: 'juqi', n: 2 } } },
+        water: { name: 'the Sunken Gallery', tier: 3, boss: 'gonggong', crystal: 'water', worldChar: 'C', colorZone: 'coast',
+                 chests: { '13,1': { gold: 700 }, '2,7': { item: 'huanhun', n: 2 } } },
+        tomb: { name: 'the Palette Vault', tier: 4, boss: 'jianling', crystal: null, worldChar: 'J',
+                chests: { '11,1': { item: 'dahuan', n: 3 }, '1,8': { gold: 1200 } } },
+        castle: { name: 'the Wellspring', tier: 4, boss: 'xuanyuan_w', crystal: null, worldChar: 'K',
+                  chests: { '15,1': { gold: 1500 }, '5,5': { item: 'dahuan', n: 4 }, '15,9': { item: 'juqi', n: 3 } } },
+    };
+
+    // Five hues on a color wheel. Advantage runs one way round the ring (KE),
+    // harmony the other (SHENG) — the same 5-cycle the engine's battle math wants,
+    // relabelled from the original elements. ash is the color of the Faded.
+    const KE = { ember: 'ash', ash: 'verd', verd: 'gold', gold: 'azure', azure: 'ember' };
+    const SHENG = { verd: 'ember', ember: 'gold', gold: 'ash', ash: 'azure', azure: 'verd' };
+    const ELEM_COLOR = { ash: '#b9bec8', verd: '#46b06a', azure: '#3f7fd0', ember: '#e0673a', gold: '#d6a83a' };
+    const ELEM_LABEL = { ash: 'Ash', verd: 'Verd', azure: 'Azure', ember: 'Ember', gold: 'Gold' };
+
+    // The Faded — creatures the Greydawn has drained. hp,atk,def,spd,xp,gold;
+    // elem = hue; refine = what the pigment-press yields; inflict = status on hit.
+    const MON = {
+        shanxiao: { name: 'Greyling', e: '👤', elem: 'verd', hp: 20, atk: 8, def: 2, spd: 4, xp: 9, gold: 7, refine: 'jinchuang' },
+        fuyao:    { name: 'Ashmoth', e: '🦋', elem: 'verd', hp: 16, atk: 9, def: 1, spd: 10, xp: 9, gold: 7, refine: 'jinchuang' },
+        yaolang:  { name: 'Wan Hound', e: '🐕', elem: 'ash', hp: 30, atk: 11, def: 3, spd: 9, xp: 14, gold: 12, refine: 'jinchuang' },
+        shijing:  { name: 'Chalk Statue', e: '🗿', elem: 'gold', hp: 38, atk: 13, def: 5, spd: 4, xp: 18, gold: 14, refine: 'jinchuang' },
+        wangliang:{ name: 'Dimwisp', e: '🕯️', elem: 'azure', hp: 45, atk: 17, def: 6, spd: 10, xp: 30, gold: 24, inflict: 'sleep', refine: 'juqi' },
+        kulou:    { name: 'Bleached Husk', e: '💀', elem: 'ash', hp: 60, atk: 20, def: 8, spd: 7, xp: 38, gold: 30, refine: 'jinchuang' },
+        zhuyao:   { name: 'Palespinner', e: '🕸️', elem: 'verd', hp: 50, atk: 18, def: 6, spd: 12, xp: 34, gold: 26, inflict: 'poison', refine: 'juqi' },
+        shanjun:  { name: 'Fallow Stag', e: '🦌', elem: 'ash', hp: 90, atk: 25, def: 9, spd: 8, xp: 55, gold: 45, refine: 'juqi' },
+        shaxie:   { name: 'Silt Crawler', e: '🦐', elem: 'gold', hp: 80, atk: 28, def: 13, spd: 11, xp: 70, gold: 55, inflict: 'poison', refine: 'dahuan' },
+        hanba:    { name: 'Cinderwraith', e: '🔥', elem: 'ember', hp: 100, atk: 30, def: 15, spd: 6, xp: 85, gold: 65, spell: 'flameAll', refine: 'dahuan' },
+        sheji:    { name: 'Drowned Muse', e: '🎭', elem: 'azure', hp: 95, atk: 32, def: 13, spd: 13, xp: 95, gold: 75, inflict: 'poison', refine: 'dahuan' },
+        fengxi:   { name: 'Tallow Boar', e: '🐗', elem: 'gold', hp: 110, atk: 30, def: 16, spd: 5, xp: 105, gold: 85, refine: 'dahuan' },
+        xingtian: { name: 'Faded Warden', e: '🛡️', elem: 'ash', hp: 140, atk: 40, def: 19, spd: 12, xp: 150, gold: 110, refine: 'huanhun' },
+        qiongqi:  { name: 'Pale Tiger', e: '🐅', elem: 'ash', hp: 170, atk: 46, def: 23, spd: 11, xp: 190, gold: 150, refine: 'huanhun' },
+        taotie:   { name: 'Hungering Blot', e: '🕳️', elem: 'gold', hp: 160, atk: 50, def: 19, spd: 15, xp: 210, gold: 170, spell: 'flameAll', refine: 'huanhun' },
+        youhun:   { name: 'Last Portrait', e: '🖼️', elem: 'azure', hp: 130, atk: 44, def: 17, spd: 17, xp: 175, gold: 140, inflict: 'sleep', refine: 'huanhun' },
+    };
+    const TIERS = {
+        1: ['shanxiao', 'fuyao', 'yaolang', 'shijing'],
+        2: ['wangliang', 'kulou', 'zhuyao', 'shanjun'],
+        3: ['shaxie', 'hanba', 'sheji', 'fengxi'],
+        4: ['xingtian', 'qiongqi', 'taotie', 'youhun'],
+    };
+    const BOSSES = {
+        tubo:       { name: 'the Wightoak', e: '🌳', elem: 'verd', hp: 320, atk: 24, def: 10, spd: 4, xp: 160, gold: 200, spell: 'quake', boss: true },
+        bifang:     { name: 'Slag, the Last Flame', e: '🕯️', elem: 'ember', hp: 600, atk: 36, def: 14, spd: 11, xp: 420, gold: 500, spell: 'flameAll', boss: true },
+        gonggong:   { name: 'the Curator', e: '🎭', elem: 'azure', hp: 900, atk: 46, def: 18, spd: 13, xp: 850, gold: 1000, spell: 'tidalWave', boss: true },
+        jianling:   { name: 'the Warden of Hues', e: '🛡️', elem: 'ash', hp: 1100, atk: 52, def: 22, spd: 14, xp: 700, gold: 800, spell: 'swordRain', boss: true },
+        xuanyuan_w: { name: 'the Loomkeeper Prime', e: '🧵', elem: null, hp: 1300, atk: 58, def: 24, spd: 15, xp: 500, gold: 500, spell: 'darkStorm', boss: true },
+        shihun:     { name: 'the Hollow Bloom', e: '🌑', elem: null, hp: 1800, atk: 66, def: 26, spd: 16, xp: 0, gold: 0, spell: 'devour', boss: true },
+    };
+    const ENEMY_SPELLS = {
+        flameAll:  { name: 'Cinderfall', power: 18, all: true },
+        quake:     { name: 'Rootwrithe', power: 14, all: true },
+        tidalWave: { name: 'Gallery Flood', power: 26, all: true },
+        darkStorm: { name: 'Unweaving', power: 34, all: true },
+        swordRain: { name: 'Grey Verdict', power: 30, all: true },
+        devour:    { name: 'The Long Fade', power: 42, all: true },
+    };
+
+    // Party: base + growth per level; spells learned at levels. Keys kept from the
+    // engine (auron/lyra/zephyr) — never shown; only .name/.cls/.e appear.
+    const HEROES = {
+        auron: { name: 'Wren', e: '🎨', cls: "Dyer's Apprentice",
+                 hp: [40, 13], mp: [6, 2], atk: [10, 2.2], def: [6, 1.6], mag: [2, 0.5], spd: [6, 0.9],
+                 spells: [{ lv: 6, id: 'cleave' }] },
+        lyra:  { name: 'Ochre', e: '🧱', cls: 'Muralist',
+                 hp: [30, 9], mp: [14, 4], atk: [5, 1.2], def: [5, 1.2], mag: [9, 2.2], spd: [7, 1.0],
+                 spells: [{ lv: 1, id: 'cure' }, { lv: 5, id: 'protect' }, { lv: 8, id: 'crossbow' },
+                          { lv: 9, id: 'cura' }, { lv: 11, id: 'revive' }, { lv: 13, id: 'sanctus' }] },
+        zephyr:{ name: 'Cobalt', e: '🔷', cls: 'Lens-Grinder',
+                 hp: [28, 8], mp: [16, 4], atk: [5, 1.0], def: [4, 1.1], mag: [10, 2.4], spd: [8, 1.1],
+                 spells: [{ lv: 1, id: 'fire' }, { lv: 1, id: 'spark' }, { lv: 5, id: 'frost' },
+                          { lv: 9, id: 'fira' }, { lv: 14, id: 'meteor' }] },
+    };
+    const SPELLS = {
+        cleave:  { name: 'Sweeping Stroke', mp: 6, kind: 'physAll', mult: 1.1, desc: 'a broad brush-cut across all foes' },
+        fire:    { name: 'Ember Fleck', mp: 4, kind: 'dmg', power: 14, elem: 'ember', desc: 'single · Ember' },
+        frost:   { name: 'Azure Drop', mp: 6, kind: 'dmg', power: 18, elem: 'azure', desc: 'single · Azure' },
+        spark:   { name: 'Verdant Lash', mp: 7, kind: 'dmg', power: 24, elem: 'verd', desc: 'single · Verd' },
+        crossbow:{ name: 'Gilt Ray', mp: 7, kind: 'dmg', power: 22, elem: 'gold', desc: 'single · Gold' },
+        fira:    { name: 'Emberbloom', mp: 12, kind: 'dmgAll', power: 16, elem: 'ember', desc: 'all · Ember' },
+        meteor:  { name: 'Prismburst', mp: 22, kind: 'dmgAll', power: 42, desc: 'all · full-spectrum blast' },
+        cure:    { name: 'Patch', mp: 4, kind: 'heal', power: 16, desc: 'heal + cleanse' },
+        protect: { name: 'Warding Sigil', mp: 6, kind: 'protect', desc: 'paint a damage-warding sigil on an ally' },
+        cura:    { name: 'Mend', mp: 10, kind: 'heal', power: 45, desc: 'greater heal + cleanse' },
+        sanctus: { name: 'Full Palette', mp: 16, kind: 'healAll', power: 30, desc: 'heal the whole party + cleanse' },
+        revive:  { name: 'Rekindle', mp: 14, kind: 'revive', desc: 'bring a fallen ally back' },
+    };
+    const ITEMS = {
+        jinchuang:{ name: 'Salve', e: '🧴', cost: 30, desc: 'HP +50', use: 'heal', power: 50 },
+        dahuan:   { name: 'Rich Salve', e: '🫙', cost: 120, desc: 'HP +150', use: 'heal', power: 150 },
+        juqi:     { name: 'Aether Draught', e: '🧃', cost: 150, desc: 'Aether +30', use: 'mp', power: 30 },
+        huanhun:  { name: 'Waxlight', e: '🕯️', cost: 300, desc: 'revive an ally', use: 'revive' },
+        neidan:   { name: 'Core Pigment', e: '🔮', cost: 0, desc: 'permanently +12 max HP', use: 'permHp', power: 12, fuseOnly: true },
+        qingxin:  { name: 'Clean Wash', e: '🧼', cost: 0, desc: 'whole party +60 and cleanse', use: 'healAllCure', power: 60, fuseOnly: true },
+        fu_jin:   { name: 'Ash Charm', e: '🤍', cost: 0, desc: 'battle: Ash strike · all', use: 'atkAll', elem: 'ash', power: 55, fuseOnly: true },
+        fu_mu:    { name: 'Verd Charm', e: '💚', cost: 0, desc: 'battle: Verd strike · all', use: 'atkAll', elem: 'verd', power: 55, fuseOnly: true },
+        fu_shui:  { name: 'Azure Charm', e: '💙', cost: 0, desc: 'battle: Azure strike · all', use: 'atkAll', elem: 'azure', power: 55, fuseOnly: true },
+        fu_huo:   { name: 'Ember Charm', e: '❤️', cost: 0, desc: 'battle: Ember strike · all', use: 'atkAll', elem: 'ember', power: 55, fuseOnly: true },
+        fu_tu:    { name: 'Gold Charm', e: '💛', cost: 0, desc: 'battle: Gold strike · all', use: 'atkAll', elem: 'gold', power: 55, fuseOnly: true },
+    };
+    const ELEM_FU = { ash: 'fu_jin', verd: 'fu_mu', azure: 'fu_shui', ember: 'fu_huo', gold: 'fu_tu' };
+    const SHOP_ITEMS = ['jinchuang', 'dahuan', 'juqi', 'huanhun'];
+    const ALL_ITEM_IDS = Object.keys(ITEMS);
+    const WEAPONS = {
+        auron:  [{ name: 'Frayed Shears', atk: 2, cost: 0 }, { name: 'Dyer’s Shears', atk: 7, cost: 90 },
+                 { name: 'Brush-Blade', atk: 16, cost: 380 }, { name: 'Truename Quill', atk: 30, cost: 1300 },
+                 { name: 'the First Color', atk: 45, cost: 0 }],
+        lyra:   [{ name: 'Chalk Stub', mag: 1, cost: 0 }, { name: 'Sigil-Trowel', mag: 4, cost: 80 },
+                 { name: 'Fresco Maul', mag: 10, cost: 330 }, { name: 'Keystone Brush', mag: 18, cost: 1100 }],
+        zephyr: [{ name: 'Cracked Lens', mag: 1, cost: 0 }, { name: 'Ground Glass', mag: 5, cost: 90 },
+                 { name: 'Spectrum Lens', mag: 11, cost: 350 }, { name: 'Sunwell Prism', mag: 20, cost: 1200 }],
+    };
+    const ARMORS = [{ name: 'Homespun', def: 2, cost: 0 }, { name: 'Dyed Cloak', def: 6, cost: 70 },
+                    { name: 'Pigment Weave', def: 12, cost: 320 }, { name: 'Prism-Lined Coat', def: 20, cost: 1000 }];
+
+    const TOWNS = {
+        1: { name: "Marrow's End", emoji: '🏚️', inn: 15, tier: 1,
+             flavor: 'a greying village at the edge of the Ashwood — Wren’s home.' },
+        2: { name: 'Hollowmere', emoji: '🏘️', inn: 40, tier: 2,
+             flavor: 'a lakeside town where the half-Faded drift, quiet and kind.' },
+        3: { name: 'Kiln Row', emoji: '🏭', inn: 80, tier: 3,
+             flavor: 'a crafters’ row below the Emberhollow, hoarding the last warm light.' },
+    };
+
+    // =========================================================================
+    //  STATE
+    // =========================================================================
+    const SAVE_KEY = 'lumenfallSave';
+    const MAXLV = 22;
+    let S = null;            // save state
+    let mode = 'title';      // title world dungeon battle town shop menu dialog ending
+    let dungeonId = null;
+    let stepCount = 0;
+    let B = null;            // battle state
+
+    function newState() {
+        return {
+            x: 0, y: 0, gold: 150,
+            party: [{ id: 'auron', lv: 1, xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 }],
+            inv: { jinchuang: 3 },
+            hu: {},
+            // `color` holds which zones have had their hue restored — the color
+            // mechanic. Everything starts grey (the Greydawn); each prism floods
+            // a zone. `world` lifts once any prism is taken; `full` at the ending.
+            flags: { intro: false, crystals: {}, recruited: {}, chests: {}, quests: { nest: 0, caravan: 0 }, reforged: false,
+                     color: {} },
+            dpos: null,
+        };
+    }
+    const xpNext = lv => 12 * lv * lv;
+    function heroStats(h) {
+        const H = HEROES[h.id];
+        const w = WEAPONS[h.id][h.weapon], a = ARMORS[h.armor];
+        const st = {};
+        for (const k of ['hp', 'mp', 'atk', 'def', 'mag', 'spd'])
+            st[k] = Math.round(H[k][0] + H[k][1] * (h.lv - 1));
+        st.atk += w.atk || 0;
+        st.mag += w.mag || 0;
+        st.def += a.def;
+        st.hp += h.bonushp || 0;
+        st.maxhp = st.hp; st.maxmp = st.mp;
+        return st;
+    }
+    function knownSpells(h) {
+        return HEROES[h.id].spells.filter(s => h.lv >= s.lv).map(s => s.id);
+    }
+    function fullHeal(h) {
+        const st = heroStats(h);
+        h.hp = st.maxhp;
+        h.mp = st.maxmp;
+    }
+
+    // =========================================================================
+    //  AUDIO — pentatonic (宮商角徵羽) chiptune tracks + sfx
+    // =========================================================================
+    let audio = null, master = null, leadBus = null, noiseBuf = null;
+    let soundOn = localStorage.getItem('xySound') !== '0';
+    let seqTimer = null, seqStep = 0, seqTime = 0, track = null;
+    const fq = m => 440 * Math.pow(2, (m - 69) / 12);
+    // 8 bars x 8 steps per track, all in the Chinese pentatonic scale (宮商角徵羽).
+    // 玄淵's motif (A-G-E-C descending) hides in the town theme's last bar and drives the boss theme.
+    const TRACKS = {
+        overworld: { step: 0.16, bassEvery: 4, arpEvery: 1, drums: 'k--h--h-',
+            lead: [
+                [72, 0, 74, 0, 76, 0, 79, 76], [74, 0, 76, 0, 79, 0, 81, 79],
+                [76, 0, 79, 0, 84, 0, 81, 79], [76, 74, 72, 0, 74, 0, 76, 0],
+                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 79, 0, 76, 0, 74, 76],
+                [79, 0, 76, 0, 74, 0, 72, 74], [74, 72, 69, 0, 72, 0, 0, 0]],
+            bass: [48, 50, 45, 43, 48, 50, 43, 48],
+            chords: [[60, 64, 67], [62, 67, 69], [57, 60, 64], [55, 62, 67],
+                     [60, 64, 67], [62, 67, 69], [55, 62, 67], [60, 64, 67]] },
+        town: { step: 0.21, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [76, 0, 0, 74, 0, 0, 72, 0], [74, 0, 0, 72, 0, 0, 69, 0],
+                [72, 0, 0, 69, 0, 0, 67, 0], [69, 0, 67, 0, 64, 0, 0, 0],
+                [76, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 76, 0, 0, 74, 0],
+                [72, 0, 0, 76, 0, 0, 72, 0], [69, 0, 67, 0, 64, 0, 60, 0]],
+            bass: [45, 43, 41, 40, 45, 43, 41, 43],
+            chords: [[57, 60, 64], [55, 62, 67], [53, 60, 65], [52, 57, 64],
+                     [57, 60, 64], [55, 62, 67], [53, 60, 65], [55, 62, 67]] },
+        battle: { step: 0.11, bassEvery: 2, arpEvery: 1, drums: 'k-hk-h-h',
+            lead: [
+                [69, 69, 0, 72, 74, 0, 76, 74], [67, 67, 0, 69, 72, 0, 74, 72],
+                [64, 64, 0, 67, 69, 0, 72, 69], [62, 64, 67, 69, 76, 69, 67, 64],
+                [69, 69, 0, 72, 74, 0, 79, 76], [67, 67, 0, 74, 72, 0, 69, 72],
+                [64, 67, 72, 76, 79, 76, 72, 69], [62, 0, 62, 62, 74, 0, 62, 0]],
+            bass: [45, 43, 40, 38, 45, 43, 40, 38],
+            chords: [[57, 60, 64], [55, 62, 67], [52, 57, 64], [50, 57, 62],
+                     [57, 60, 64], [55, 62, 67], [52, 57, 64], [50, 57, 62]] },
+        dungeon: { step: 0.19, bassEvery: 4, arpEvery: 2, drums: 'k-------',
+            lead: [
+                [62, 0, 0, 65, 0, 0, 62, 0], [67, 0, 0, 65, 0, 0, 62, 0],
+                [72, 0, 0, 69, 0, 0, 67, 0], [62, 0, 0, 0, 0, 0, 0, 0],
+                [62, 0, 0, 65, 0, 0, 67, 0], [69, 0, 0, 67, 0, 0, 65, 0],
+                [65, 0, 0, 62, 0, 0, 60, 0], [62, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [38, 36, 33, 31, 38, 36, 33, 38],
+            chords: [[50, 55, 57], [48, 53, 55], [45, 50, 52], [43, 48, 50],
+                     [50, 55, 57], [48, 53, 55], [45, 50, 52], [50, 55, 57]] },
+        boss: { step: 0.105, bassEvery: 2, arpEvery: 1, drums: 'kkh-k-h-',
+            lead: [
+                [69, 0, 67, 0, 64, 0, 60, 0], [69, 69, 67, 67, 64, 64, 62, 60],
+                [72, 0, 69, 0, 67, 0, 62, 0], [64, 62, 64, 62, 64, 0, 57, 0],
+                [69, 0, 72, 0, 76, 0, 72, 0], [79, 76, 79, 76, 79, 0, 67, 0],
+                [72, 69, 72, 69, 72, 0, 62, 0], [64, 64, 64, 64, 62, 62, 62, 62]],
+            bass: [45, 45, 43, 40, 45, 45, 43, 45],
+            chords: [[57, 60, 64], [57, 60, 64], [55, 62, 67], [52, 57, 64],
+                     [57, 60, 64], [50, 57, 62], [55, 62, 67], [52, 57, 64]] },
+        // 憶 — a tender 《魯冰花》-style ballad (original melody in that gentle
+        // major-pentatonic idiom): slow, flute-forward, lots of breathing space.
+        // Used for remembrance visions, the master's memory, and the ending.
+        memory: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
+                [69, 0, 72, 0, 74, 0, 0, 0], [72, 0, 69, 0, 67, 0, 0, 0],
+                [72, 0, 74, 0, 76, 0, 0, 0], [79, 0, 76, 0, 74, 0, 72, 0],
+                [69, 0, 67, 0, 69, 0, 72, 0], [69, 0, 67, 0, 64, 0, 0, 0]],
+            bass: [48, 45, 41, 43, 48, 45, 40, 43],
+            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
+                     [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]] },
+
+        // ------------------------------------------------------------------
+        // The five tracks below are ORIGINAL melodies written in the Taiwanese
+        // folk/ballad idiom. Nothing here is transcribed from a real song —
+        // 《望春風》《雨夜花》《魯冰花》 and the like are studied for their
+        // *devices*, which are then applied to new tunes:
+        //   · anhemitonic pentatonic — 宮商角徵羽 only, no 4th/7th (fa/ti)
+        //   · 起承轉合 — four two-bar phrases: open, answer, turn, resolve.
+        //     The 轉 (bars 5-6) is where the mode darkens or the register jumps.
+        //   · stepwise descent into the cadence, tonic landed on a long note
+        //   · 羽 mode (minor pentatonic on la) for grief, 宮 (do) for warmth
+        //   · wide opening leap answered by a slow climb down — the Hengchun
+        //     恆春民謠 gesture, used here for the desert
+        // ------------------------------------------------------------------
+
+        // 序曲 — title. Stately and open; the game opened on the town theme before.
+        // 宮 mode on C. 起 rises through the pentatonic, 轉 drops to 羽 for shade.
+        title: { step: 0.26, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [72, 0, 0, 76, 0, 0, 79, 0], [81, 0, 79, 0, 76, 0, 0, 0],
+                [74, 0, 0, 76, 0, 0, 79, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [69, 0, 0, 72, 0, 0, 74, 0], [76, 0, 74, 0, 72, 0, 69, 0],
+                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 79, 0, 76, 74, 72, 0]],
+            bass: [48, 45, 50, 48, 45, 43, 48, 48],
+            chords: [[60, 64, 67], [57, 60, 64], [62, 67, 69], [60, 64, 67],
+                     [57, 60, 64], [55, 62, 67], [60, 64, 67], [60, 64, 67]] },
+
+        // 青丘 — the fox village (青丘寨). 徵 mode on G, lilting and playful:
+        // repeated-note upbeats and quick turns, the liveliness of a work song.
+        fox: { step: 0.17, bassEvery: 4, arpEvery: 1, drums: '--h--h--',
+            lead: [
+                [79, 79, 0, 81, 0, 76, 0, 74], [72, 0, 74, 76, 0, 79, 0, 0],
+                [81, 81, 0, 84, 0, 79, 0, 76], [79, 0, 76, 74, 0, 72, 0, 0],
+                [76, 0, 79, 0, 81, 0, 84, 0], [86, 0, 84, 0, 81, 79, 0, 0],
+                [74, 74, 0, 76, 0, 79, 0, 81], [79, 0, 76, 0, 72, 0, 0, 0]],
+            bass: [55, 60, 57, 55, 52, 55, 50, 55],
+            chords: [[55, 62, 67], [60, 64, 67], [57, 60, 64], [55, 62, 67],
+                     [64, 67, 72], [62, 67, 69], [57, 60, 64], [55, 62, 67]] },
+
+        // 望川 — the desert trade town (望川鎮). 羽 mode on A, sparse and arid:
+        // each phrase opens on a bare leap and walks back down alone.
+        desert: { step: 0.23, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [69, 0, 0, 0, 76, 0, 0, 0], [74, 0, 72, 0, 69, 0, 0, 0],
+                [72, 0, 0, 0, 79, 0, 0, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [81, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 72, 0, 0, 69, 0],
+                [67, 0, 69, 0, 72, 0, 74, 0], [69, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [45, 41, 40, 45, 43, 40, 38, 45],
+            chords: [[57, 60, 64], [53, 60, 65], [52, 57, 64], [57, 60, 64],
+                     [57, 64, 69], [53, 60, 65], [55, 62, 67], [57, 60, 64]] },
+
+        // 劍爐 — the sword-tomb forge (劍塚). 羽 mode, low and ritual; the kick
+        // on 1 and 5 is the hammer. 轉 flares as the forge relights, then falls.
+        forge: { step: 0.2, bassEvery: 2, arpEvery: 2, drums: 'k---k---',
+            lead: [
+                [57, 0, 0, 0, 60, 0, 0, 0], [62, 0, 0, 0, 64, 0, 0, 0],
+                [69, 0, 0, 67, 0, 0, 64, 0], [60, 0, 0, 0, 0, 0, 0, 0],
+                [57, 0, 60, 0, 64, 0, 67, 0], [69, 0, 0, 72, 0, 0, 76, 0],
+                [79, 0, 76, 0, 72, 0, 69, 0], [69, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [33, 33, 36, 36, 33, 33, 40, 33],
+            chords: [[45, 52, 57], [48, 55, 60], [45, 52, 57], [48, 52, 55],
+                     [45, 52, 57], [57, 60, 64], [52, 57, 64], [45, 52, 57]] },
+
+        // 終曲 — the ending. Opens on 憶's exact first phrase (G-A-C) so the
+        // callback is unmistakable, then refuses its falling cadence and climbs
+        // an octave instead: the same memory, finally resolved.
+        ending: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
+                [69, 0, 72, 0, 76, 0, 0, 0], [74, 0, 72, 0, 69, 0, 0, 0],
+                [72, 0, 76, 0, 79, 0, 0, 0], [81, 0, 79, 0, 76, 0, 74, 0],
+                [76, 0, 79, 0, 84, 0, 0, 0], [84, 0, 0, 0, 79, 0, 72, 0]],
+            bass: [48, 45, 41, 43, 48, 45, 43, 48],
+            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
+                     [60, 64, 67], [57, 60, 64], [55, 62, 67], [60, 64, 67]] },
+    };
+    function ensureAudio() {
+        if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
+        audio = new (window.AudioContext || window.webkitAudioContext)();
+        master = audio.createGain();
+        master.gain.value = soundOn ? 1 : 0;
+        master.connect(audio.destination);
+        // lead bus with an echo send for a fatter, less beepy melody
+        leadBus = audio.createGain();
+        leadBus.connect(master);
+        const delay = audio.createDelay(0.5);
+        delay.delayTime.value = 0.26;
+        const fb = audio.createGain(); fb.gain.value = 0.25;
+        const wet = audio.createGain(); wet.gain.value = 0.18;
+        leadBus.connect(delay); delay.connect(fb); fb.connect(delay);
+        delay.connect(wet); wet.connect(master);
+        // shared white-noise buffer for percussion
+        noiseBuf = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+        const d = noiseBuf.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        if (track) startTrack(track);
+    }
+    function tone(f, t, dur, type, gain, dest) {
+        if (!audio) return;
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = type; o.frequency.value = f;
+        g.gain.setValueAtTime(gain, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(dest || master);
+        o.start(t); o.stop(t + dur + 0.02);
+    }
+    // 古箏-style pluck: sharp attack, fast decay, subtle upward 滑音 slide, octave shimmer
+    function leadNote(m, t, dur) {
+        if (!audio) return;
+        t += (Math.random() - 0.5) * 0.012; // humanize
+        const f = fq(m);
+        const voices = [['triangle', 1, 0.052], ['sine', 2, 0.016]];
+        for (const [type, mult, g0] of voices) {
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.type = type;
+            o.frequency.setValueAtTime(f * mult * 0.975, t);
+            o.frequency.exponentialRampToValueAtTime(f * mult, t + 0.035);
+            g.gain.setValueAtTime(g0 * (0.9 + Math.random() * 0.2), t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + Math.max(dur * 1.7, 0.18));
+            o.connect(g).connect(leadBus);
+            o.start(t); o.stop(t + dur * 1.8 + 0.06);
+        }
+    }
+    // 笛-style flute: soft attack sine with vibrato, doubles phrase heads on the second pass
+    function flute(m, t, dur) {
+        if (!audio) return;
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = fq(m);
+        const lfo = audio.createOscillator(), lg = audio.createGain();
+        lfo.frequency.value = 5.2; lg.gain.value = 9;
+        lfo.connect(lg); lg.connect(o.detune);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.026, t + 0.07);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        o.connect(g).connect(leadBus);
+        o.start(t); lfo.start(t);
+        o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+    }
+    function drum(ch, t) {
+        if (!audio) return;
+        if (ch === 'k') {
+            const o = audio.createOscillator(), g = audio.createGain();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(130, t);
+            o.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+            g.gain.setValueAtTime(0.22, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+            o.connect(g).connect(master);
+            o.start(t); o.stop(t + 0.14);
+        } else if (ch === 'h') { // 梆子 woodblock: resonant band-passed tick
+            const src = audio.createBufferSource();
+            src.buffer = noiseBuf;
+            const bp = audio.createBiquadFilter();
+            bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 7;
+            const g = audio.createGain();
+            g.gain.setValueAtTime(0.11, t);
+            g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+            src.connect(bp); bp.connect(g); g.connect(master);
+            src.start(t); src.stop(t + 0.07);
+        }
+    }
+    // the ambient track for whichever map you're standing on. The sword-tomb is a
+    // forge rather than a monster den, so it gets its own theme.
+    const mapTrack = () => !dungeonId ? 'overworld' : dungeonId === 'tomb' ? 'forge' : 'dungeon';
+    function startTrack(name) {
+        track = name;
+        if (!audio) return;
+        clearInterval(seqTimer);
+        if (!name) return;
+        seqStep = 0;
+        seqTime = audio.currentTime + 0.08;
+        seqTimer = setInterval(() => {
+            const T = TRACKS[track];
+            if (!T) return;
+            while (seqTime < audio.currentTime + 0.28) {
+                const bar = Math.floor(seqStep / 8) % 8, pos = seqStep % 8;
+                const pass = Math.floor(seqStep / 64) % 2;
+                const n = T.lead[bar][pos];
+                if (n) leadNote(n, seqTime, T.step * 1.1);
+                if (n && pass === 1 && pos === 0) flute(n + 12, seqTime, T.step * 7);
+                if (pos % T.bassEvery === 0) tone(fq(T.bass[bar]), seqTime, T.step * T.bassEvery * 0.9, 'triangle', 0.065);
+                if (pos % T.arpEvery === 0) {
+                    const chord = T.chords[bar];
+                    tone(fq(chord[(pos / T.arpEvery) % 3]), seqTime, T.step * 0.9, 'sine', 0.022);
+                }
+                drum(T.drums[pos], seqTime);
+                seqStep++;
+                seqTime += T.step;
+            }
+        }, 70);
+    }
+    function sfx(kind) {
+        if (!audio || !soundOn) return;
+        const t = audio.currentTime;
+        const seqs = {
+            hit: [[160, 'sawtooth', 0.1]], hurt: [[110, 'square', 0.12]],
+            spell: [[440, 'sine', 0.08], [660, 'sine', 0.08], [880, 'sine', 0.1]],
+            heal: [[523, 'sine', 0.09], [784, 'sine', 0.12]],
+            item: [[660, 'square', 0.07], [880, 'square', 0.08]],
+            chest: [[523, 'square', 0.08], [659, 'square', 0.08], [784, 'square', 0.12]],
+            fanfare: [[523, 'square', 0.09], [523, 'square', 0.06], [523, 'square', 0.06], [659, 'square', 0.14], [784, 'square', 0.2]],
+            crystal: [[880, 'sine', 0.12], [1109, 'sine', 0.12], [1319, 'sine', 0.2], [1760, 'sine', 0.28]],
+            gameover: [[330, 'sawtooth', 0.2], [262, 'sawtooth', 0.2], [196, 'sawtooth', 0.3], [131, 'sawtooth', 0.45]],
+            step: [], blip: [[520, 'square', 0.05]],
+        };
+        (seqs[kind] || []).forEach((s, i) => tone(s[0], t + i * 0.1, s[2], s[1], 0.08));
+    }
+    document.getElementById('btnSound').addEventListener('click', () => {
+        ensureAudio();
+        soundOn = !soundOn;
+        localStorage.setItem('xySound', soundOn ? '1' : '0');
+        master.gain.value = soundOn ? 1 : 0;
+        document.getElementById('btnSound').textContent = soundOn ? '🎵 Sound: On' : '🔇 Sound: Off';
+    });
+    document.getElementById('btnSound').textContent = soundOn ? '🎵 Sound: On' : '🔇 Sound: Off';
+    document.getElementById('btnEnc').addEventListener('click', cycleEnc);
+    for (const ev of ['keydown', 'pointerdown', 'touchstart']) document.addEventListener(ev, ensureAudio);
+
+    // =========================================================================
+    //  RENDERING
+    // =========================================================================
+    const TILE = 32, VW = 15, VH = 11;
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const $ = id => document.getElementById(id);
+    const TCOLORS = { '.': '#4f7249', f: '#33582f', '^': '#7a7469', '~': '#2e5d7d', s: '#c9b077',
+                      '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#33582f',
+                      1: '#4f7249', 2: '#33582f', 3: '#c9b077', A: '#4f7249', K: '#7a7469', C: '#c9b077',
+                      J: '#33582f', n: '#33582f', x: '#c9b077',
+                      d: '#8d6e4b' };
+    // Each dungeon gets its own floor; TCOLORS is shared with the world map, whose
+    // grass green has no business inside a volcano. Covers the tiles that are
+    // "floor with something standing on it" — plain floor, the exit, chests, the
+    // boss's ground — so they don't punch coloured boxes into the room.
+    const DFLOOR = { earth: '#6b563c', fire: '#4a2a22', water: '#38566b', castle: '#2f2a3f' };
+    const DFLOOR_TILES = { '.': 1, S: 1, T: 1, B: 1 };
+    function tileBase(ch) {
+        if (mode === 'dungeon' && DFLOOR_TILES[ch]) return DFLOOR[dungeonId] || '#4a4038';
+        return TCOLORS[ch] || '#4f7249';
+    }
+    // Terrain of different colours meets in a hard rectangular seam, which is the
+    // main thing that reads as "flat squares" rather than landscape. Bleed the
+    // neighbour's colour a few px over the shared edge and scatter a couple of
+    // dither pixels past it, so the boundary breaks up. Walls/water keep their
+    // hard edge — there the crisp line is correct.
+    const NO_BLEND = { '#': 1, '~': 1, w: 1 };
+    function blendEdges(ch, x, y, px0, py0, base) {
+        if (NO_BLEND[ch]) return;
+        const EDGES = [[1, 0, TILE - 3, 0, 3, TILE], [-1, 0, 0, 0, 3, TILE],
+                       [0, 1, 0, TILE - 3, TILE, 3], [0, -1, 0, 0, TILE, 3]];
+        for (let i = 0; i < 4; i++) {
+            const [dx, dy, ox, oy, w, h] = EDGES[i];
+            const nch = mapAt(x + dx, y + dy);
+            if (NO_BLEND[nch]) continue;
+            const nc = tileBase(nch);
+            if (nc === base) continue;
+            ctx.globalAlpha = 0.5;
+            ctx.fillStyle = nc;
+            ctx.fillRect(px0 + ox, py0 + oy, w, h);
+            ctx.globalAlpha = 0.75;
+            for (let k = 0; k < 3; k++) {
+                const t = th(x, y, i * 4 + k);
+                const jx = dx ? (dx > 0 ? TILE - 6 : 4) : t * (TILE - 4) + 2;
+                const jy = dy ? (dy > 0 ? TILE - 6 : 4) : t * (TILE - 4) + 2;
+                ctx.fillRect(px0 + jx, py0 + jy, 2, 2);
+            }
+            ctx.globalAlpha = 1;
+        }
+    }
+    const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑', J: '🛕', n: '🕸️', x: '🏕️',
+                     l: '🔥', w: '🌊', T: '📦', '~': null };
+    // Terrain rendered as procedural pixel sprites (sprites.js); tiles not listed
+    // fall back to the emoji in TEMOJI. Two chars mean different things depending
+    // on the map — 'B' is a volcano outdoors but a boss underground, and 'S' is the
+    // start clearing outdoors but the exit door underground — so the lookup is
+    // split by mode rather than keyed on the char alone.
+    const TILE_SPRITE = { f: 'tree', '^': 'peak', 1: 'house', 2: 'house', 3: 'house', w: 'wave' };
+    const WORLD_SPRITE = { A: 'shrine', B: 'volcano', C: 'pagoda', J: 'tomb', K: 'gate',
+                           n: 'nest', x: 'camp' };
+    const DUNGEON_SPRITE = { T: 'chest', S: 'door', l: 'lava' };
+    const tileSprite = ch => TILE_SPRITE[ch] ||
+        (mode === 'dungeon' ? DUNGEON_SPRITE[ch] : WORLD_SPRITE[ch]);
+    // terrain that tiles in bulk and so gets mirrored per-tile to hide the grid
+    const FLIPPABLE = { f: 1, '^': 1, w: 1, l: 1 };
+    // Walk cycle: the player sprite's frames are [stood, left foot up, right foot
+    // up], so stepping through 0,1,0,2 reads as a stride. WALK_HOLD is how long
+    // after a step he keeps walking — a touch longer than the 150ms key repeat,
+    // so held movement animates continuously instead of stuttering.
+    const WALK_SEQ = [0, 1, 0, 2], WALK_HOLD = 260;
+    let lastMoveAt = -1e9, facing = 1;
+    // battle sprites: party members and the monsters/bosses that have pixel art
+    // (unlisted foes fall back to their emoji e)
+    const HERO_SPRITE = { auron: 'player', lyra: 'muli', zephyr: 'qingxuan' };
+    const MON_SPRITE = { shanxiao: 'shanxiao', fuyao: 'fuyao', yaolang: 'yaolang', shijing: 'shijing',
+                         tubo: 'tubo', bifang: 'bifang', gonggong: 'gonggong', xuanyuan_w: 'xuanyuan_w', shihun: 'shihun' };
+    function enemyGlyph(e, size) {
+        const n = MON_SPRITE[e.id];
+        return (n && window.SPR) ? SPR.tag(n, size) : '<span style="font-size:' + size + 'px;line-height:1">' + e.e + '</span>';
+    }
+    function heroGlyph(id, size) {
+        const n = HERO_SPRITE[id];
+        return (n && window.SPR) ? SPR.tag(n, size) : HEROES[id].e;
+    }
+
+    function mapAt(x, y) {
+        const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
+        if (y < 0 || y >= m.length || x < 0 || x >= m[0].length) return mode === 'dungeon' ? '#' : '~';
+        return m[y][x];
+    }
+    function curPos() { return mode === 'dungeon' ? S.dpos : S; }
+
+    // Deterministic per-tile hash in [0,1) for texture details and tile variants.
+    // Uses Math.imul and unsigned shifts on purpose: plain `h * 1103515245` on a
+    // 32-bit-sized h overflows 2^53, so the low bits are rounded away before the
+    // shift-xor can mix them and the output comes out badly skewed (it returned
+    // <0.5 for literally every tile, which silently made variant selection and
+    // mirroring do nothing).
+    function th(x, y, n) {
+        let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) ^ Math.imul(n, 1274126177);
+        h = Math.imul(h ^ (h >>> 13), 1103515245);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+    }
+    // ambient particles per area
+    let particles = [], pKind = null;
+    var walkTarget = null;
+    // Ambient particles follow the terrain you're standing on: cherry petals over
+    // the plains and woods, but blown sand in the southern desert — petals drifting
+    // over the dunes looked absurd.
+    const SANDY = { s: 1, 3: 1, x: 1, C: 1 };
+    function particleKind() {
+        if (mode === 'dungeon') return { earth: 'dust', fire: 'ember', water: 'bubble', castle: 'mist' }[dungeonId] || 'dust';
+        return SANDY[mapAt(S.x, S.y)] ? 'dust' : 'petal';
+    }
+    function initParticles(kind) {
+        pKind = kind;
+        const n = kind === 'mist' ? 7 : 16;
+        particles = Array.from({ length: n }, () => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            s: Math.random() * 2 + (kind === 'mist' ? 26 : 1.5),
+            ph: Math.random() * Math.PI * 2,
+            v: Math.random() * 0.4 + 0.2,
+        }));
+    }
+    function drawParticles(t) {
+        const kind = particleKind();
+        if (kind !== pKind) initParticles(kind);
+        for (const p of particles) {
+            if (kind === 'petal') {
+                p.y += p.v * 0.6; p.x += Math.sin(t / 900 + p.ph) * 0.5 - 0.15;
+                ctx.fillStyle = 'rgba(245,183,201,0.7)';
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(t / 700 + p.ph);
+                ctx.fillRect(-p.s, -p.s * 0.5, p.s * 2, p.s);
+                ctx.restore();
+            } else if (kind === 'ember') {
+                p.y -= p.v; p.x += Math.sin(t / 300 + p.ph) * 0.4;
+                ctx.fillStyle = 'rgba(255,156,74,' + (0.4 + 0.4 * Math.sin(t / 150 + p.ph)) + ')';
+                ctx.fillRect(p.x, p.y, p.s, p.s);
+            } else if (kind === 'bubble') {
+                p.y -= p.v * 0.5; p.x += Math.sin(t / 800 + p.ph) * 0.3;
+                ctx.strokeStyle = 'rgba(180,220,255,0.4)';
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.stroke();
+            } else if (kind === 'dust') {
+                p.x += p.v * 0.3; p.y += Math.sin(t / 1100 + p.ph) * 0.2;
+                ctx.fillStyle = 'rgba(190,170,140,0.3)';
+                ctx.fillRect(p.x, p.y, 1.6, 1.6);
+            } else { // mist
+                p.x += p.v * 0.25;
+                const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.s);
+                g.addColorStop(0, 'rgba(160,170,195,0.10)');
+                g.addColorStop(1, 'rgba(160,170,195,0)');
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI * 2); ctx.fill();
+            }
+            if (p.y > canvas.height + 10) { p.y = -8; p.x = Math.random() * canvas.width; }
+            if (p.y < -10) { p.y = canvas.height + 8; p.x = Math.random() * canvas.width; }
+            if (p.x > canvas.width + 12) p.x = -10;
+            if (p.x < -12) p.x = canvas.width + 10;
+        }
+    }
+    let lastHud = 0;
+    // ---- the color mechanic ----
+    // The Greydawn has drained the world, so everything renders desaturated. The
+    // world map lifts one step toward full color with each Prism recovered;
+    // dungeons stay grey until their region's Prism is taken (which happens as you
+    // leave), so you fight through grey and step out into color; the ending floods
+    // it all back. Driven by CSS `filter` on the canvas — cheap, and only written
+    // when it actually changes.
+    function colorFilter() {
+        const c = (S && S.flags.color) || {};
+        if (c.full) return 'none';
+        if (mode === 'dungeon') {
+            const zone = DUNGEONS[dungeonId] && DUNGEONS[dungeonId].colorZone;
+            return (zone && c[zone]) ? 'none' : 'grayscale(0.82) saturate(0.45) brightness(0.97)';
+        }
+        const n = S ? ['earth', 'fire', 'water'].filter(k => S.flags.crystals[k]).length : 0;
+        const g = Math.max(0, 0.8 - n * 0.26);
+        return g < 0.04 ? 'none' : 'grayscale(' + g.toFixed(2) + ') saturate(' + (0.5 + n * 0.17).toFixed(2) + ')';
+    }
+    let lastFilter = null;
+    function applyColorFilter() {
+        const f = colorFilter();
+        if (f !== lastFilter) { lastFilter = f; canvas.style.filter = f === 'none' ? '' : f; }
+    }
+
+    function draw(t) {
+        if (!S || (mode !== 'world' && mode !== 'dungeon')) return;
+        t = t || performance.now();
+        applyColorFilter();
+        const p = curPos();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const camX = p.x - Math.floor(VW / 2), camY = p.y - Math.floor(VH / 2);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (let vy = 0; vy < VH; vy++) {
+            for (let vx = 0; vx < VW; vx++) {
+                const x = camX + vx, y = camY + vy;
+                let ch = mapAt(x, y);
+                if (mode === 'dungeon' && ch === 'T' && S.flags.chests[dungeonId + ':' + x + ',' + y]) ch = '.';
+                if (mode === 'dungeon' && ch === 'B' && bossDown(dungeonId)) ch = '.';
+                const px0 = vx * TILE, py0 = vy * TILE;
+                const base = tileBase(ch);
+                ctx.fillStyle = base;
+                ctx.fillRect(px0, py0, TILE, TILE);
+                blendEdges(ch, x, y, px0, py0, base);
+
+                // -------- textured details --------
+                if (ch === '.' || ch === 'S' || '123AC'.includes(ch)) {
+                    ctx.fillStyle = 'rgba(0,0,0,0.10)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
+                    }
+                    if (mode === 'world' && ch === '.' && th(x, y, 9) < 0.06) {
+                        ctx.fillStyle = th(x, y, 11) < 0.5 ? '#f5b7c9' : '#f0e6c8';
+                        ctx.fillRect(px0 + th(x, y, 10) * (TILE - 6) + 3, py0 + th(x, y, 12) * (TILE - 6) + 3, 3, 3);
+                    }
+                } else if (ch === 's' || ch === '3') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
+                    }
+                } else if (ch === 'f' || ch === '2') {
+                    ctx.fillStyle = 'rgba(20,40,18,0.5)';
+                    ctx.fillRect(px0 + 6 + th(x, y, 1) * 6, py0 + 4, 2, TILE - 8);
+                    ctx.fillRect(px0 + 20 + th(x, y, 2) * 6, py0 + 6, 2, TILE - 10);
+                } else if (ch === '^') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.09)';
+                    ctx.beginPath();
+                    ctx.moveTo(px0, py0 + TILE);
+                    ctx.lineTo(px0 + TILE * 0.55, py0 + 4);
+                    ctx.lineTo(px0 + TILE, py0 + TILE);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(0,0,0,0.14)';
+                    ctx.fillRect(px0, py0 + TILE * 0.72, TILE, TILE * 0.28);
+                } else if (ch === '~' || ch === 'w') {
+                    for (let k = 0; k < 2; k++) {
+                        const ph = ((t / 1400 + th(x, y, k) + k * 0.5) % 1);
+                        ctx.fillStyle = 'rgba(255,255,255,' + (0.10 * Math.sin(ph * Math.PI)) + ')';
+                        ctx.fillRect(px0 + 3, py0 + ph * (TILE - 4) + 2, TILE - 6, 2);
+                    }
+                } else if (ch === 'l') {
+                    ctx.fillStyle = 'rgba(255,150,40,' + (0.15 + 0.12 * Math.sin(t / 260 + x * 2 + y * 3)) + ')';
+                    ctx.fillRect(px0, py0, TILE, TILE);
+                } else if (ch === '#') {
+                    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                    ctx.fillRect(px0 + 1, py0 + 1, TILE - 2, 2);
+                    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+                    ctx.fillRect(px0 + 1, py0 + TILE - 3, TILE - 2, 2);
+                }
+
+                // procedural pixel sprites for terrain, emoji fallback if sprites.js
+                // failed to load or the tile has no art yet (see sprites.js).
+                // Repeated terrain is mirrored and (for forest) picked from two
+                // grids on a per-tile hash, so a big forest or ridge doesn't read
+                // as one stamp in a grid.
+                let sprName = tileSprite(ch);
+                if (sprName === 'tree' && th(x, y, 7) < 0.42) sprName = 'tree2';
+                else if (sprName === 'peak' && th(x, y, 7) < 0.38) sprName = 'peak2';
+                if (sprName && window.SPR) {
+                    // Animated terrain runs off the clock, offset by a per-tile hash
+                    // so a lake ripples rather than pulsing in lockstep.
+                    const nf = SPR.frames(sprName);
+                    const fr = nf > 1 ? Math.floor(t / 220 + th(x, y, 6) * nf) : 0;
+                    SPR.blit(ctx, sprName, px0, py0, TILE, FLIPPABLE[ch] && th(x, y, 3) < 0.5, fr);
+                } else {
+                    ctx.font = '20px serif';
+                    const em = TEMOJI[ch];
+                    if (em) ctx.fillText(em, px0 + TILE / 2, py0 + TILE / 2 + 1);
+                }
+                // the waiting boss still shows as its emoji atop the dungeon floor
+                if (ch === 'B' && mode === 'dungeon') { ctx.font = '20px serif'; ctx.fillText(BOSSES[DUNGEONS[dungeonId].boss].e, px0 + TILE / 2, py0 + TILE / 2); }
+            }
+        }
+        drawParticles(t);
+        // click-to-walk destination marker
+        if (walkTarget) {
+            const mx = (walkTarget.x - camX) * TILE + TILE / 2;
+            const my = (walkTarget.y - camY) * TILE + TILE / 2;
+            if (mx > -TILE && my > -TILE && mx < canvas.width + TILE && my < canvas.height + TILE) {
+                ctx.strokeStyle = 'rgba(241,196,15,' + (0.5 + 0.35 * Math.sin(t / 180)) + ')';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(mx, my, 8 + 2.5 * Math.sin(t / 180), 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        }
+        // player: soft shadow, gentle bob, and a walk cycle while he's moving
+        const px = (p.x - camX) * TILE + TILE / 2;
+        const walking = t - lastMoveAt < WALK_HOLD;
+        // stand still and he breathes; move and the bob tightens into a stride
+        const py = (p.y - camY) * TILE + TILE / 2 +
+            (walking ? Math.sin(t / 90) * 0.9 : Math.sin(t / 320) * 1.6);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.ellipse(px, (p.y - camY) * TILE + TILE - 4, 9, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (window.SPR) {
+            const fr = walking ? WALK_SEQ[Math.floor(t / 110) % WALK_SEQ.length] : 0;
+            SPR.blitCenter(ctx, 'player', px, py, 26, facing < 0, fr);
+        } else {
+            ctx.font = '22px serif';
+            ctx.fillText('🤺', px, py);
+        }
+        // ink-wash vignette
+        const vg = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.height * 0.42,
+                                            canvas.width / 2, canvas.height / 2, canvas.height * 0.85);
+        vg.addColorStop(0, 'rgba(8,10,18,0)');
+        vg.addColorStop(1, 'rgba(8,10,18,0.32)');
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (t - lastHud > 250) { lastHud = t; updateHud(); }
+    }
+    function renderLoop(t) {
+        if (S && (mode === 'world' || mode === 'dungeon')) draw(t);
+        requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+    function bossDown(id) {
+        if (id === 'castle') return S.flags.malachorDown;
+        if (id === 'tomb') return !!S.flags.reforged;
+        return !!S.flags.crystals[DUNGEONS[id].crystal];
+    }
+    // Prism names by region key, for the tracker and the visions.
+    const PRISM = { earth: 'Prism of Dawn', fire: 'Prism of Noon', water: 'Prism of Dusk' };
+    function objectiveText() {
+        if (!S) return '';
+        const c = S.flags.crystals, f = S.flags;
+        const n = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        if (f.malachorDown) return 'Color floods back into the world. Wander freely, or press the last of the Faded.';
+        if (n === 3) return 'All three Prisms are gathered — carry them north to <b>the Wellspring 🌀</b>.';
+        if (!f.recruited || !f.recruited.lyra) return 'Cross to <b>Marrow’s End 🏚️</b> and speak with the elder.';
+        if (!c.earth) return 'Enter <b>the Ashwood 🌲</b> to the east and recover the <b>Prism of Dawn</b>.';
+        if (!c.fire) return 'Rest at <b>Hollowmere 🏘️</b>, then climb to <b>the Emberhollow 🌋</b> for the <b>Prism of Noon</b>.';
+        if (!c.water) return 'Go south to the drowned <b>Sunken Gallery 🏛️</b> for the <b>Prism of Dusk</b>.';
+        return 'Gather the three Prisms.';
+    }
+    function updateHud() {
+        if (!S) return;
+        $('questText').innerHTML = 'Goal: ' + objectiveText();
+        $('hGold').innerHTML = S.gold;
+        const c = S.flags.crystals;
+        $('hCrystals').innerHTML = 'Prisms: ' + (['earth', 'fire', 'water'].map(k => c[k] ? '🔶' : '▫️').join(''));
+        $('hParty').innerHTML = S.party.map(h => {
+            const st = heroStats(h);
+            return HEROES[h.id].e + ' ' + h.hp + '/' + st.maxhp;
+        }).join(' · ');
+    }
+
+    // =========================================================================
+    //  DIALOG SYSTEM
+    // =========================================================================
+    let dialogQueue = [], dialogDone = null, prevMode = 'world';
+    function say(lines, done) {
+        dialogQueue = lines.slice();
+        dialogDone = done || null;
+        if (mode !== 'dialog') prevMode = mode;
+        mode = 'dialog';
+        $('dialog').classList.add('open');
+        nextDialog(false);
+    }
+    function nextDialog(advance = true) {
+        if (advance) dialogQueue.shift();
+        if (!dialogQueue.length) {
+            $('dialog').classList.remove('open');
+            mode = prevMode;
+            const cb = dialogDone;
+            dialogDone = null;
+            if (cb) cb();
+            draw();
+            return;
+        }
+        const [speaker, text] = dialogQueue[0];
+        $('dSpeaker').textContent = speaker ? speaker + ':' : '';
+        $('dText').innerHTML = text;
+    }
+    $('dialogBox').addEventListener('click', () => nextDialog());
+
+    // =========================================================================
+    //  MOVEMENT & WORLD EVENTS
+    // =========================================================================
+    const BLOCKED = { '~': 1, '^': 1, '#': 1, l: 1, w: 1 };
+    function tryMove(dx, dy) {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        const p = curPos();
+        const nx = p.x + dx, ny = p.y + dy;
+        const ch = mapAt(nx, ny);
+        if (BLOCKED[ch]) return;
+        p.x = nx; p.y = ny;
+        stepCount++;
+        lastMoveAt = performance.now();
+        facing = dx ? (dx > 0 ? 1 : -1) : facing;
+        enterTile(ch, nx, ny);
+        draw();
+    }
+
+    function enterTile(ch, x, y) {
+        if (mode === 'world') {
+            if ('123'.includes(ch)) return openTown(Number(ch));
+            if (ch === 'n') return nestEvent();
+            if (ch === 'x') return caravanEvent();
+            for (const [id, D] of Object.entries(DUNGEONS)) {
+                if (D.worldChar === ch) return tryEnterDungeon(id);
+            }
+            maybeEncounter(regionTier(x, y), ch === 'f' ? 0.16 : ch === 's' ? 0.12 : 0.1);
+        } else {
+            const D = DUNGEONS[dungeonId];
+            if (ch === 'S' && stepCount > 2) return exitDungeon('You climb back out into the daylight.');
+            if (ch === 'T') return openChest(x, y);
+            if (ch === 'B' && !bossDown(dungeonId)) {
+                const intro = BOSS_INTROS[D.boss];
+                if (intro) return say(intro, () => startBattle([D.boss], true));
+                return startBattle([D.boss], true);
+            }
+            maybeEncounter(D.tier, 0.13);
+        }
+    }
+    function regionTier(x, y) {
+        if (y >= 22) return 3;
+        if (y < 10 && x < 14) return 2;
+        return 1;
+    }
+    const ENC_MODES = [
+        { mul: 1, label: '⚔️ Encounters: Normal' },
+        { mul: 0.4, label: '⚔️ Encounters: Rare' },
+        { mul: 0, label: '🕊️ Encounters: Off' },
+    ];
+    let encMode = Number(localStorage.getItem('xyEnc') || 0) % ENC_MODES.length;
+    function cycleEnc() {
+        encMode = (encMode + 1) % ENC_MODES.length;
+        localStorage.setItem('xyEnc', encMode);
+        $('btnEnc').textContent = ENC_MODES[encMode].label;
+    }
+    $('btnEnc').textContent = ENC_MODES[encMode].label;
+    function maybeEncounter(tier, rate) {
+        if (stepCount < 4) return;
+        if (Math.random() < rate * ENC_MODES[encMode].mul) {
+            stepCount = 0;
+            const pool = TIERS[tier];
+            const n = 1 + Math.floor(Math.random() * Math.min(3, S.party.length + 1));
+            const troop = Array.from({ length: n }, () => pool[Math.floor(Math.random() * pool.length)]);
+            startBattle(troop, false);
+        }
+    }
+    function tryEnterDungeon(id) {
+        const D = DUNGEONS[id];
+        if (id === 'castle') {
+            const c = S.flags.crystals;
+            if (!(c.earth && c.fire && c.water)) {
+                return say([
+                    ['', 'A wall of starless grey seals the Wellspring — not a barrier so much as an <i>absence</i>, the same absence that took Sable.'],
+                    ['', 'Only the light of all three Prisms together can part it.'],
+                ]);
+            }
+            if (S.flags.malachorDown) return say([['', 'The Wellspring runs bright and quiet now. Its keeper watches a different way.']]);
+        }
+        if (bossDown(id) && id !== 'castle') {
+            return say([['', D.name + ' has gone still and full of color. Its Prism hums softly in your pack.']]);
+        }
+        dungeonId = id;
+        mode = 'dungeon';
+        stepCount = 0;
+        // find S tile
+        const m = DMAPS[id];
+        for (let yy = 0; yy < m.length; yy++)
+            for (let xx = 0; xx < m[0].length; xx++)
+                if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
+        // The shop hint only reaches players who open the shop. Someone who walks
+        // straight in with the starting weapon faces roughly a 1-in-7 fight at the
+        // first boss (test/report_fights.mjs) and has no way to know why they keep
+        // losing — so Ochre says it once, at the door, where it still helps.
+        const lines = [['', 'You step into <b>' + D.name + '</b>…' +
+            (D.boss === 'xuanyuan_w' ? ' The drained color of a whole world sighs in the dark ahead of you.' : '')]];
+        if (!S.flags.gearWarned && S.flags.recruited.lyra && S.party.some(h => h.weapon === 0)) {
+            S.flags.gearWarned = true;
+            save();   // persist it now, as every other flag-setter here does —
+                      // otherwise a reload before the next save re-nags you
+            lines.push(['Ochre', '(low) Hold on, Wren — we’re still carrying starter tools. <b>Head back to town, buy proper gear and salves</b> before we push in. What’s down here won’t go easy on a blunt brush.']);
+        }
+        say(lines);
+        startTrack(mapTrack());
+        draw();
+    }
+    function exitDungeon(msg) {
+        mode = 'world';
+        dungeonId = null;
+        stepCount = 0;
+        startTrack('overworld');
+        if (msg) say([['', msg]]);
+        draw();
+    }
+    function openChest(x, y) {
+        const key = dungeonId + ':' + x + ',' + y;
+        if (S.flags.chests[key]) return;
+        S.flags.chests[key] = true;
+        const loot = DUNGEONS[dungeonId].chests[x + ',' + y] || { gold: 50 };
+        sfx('chest');
+        if (loot.gold) {
+            S.gold += loot.gold;
+            say([['', 'A cache! <b class="gold">' + loot.gold + ' coin</b>. 💰']]);
+        } else {
+            S.inv[loot.item] = (S.inv[loot.item] || 0) + loot.n;
+            say([['', 'A cache! <b>' + ITEMS[loot.item].name + ' ×' + loot.n + '</b> ' + ITEMS[loot.item].e]]);
+        }
+        save();
+    }
+
+    // =========================================================================
+    //  STORY — boss confrontations & crystal visions
+    // =========================================================================
+    const BOSS_INTROS = {
+        tubo: [
+            ['???', 'Who wakes the wood… The color-thief comes for what I keep. I am the Wightoak. I keep the still.'],
+            ['Ochre', 'Wren — those grey bands round its trunk. That’s dyer’s binding-work. Somebody set this thing to guard the Prism a long time ago, and it’s still obeying the order.'],
+            ['Wren', 'Then let’s end the order. Gently, if it’ll let us.'],
+        ],
+        bifang: [
+            ['Slag', 'Another warm little spark, climbing up out of the grey. Doesn’t it burn, carrying color? It burns <i>me</i>. Snuff one flame and the rest only flare the brighter.'],
+            ['Cobalt', 'It’s the last true fire in the Emberhollow — everything else here is embers pretending. It’ll scorch the Prism to ash before it lets it go quiet.'],
+            ['Slag', 'The one who drained the world <b>wept</b> while she did it. I remember the hiss of the tears. Burn with me!'],
+        ],
+        gonggong: [
+            ['the Curator', 'Visitors. How rare. Please — do not touch the exhibits. I have kept this Gallery perfect and unchanging since the water rose. Nothing fades here. Nothing ages. Nothing is lost.'],
+            ['Wren', 'Everyone in here is Faded. You’ve made a museum of the drowned.'],
+            ['the Curator', 'I have made them <i>safe</i>. Safe from change, from grief, from the indignity of wilting. And you would take my last Prism and let it all begin to rot again? The tide never yields.'],
+        ],
+        jianling: [
+            ['???', '…Halt. This vault holds pigment the world can no longer bear to carry. Turn back, thief.'],
+            ['Ochre', 'A sentinel — hollowed out and left on watch. Same binding-work as the Wightoak. There’s a great deal of the Loomkeepers’ leavings in this world, once you know the pattern.'],
+            ['Wren', 'Then let’s take what we came for, and leave it its rest.'],
+        ],
+        xuanyuan_w: [
+            ['the Loomkeeper', 'Wren. Sable’s apprentice. So she sent you all this way, the three Prisms cradled in your own two hands. …Of course she did. It could only ever have been you.'],
+            ['Wren', 'You’re the ones draining the world. You took Sable. You took everyone I ever knew.'],
+            ['the Loomkeeper', 'We <b>spared</b> them. Child — this world was once so bright it could not be borne. Every color was a feeling, every feeling a wound, and the wounds never closed. A whole world of grief that could not stop grieving. So we found the one mercy left: grey. The Faded do not suffer. They rest.'],
+            ['the Loomkeeper', 'Sable understood it before any of us. She gave her own color to tie off the last knot — to spare <i>you</i>, most of all, a bright and dying life. And now you have carried the last three colors here yourself. One more thread drawn, and the world sleeps forever, and gently.'],
+            ['Ochre', 'Elder… look at your hands. The grey is eating you too.'],
+            ['the Loomkeeper', 'Gladly. Ten thousand years of it, gladly. Turn back, children. Do not light a fire over a world that only survives by forgetting how much it hurt to be alive.'],
+            ['Wren', 'A world with nothing left to lose isn’t saved. It’s just already dead, and too grey to know it. Sable didn’t send me to be spared. She told me to paint something bright — something that <b>wouldn’t last</b>. That was always the whole point of it.'],
+            ['the Loomkeeper', 'Three hands on the one brush… you sound just like her. Then paint, Wren. Show me it was worth the grief.'],
+        ],
+    };
+    // The three visions carry the twist: color is being drained on purpose (1),
+    // by Sable’s own order and Sable herself (2), as a mercy against a world too
+    // vivid to bear (3).
+    const CRYSTAL_VISIONS = {
+        earth: [
+            ['', 'The Wightoak stills at last — and the first Prism, the <b>Prism of Dawn</b>, warms to a soft coral light in your hands.'],
+            ['', '<i>A vision floods in: a figure in a dyer’s apron kneels at a vast loom strung with threads of light, and with terrible patience draws one red thread out of the world. Then another. Then another. The sky greys a shade with every pull.</i>'],
+            ['Ochre', 'The color didn’t sicken and die, Wren. Someone is <b>unpicking</b> it — thread by thread, on purpose. And that apron… that’s guild work. Dyer’s guild.'],
+            ['Wren', '…Sable’s guild. Steady. Two Prisms left. The next one will tell us more.'],
+            ['', '✨ You recovered the <b>Prism of Dawn</b>! 🔶 Color floods back into the Ashwood.'],
+        ],
+        fire: [
+            ['', 'Slag gutters out with something like relief — and the second Prism, the <b>Prism of Noon</b>, burns steady and gold.'],
+            ['', '<i>An older, warmer vision: the same dyer’s hands, younger now, guiding a small child’s fingers to smear red into yellow — the first orange the child has ever made. The child laughs. The dyer’s face is turned away, but you would know those hands anywhere.</i>'],
+            ['Wren', '…That small one is <b>me</b>. That’s Sable, teaching me my first color. She wasn’t just guild. She was one of <i>them</i>. She was a Loomkeeper.'],
+            ['Cobalt', 'So the one you’re chasing to the world’s heart is the one you’re grieving — and whoever’s unpicking the world knew precisely what they were unpicking.'],
+            ['Ochre', 'Nobody burns their whole life’s work for nothing. I’d dearly like to know what frightened <i>them</i> so badly they’d grey out a world to stop it.'],
+            ['', '✨ You recovered the <b>Prism of Noon</b>! 🔶 Warmth returns to the Emberhollow.'],
+        ],
+        water: [
+            ['', 'The Curator dissolves into still water — and the last, deepest Prism, the <b>Prism of Dusk</b>, opens like a violet eye.'],
+            ['', '<i>It shows you what the Loomkeepers saw: a world so saturated that every joy came barbed with the certainty of its loss — every spring already mourning its winter, every face already a portrait of the grief to come. A world drowning in feeling, unable to stop, unable to rest.</i>'],
+            ['Cobalt', 'So that’s the mercy in it. Drain the color and change stops. No wilting, no aging, no grief — because nothing ever leaves. The Faded aren’t dying. They’re… resting.'],
+            ['Ochre', 'And it’s killing her. A whole year, alone, holding a dying world’s color in one mortal heart, so the rest of us wouldn’t have to feel it go.'],
+            ['Wren', 'Sable still Faded, Ochre. Everyone I love still greys and goes still. …Maybe both things are true at once. We go to the Wellspring. We finish it. All of it.'],
+            ['', '✨ You recovered the <b>Prism of Dusk</b>! 🔶 The southern coast blooms with color.'],
+        ],
+    };
+
+    // =========================================================================
+    //  TOWNS
+    // =========================================================================
+    // ---- side quests ----
+    let questBattle = null;
+    function nestEvent() {
+        const q = S.flags.quests;
+        if (q.nest >= 1) return say([['', 'The great web is torn down; you can hear birds in the treeline again.']]);
+        say([
+            ['', 'The treeline is hung with layer upon layer of pale web — and from deep in its heart comes the faint crying of a child.'],
+            ['', '<b class="bad">The web’s owner has come back.</b>'],
+        ], () => { questBattle = 'nest'; startBattle(['zhuyao', 'zhuyao', 'zhuyao'], false); });
+    }
+    function caravanEvent() {
+        if (S.flags.quests.caravan >= 1) return say([['', 'The pedlars moved on long ago; their wheel-ruts are already softening in the dust.']]);
+        say([
+            ['', 'Among the dunes, a little caravan is ringed by the Faded — a cart overturned, its bells jangling.'],
+            ['Caravan-master', 'Help — someone, please!'],
+        ], () => { questBattle = 'caravan'; startBattle(['shaxie', 'shaxie', 'hanba'], false); });
+    }
+    function questReward(q) {
+        if (q === 'nest') {
+            S.flags.quests.nest = 1;
+            say([
+                ['', 'You cut open the cocoon and lift out a shivering child.'],
+                ['Child', '…I want to go home… to Marrow’s End…'],
+                ['', '<i>(Take the child home to Marrow’s End and tell the elder.)</i>'],
+            ]);
+        } else if (q === 'caravan') {
+            S.flags.quests.caravan = 1;
+            S.gold += 300;
+            S.inv.fu_shui = (S.inv.fu_shui || 0) + 1;
+            say([
+                ['Caravan-master', 'You saved us — bless you! Take this for your trouble, and an old Azure Charm from my grandmother’s stores!'],
+                ['', '<b class="gold">Got 300 coin and Azure Charm ×1!</b>'],
+            ]);
+        }
+        save();
+    }
+
+    let townId = null;
+    // 桃源村 keeps the homely town theme; the fox village and the desert town
+    // get their own so the three don't blur together
+    const TOWN_TRACK = { 2: 'fox', 3: 'desert' };
+    function openTown(id) {
+        townId = id;
+        mode = 'town';
+        startTrack(TOWN_TRACK[id] || 'town');
+        const T = TOWNS[id];
+        $('townEmoji').textContent = T.emoji;
+        $('townName').textContent = T.name;
+        $('townText').textContent = T.flavor;
+        const box = $('townBtns');
+        box.innerHTML = '';
+        const add = (label, fn, cls) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', fn);
+            box.appendChild(b);
+        };
+        add('🛏️ Inn — rest & save (' + T.inn + ' coin)', () => innRest(T));
+        add('🛒 Shop', () => openShop(T.tier));
+        add('💬 Talk to the locals', () => townTalk(id));
+        add('🚪 Leave town', leaveTown, 'primary');
+        $('town').classList.add('open');
+    }
+    function leaveTown() {
+        $('town').classList.remove('open');
+        mode = 'world';
+        startTrack('overworld');
+        draw();
+    }
+    function innRest(T) {
+        if (S.gold < T.inn) return say([['Innkeep', 'No coin, no bed, traveller.']]);
+        S.gold -= T.inn;
+        S.party.forEach(fullHeal);
+        sfx('heal');
+        const c = S.flags.crystals;
+        const crystalCount = ['earth', 'fire', 'water'].filter(k => c[k]).length;
+        if (crystalCount >= 2 && !S.flags.dream) {
+            S.flags.dream = true;
+            save();
+            startTrack('memory');
+            say([
+                ['', '<i>That night you dream of Sable’s dye-shop — the roof gone, a starless grey sky overhead.</i>'],
+                ['???', '…The Prisms you carry are humming, apprentice. Do you imagine I cannot hear the world’s last color calling to me, all the way from the Wellspring?'],
+                ['???', 'Every step you take toward me, the color burns a shade brighter — and every shade brighter, the grief we buried stirs a little nearer the surface. Come quickly. One of us, at least, will get the ending they came for.'],
+                ['', '<i>You wake in a warm room, frost on the blankets. (Party restored — progress saved.)</i>'],
+            ]);
+        } else {
+            save();
+            say([['Innkeep', 'Rest well. <i>(Party fully restored — progress saved.)</i>']]);
+        }
+        updateHud();
+    }
+    function townTalk(id) {
+        const c = S.flags.crystals;
+        if (id === 1) {
+            if (!S.flags.recruited.lyra) {
+                S.flags.recruited.lyra = true;
+                S.party.push({ id: 'lyra', lv: Math.max(1, S.party[0].lv), xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
+                fullHeal(S.party[S.party.length - 1]);
+                save();
+                return say([
+                    ['Elder', 'Wren. Sable’s apprentice, all grown. You have her stubborn chin, you know. …And you have her errand, I think.'],
+                    ['Elder', 'The first Prism sleeps in the Ashwood, east of here. But the wood is guarded now — something old was set to keep it, and it kills anything with color in it that comes near.'],
+                    ['Ochre', 'Then you’ll want a big fellow with a shield, won’t you. Ochre. I paint walls — and I paint them so nothing gets past. My whole town Faded around me while I mixed grey to match the sky. I’m done matching the sky.'],
+                    ['Ochre', 'Sable came through Marrow’s End once, years back. Bought no dye. Just stood in the square a long while, looking at the children. I’ve wondered about that woman ever since.'],
+                    ['Wren', '…So did I, it turns out. Come on, then, muralist. Keep the shield up.'],
+                    ['', '<b class="good">Ochre joined the party!</b> 🧱'],
+                ]);
+            }
+            if (S.flags.quests.nest === 1) {
+                S.flags.quests.nest = 2;
+                S.gold += 200;
+                S.inv.neidan = (S.inv.neidan || 0) + 1;
+                save();
+                return say([
+                    ['Elder', 'You brought the child back from the web! Bless you both — take the village’s thanks, and this: a Core Pigment, passed down since before the grey. Grind it into yourself; it never washes out.'],
+                    ['', '<b class="gold">Got 200 coin and Core Pigment ×1!</b>'],
+                ]);
+            }
+            if (!c.earth) return say([
+                ['Elder', 'The Ashwood lies east. Whatever waits in there wasn’t born in that wood — it was <i>placed</i>. Mind yourself.'],
+                ['Elder', '…And a hunter’s child went missing at the southwest treeline. If you see a great pale web 🕸️, take care.'],
+            ]);
+            if (!c.fire) return say([
+                ['Elder', 'The fields have a little green in them again since you took that Prism. But the vision you spoke of chills me — a dyer, <i>unpicking</i> the world on purpose?'],
+                ['Ochre', 'The apron bore guild work, Elder. We saw it plainly.'],
+                ['Elder', 'Then go northwest, up to Hollowmere by the lake, and on to the Emberhollow. There’s a lens-grinder up that way who’s been staring at the mountain for a year.'],
+            ]);
+            if (!c.water) return say([['Elder', 'Two Prisms. The pedlars say a whole drowned city rose out of the southern shallows, still dripping. Go and finish it, children.']]);
+            return say([['Elder', 'So it’s true — the Loomkeepers, and their Wellspring at the world’s heart. Wren… whatever Sable was to you, don’t falter when you reach it. She wouldn’t have.']]);
+        }
+        if (id === 2) {
+            if (!S.flags.recruited.zephyr) {
+                S.flags.recruited.zephyr = true;
+                S.party.push({ id: 'zephyr', lv: Math.max(1, S.party[0].lv), xp: 0, hp: 0, mp: 0, weapon: 0, armor: 0 });
+                fullHeal(S.party[S.party.length - 1]);
+                save();
+                return say([
+                    ['Townsfolk', 'Strangers — with <i>color</i> still in you. Careful, half of Hollowmere’s gone quiet and Faded. And mind the lens-grinder; she’s watched that mountain a year without blinking.'],
+                    ['Cobalt', 'Because the night the Greydawn came, I was up on that mountain, grinding a lens to catch the sunrise. I caught the exact moment the color started going <i>out</i> instead of in.'],
+                    ['Cobalt', 'Cobalt. I split light for a living — or I did, when there was light worth splitting. You’re carrying Prisms. That’s the first real color I’ve seen in a year. I’m coming, and don’t bother arguing; I’ve nothing left here to stay for.'],
+                    ['Cobalt', 'Whatever’s draining the world isn’t breaking it. It’s too… <b>careful</b> for that. Like someone tidying a room they don’t mean to come back to.'],
+                    ['', '<b class="good">Cobalt joined the party!</b> 🔷'],
+                ]);
+            }
+            if (!c.fire) return say([['Townsfolk', 'The Emberhollow’s up past the tree-line, where the last warm light pools. The thing that guards it — the hunters swear it <i>weeps</i> as it burns. Go gently.']]);
+            if (!c.water) return say([['Faded woman', '(faintly, smiling) …it doesn’t hurt, you know. In here. You could stay. …No? Then the Sunken Gallery is far south. The Curator keeps it. He was kind, once.']]);
+            return say([['Cobalt', '(here, at home) I keep a lens aimed north now, at the Wellspring. Some mornings I swear I can see it drinking. …When you’re ready, Wren. All of it.']]);
+        }
+        if (id === 3) {
+            if (!c.water) return say([
+                ['Kiln-keeper', 'We hoard the last warm light here, in the ovens, so the Row doesn’t grey. The Sunken Gallery rose out of the south shallows, still dripping — that’s where your Prism of Dusk went.'],
+                ['Kiln-keeper', 'My grandmother tended a Loomkeeper chapel. She said the deepest color remembers why the Wellspring was built at all: not to <i>make</i> color — to have somewhere to <b>take it away to</b>.'],
+            ]);
+            if (!(c.earth && c.fire && c.water)) return say([['Kiln-keeper', 'Still short a Prism? Go back for it — a guarded thing doesn’t misplace what it was set to guard.']]);
+            // The one place the game says out loud that the late fights are an
+            // inventory gate: the tier-4 bosses out-damage Salve (+50) outright,
+            // and nothing else mentions Rich Salve exists.
+            return say([
+                ['Kiln-keeper', 'All three? Then it’s north, to the Wellspring in the pass. But listen — if the old tales hold, that much color in one place will wake what the grey was hiding. Be sure of what you want, before you get there.'],
+                ['Kiln-keeper', 'And a plain word: don’t be a miser. Up ahead a Salve stops a cut but not <i>that</i> — lay in <b>Rich Salve 🫙</b>, all you can carry. The coin you save won’t buy a life back.'],
+            ]);
+        }
+    }
+
+    // =========================================================================
+    //  SHOP
+    // =========================================================================
+    function openShop(tier) {
+        mode = 'shop';
+        $('town').classList.remove('open');
+        $('shop').classList.add('open');
+        renderShop(tier);
+    }
+    let shopTier = 1;
+    // The difficulty curve is gated on gear far more than on levels — 鏽劍 is +2
+    // atk and 湛盧 is +30, against ~2 atk per level — but nothing in the game ever
+    // said so, so a player could grind for hours and still lose to a boss they'd
+    // walk over with a better sword. 墨璃 (a Mohist engineer: tools over talent)
+    // says it, once it's actually actionable.
+    function shopHint(tier) {
+        if (!S.flags.recruited.lyra) return '';        // she isn't with us yet
+        const affordable = [];
+        for (const h of S.party) {
+            const w = WEAPONS[h.id][h.weapon + 1];
+            if (w && h.weapon + 1 <= tier && S.gold >= w.cost) affordable.push('⚔️');
+            const a = ARMORS[h.armor + 1];
+            if (a && h.armor + 1 <= tier && S.gold >= a.cost) affordable.push('🛡️');
+        }
+        if (!affordable.length) return '';
+        const stillRusty = S.party.some(h => h.weapon === 0);
+        return '<b>Ochre:</b> ' + (stillRusty
+            ? '“Still on the starter tools? Don’t scrimp here — <b>a good brush is worth ten years of practice</b>. Skill grows slow; gear grows fast.”'
+            : '“Coin in hand — upgrade. What’s ahead won’t wait for you to grind out the levels.”');
+    }
+
+    function renderShop(tier) {
+        shopTier = tier;
+        $('shopGold').textContent = '💰 ' + S.gold + ' coin';
+        $('shopHint').innerHTML = shopHint(tier);
+        const box = $('shopItems');
+        box.innerHTML = '';
+        const add = (label, cost, fn, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = '<span class="shopItem"><span>' + label + '</span><span class="gold">' + cost + ' coin</span></span>';
+            b.disabled = disabled || S.gold < cost;
+            b.addEventListener('click', () => { S.gold -= cost; fn(); sfx('item'); save(); renderShop(shopTier); updateHud(); });
+            box.appendChild(b);
+        };
+        for (const key of SHOP_ITEMS) {
+            const it = ITEMS[key];
+            const minTier = { jinchuang: 1, dahuan: 2, juqi: 2, huanhun: 3 }[key];
+            if (tier >= minTier) add(it.e + ' ' + it.name + ' <small>(' + it.desc + ')</small>', it.cost,
+                () => { S.inv[key] = (S.inv[key] || 0) + 1; });
+        }
+        for (const h of S.party) {
+            const wlist = WEAPONS[h.id];
+            const next = h.weapon + 1;
+            if (next < wlist.length && next <= tier) {
+                const w = wlist[next];
+                add('⚔️ ' + w.name + ' <small>（' + HEROES[h.id].name + '）</small>', w.cost, () => { h.weapon = next; });
+            }
+            const anext = h.armor + 1;
+            if (anext < ARMORS.length && anext <= tier) {
+                const a = ARMORS[anext];
+                add('🛡️ ' + a.name + ' <small>（' + HEROES[h.id].name + '）</small>', a.cost, () => { h.armor = anext; });
+            }
+        }
+    }
+    $('shopLeave').addEventListener('click', () => {
+        $('shop').classList.remove('open');
+        if (townId) { mode = 'town'; $('town').classList.add('open'); }
+        else { mode = 'world'; draw(); }
+    });
+
+    // =========================================================================
+    //  MENU (items / status / save)
+    // =========================================================================
+    function openMenu() {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        prevMode = mode;
+        mode = 'menu';
+        $('menu').classList.add('open');
+        renderMenu();
+    }
+    function renderMenu() {
+        const body = $('menuBody');
+        let html = '';
+        for (const h of S.party) {
+            const st = heroStats(h);
+            const H = HEROES[h.id];
+            html += '<div class="heroCard' + (h.hp <= 0 ? ' ko' : '') + '" style="margin:5px auto;max-width:300px">' +
+                '<div class="nm">' + H.e + ' ' + H.name + ' <small>Lv ' + h.lv + ' ' + H.cls + '</small></div>' +
+                '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
+                'HP ' + h.hp + '/' + st.maxhp + ' · Aether ' + h.mp + '/' + st.maxmp +
+                '<div style="color:#95a5a6">⚔️' + st.atk + ' 🛡️' + st.def + ' ✨' + st.mag +
+                ' · ' + WEAPONS[h.id][h.weapon].name + ', ' + ARMORS[h.armor].name +
+                '<br>XP ' + h.xp + '/' + xpNext(h.lv) + '</div></div>';
+        }
+        body.innerHTML = html;
+        const btns = $('menuBtns');
+        btns.innerHTML = '';
+        const add = (label, fn, cls) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            if (cls) b.className = cls;
+            b.addEventListener('click', fn);
+            btns.appendChild(b);
+        };
+        for (const key of ALL_ITEM_IDS) {
+            if ((S.inv[key] || 0) <= 0) continue;
+            if (ITEMS[key].use === 'atkAll') continue; // talismans are battle-only
+            add(ITEMS[key].e + ' ' + ITEMS[key].name + ' ×' + S.inv[key], () => useItemMenu(key));
+        }
+        add('🎨 the Pigment Press', openHu);
+        if (prevMode === 'world') add('💾 Save', () => { save(); say([['', 'Progress saved ✅']]); closeMenu(); });
+        add('↩️ Close', closeMenu, 'primary');
+    }
+    function useItemMenu(key) {
+        // apply to first hero who benefits
+        const it = ITEMS[key];
+        let target = null;
+        if (it.use === 'heal') target = S.party.find(h => h.hp > 0 && h.hp < heroStats(h).maxhp);
+        else if (it.use === 'mp') target = S.party.find(h => h.hp > 0 && h.mp < heroStats(h).maxmp);
+        else if (it.use === 'revive') target = S.party.find(h => h.hp <= 0);
+        else if (it.use === 'permHp' || it.use === 'healAllCure') target = S.party.find(h => h.hp > 0);
+        if (!target) return;
+        S.inv[key]--;
+        applyItem(it, target);
+        sfx(it.use === 'heal' ? 'heal' : 'item');
+        save();
+        renderMenu();
+        updateHud();
+    }
+    function applyItem(it, h) {
+        const st = heroStats(h);
+        if (it.use === 'heal') h.hp = Math.min(st.maxhp, h.hp + it.power);
+        else if (it.use === 'mp') h.mp = Math.min(st.maxmp, h.mp + it.power);
+        else if (it.use === 'revive') h.hp = Math.floor(st.maxhp / 2);
+        else if (it.use === 'permHp') { h.bonushp = (h.bonushp || 0) + it.power; h.hp += it.power; }
+        else if (it.use === 'healAllCure') {
+            for (const p of S.party) if (p.hp > 0) p.hp = Math.min(heroStats(p).maxhp, p.hp + it.power);
+        }
+    }
+    function closeMenu() {
+        $('menu').classList.remove('open');
+        mode = prevMode;
+        draw();
+    }
+    $('btnMenu').addEventListener('click', openMenu);
+
+    // =========================================================================
+    //  BATTLE SYSTEM
+    // =========================================================================
+    function startBattle(troopIds, isBoss) {
+        mode = 'battle';
+        startTrack(isBoss ? 'boss' : 'battle');
+        B = {
+            enemies: troopIds.map((id, i) => {
+                const M = BOSSES[id] || MON[id];
+                return { ...M, id, hp: M.hp, maxhp: M.hp, idx: i, turn: 0 };
+            }),
+            isBoss,
+            heroIdx: 0,
+            actions: [],
+            phase: 'command',
+            defending: {},
+            status: {},   // heroIdx -> { poison, sleep, protect }
+            fxq: [],
+        };
+        $('battle').classList.add('open');
+        bMsg(isBoss ? '☠️ ' + B.enemies[0].name + ' bars the way!' : 'The Faded close in!');
+        renderBattle();
+        promptHero();
+    }
+    function bMsg(t) { $('bMsg').innerHTML = t; }
+    function aliveHeroes() { return S.party.filter(h => h.hp > 0); }
+    function aliveEnemies() { return B.enemies.filter(e => e.hp > 0); }
+
+    function renderBattle() {
+        const row = $('enemyRow');
+        row.innerHTML = '';
+        B.enemies.forEach(e => {
+            const d = document.createElement('div');
+            d.className = 'enemy' + (e.hp <= 0 ? ' dead' : '');
+            d.id = 'en-' + e.idx;
+            d.dataset.idx = e.idx;
+            d.innerHTML = '<div class="sprite">' + enemyGlyph(e, 48) + '</div><div class="ehp">' + e.name +
+                (e.elem ? ' <b style="color:' + ELEM_COLOR[e.elem] + '">' + ELEM_LABEL[e.elem] + '</b>' : '') +
+                (e.boss ? '<br>' + Math.max(0, e.hp) + '/' + e.maxhp : '') + '</div>';
+            d.addEventListener('click', () => enemyClicked(e.idx));
+            row.appendChild(d);
+        });
+        const pp = $('partyPanel');
+        pp.innerHTML = '';
+        S.party.forEach((h, i) => {
+            const st = heroStats(h);
+            const H = HEROES[h.id];
+            const stt = B.status[i] || {};
+            const icons = (stt.poison ? '☠️' : '') + (stt.sleep ? '💤' : '') + (stt.protect ? '🛡️' : '');
+            const d = document.createElement('div');
+            d.id = 'hc-' + i;
+            d.className = 'heroCard' + (h.hp <= 0 ? ' ko' : '') + (B.phase === 'command' && i === B.heroIdx ? ' active' : '');
+            d.innerHTML = '<div class="nm">' + heroGlyph(h.id, 18) + ' ' + H.name + ' <small>Lv' + h.lv + '</small> ' + icons + '</div>' +
+                '<div class="mini"><div class="hpf" style="width:' + Math.max(0, h.hp / st.maxhp * 100) + '%"></div></div>' +
+                '<div class="mini"><div class="mpf" style="width:' + Math.max(0, h.mp / st.maxmp * 100) + '%"></div></div>' +
+                'HP ' + Math.max(0, h.hp) + ' · Aether ' + h.mp;
+            pp.appendChild(d);
+        });
+    }
+
+    // Deferred visual effects: applied after renderBattle rebuilds the DOM
+    function queueFx(sel, cls, text, color) {
+        if (B) B.fxq.push({ sel, cls, text, color });
+    }
+    function flushFx() {
+        if (!B) return;
+        for (const f of B.fxq) {
+            const el = document.querySelector(f.sel);
+            if (!el) continue;
+            if (f.cls) { el.classList.remove(f.cls); void el.offsetWidth; el.classList.add(f.cls); }
+            if (f.text) {
+                const s = document.createElement('span');
+                s.className = 'dmgFloat';
+                s.textContent = f.text;
+                s.style.color = f.color || '#fff';
+                s.style.left = (25 + Math.random() * 35) + '%';
+                el.appendChild(s);
+                setTimeout(() => s.remove(), 950);
+            }
+        }
+        B.fxq = [];
+    }
+    function flash(color) {
+        const f = $('flashFx');
+        f.style.background = color;
+        f.classList.remove('flashAnim'); void f.offsetWidth; f.classList.add('flashAnim');
+    }
+    const ELEM_FLASH = { ember: 'rgba(230,80,30,0.4)', azure: 'rgba(120,200,255,0.4)',
+                         verd: 'rgba(140,255,140,0.4)', ash: 'rgba(235,238,245,0.5)',
+                         gold: 'rgba(214,168,58,0.42)', none: 'rgba(200,160,255,0.4)' };
+
+    let pendingAction = null;
+    function promptHero() {
+        // skip dead heroes
+        while (B.heroIdx < S.party.length && S.party[B.heroIdx].hp <= 0) B.heroIdx++;
+        if (B.heroIdx >= S.party.length) return resolveRound();
+        // sleeping heroes lose their turn (40% chance to wake each round)
+        const stt = B.status[B.heroIdx] || {};
+        if (stt.sleep) {
+            if (Math.random() < 0.4) {
+                stt.sleep = false;
+                bMsg(HEROES[S.party[B.heroIdx].id].name + ' wakes!');
+            } else {
+                bMsg(HEROES[S.party[B.heroIdx].id].name + ' is fast asleep… 💤');
+                renderBattle();
+                $('cmds').innerHTML = '';
+                B.heroIdx++;
+                return setTimeout(promptHero, 700);
+            }
+        }
+        B.phase = 'command';
+        const h = S.party[B.heroIdx];
+        const H = HEROES[h.id];
+        renderBattle();
+        bMsg('<b>' + H.name + '</b> — your move.');
+        const c = $('cmds');
+        c.innerHTML = '';
+        const add = (label, fn, disabled) => {
+            const b = document.createElement('button');
+            b.innerHTML = label;
+            b.disabled = !!disabled;
+            b.addEventListener('click', fn);
+            c.appendChild(b);
+        };
+        add('⚔️ Strike', () => { pendingAction = { kind: 'attack', hero: B.heroIdx }; targetMode(); });
+        const spells = knownSpells(h);
+        if (spells.length) {
+            add('✨ Spell', () => showSpellMenu(h, spells));
+        }
+        add('🎒 Item', () => showItemMenu());
+        add('🛡️ Guard', () => queueAction({ kind: 'defend', hero: B.heroIdx }));
+        if (!B.isBoss) {
+            add('🎨 Capture', () => { pendingAction = { kind: 'capture', hero: B.heroIdx }; targetMode(); });
+            add('🏃 Flee', () => queueAction({ kind: 'flee', hero: B.heroIdx }));
+        }
+    }
+    function showSpellMenu(h, spells) {
+        const c = $('cmds');
+        c.innerHTML = '';
+        for (const sid of spells) {
+            const sp = SPELLS[sid];
+            const b = document.createElement('button');
+            b.innerHTML = sp.name + ' <small>' + sp.mp + 'MP · ' + sp.desc + '</small>';
+            b.disabled = h.mp < sp.mp;
+            b.addEventListener('click', () => {
+                pendingAction = { kind: 'spell', hero: B.heroIdx, spell: sid };
+                const k = sp.kind;
+                if (k === 'dmg') targetMode();
+                else if (k === 'heal' || k === 'protect') allyTargetMode(false);
+                else if (k === 'revive') allyTargetMode(true);
+                else queueAction(pendingAction);
+            });
+            c.appendChild(b);
+        }
+        backBtn(c);
+    }
+    function showItemMenu() {
+        const c = $('cmds');
+        c.innerHTML = '';
+        let any = false;
+        for (const key of ALL_ITEM_IDS) {
+            if ((S.inv[key] || 0) <= 0) continue;
+            const it = ITEMS[key];
+            if (it.use === 'permHp') continue; // menu-only
+            any = true;
+            const b = document.createElement('button');
+            b.innerHTML = it.e + ' ' + it.name + ' ×' + S.inv[key] + ' <small>' + it.desc + '</small>';
+            b.addEventListener('click', () => {
+                pendingAction = { kind: 'item', hero: B.heroIdx, item: key };
+                if (it.use === 'atkAll' || it.use === 'healAllCure') queueAction(pendingAction);
+                else allyTargetMode(it.use === 'revive');
+            });
+            c.appendChild(b);
+        }
+        if (!any) {
+            const d = document.createElement('div');
+            d.style.cssText = 'font-size:13px;color:#95a5a6;align-self:center';
+            d.textContent = 'No items!';
+            c.appendChild(d);
+        }
+        backBtn(c);
+    }
+    function backBtn(c) {
+        const b = document.createElement('button');
+        b.textContent = '↩️ Back';
+        b.className = 'danger';
+        b.addEventListener('click', promptHero);
+        c.appendChild(b);
+    }
+    function targetMode() {
+        bMsg('Choose a target! 🎯');
+        $('cmds').innerHTML = '';
+        backBtn($('cmds'));
+        document.querySelectorAll('.enemy:not(.dead)').forEach(d => d.classList.add('target'));
+    }
+    function enemyClicked(idx) {
+        if (!pendingAction || B.phase !== 'command') return;
+        if (B.enemies[idx].hp <= 0) return;
+        pendingAction.target = idx;
+        document.querySelectorAll('.enemy').forEach(d => d.classList.remove('target'));
+        queueAction(pendingAction);
+    }
+    function allyTargetMode(wantDead) {
+        const c = $('cmds');
+        c.innerHTML = '';
+        S.party.forEach((h, i) => {
+            const ok = wantDead ? h.hp <= 0 : h.hp > 0;
+            if (!ok) return;
+            const b = document.createElement('button');
+            b.textContent = HEROES[h.id].e + ' ' + HEROES[h.id].name;
+            b.addEventListener('click', () => { pendingAction.target = i; queueAction(pendingAction); });
+            c.appendChild(b);
+        });
+        backBtn(c);
+    }
+    function queueAction(a) {
+        B.actions.push(a);
+        pendingAction = null;
+        B.heroIdx++;
+        promptHero();
+    }
+
+    function resolveRound() {
+        B.phase = 'resolve';
+        $('cmds').innerHTML = '';
+        B.defending = {};
+        // build full action list: heroes + enemies, sort by speed
+        const acts = [];
+        for (const a of B.actions) {
+            const h = S.party[a.hero];
+            acts.push({ ...a, spd: heroStats(h).spd + Math.random() * 3, side: 'hero' });
+        }
+        for (const e of aliveEnemies()) {
+            acts.push({ kind: 'enemyAct', enemy: e.idx, spd: e.spd + Math.random() * 3, side: 'enemy' });
+        }
+        acts.sort((a, b2) => b2.spd - a.spd);
+        B.actions = [];
+        runActions(acts, 0);
+    }
+
+    function runActions(acts, i) {
+        if (!B) return;
+        if (checkBattleEnd()) return;
+        if (i >= acts.length) {
+            // 玄淵's lingering will intervenes once in the final battle
+            const e0 = B.enemies[0];
+            if (!B.xuHelp && e0 && e0.id === 'shihun' && e0.hp > 0 && e0.hp < e0.maxhp * 0.4) {
+                B.xuHelp = true;
+                for (const h of aliveHeroes()) {
+                    const st2 = heroStats(h);
+                    const heal = Math.round(st2.maxhp * 0.45);
+                    h.hp = Math.min(st2.maxhp, h.hp + heal);
+                    queueFx('#hc-' + S.party.indexOf(h), null, '+' + heal, '#2ecc71');
+                }
+                sfx('heal');
+                bMsg('A last will surfaces in the grey — Sable’s: “Now, children — all three of you, now!” The whole party surges back to life!');
+                renderBattle();
+                flushFx();
+            }
+            // end of round: poison ticks
+            let anyPoison = false;
+            S.party.forEach((h, idx) => {
+                if (h.hp > 0 && B.status[idx] && B.status[idx].poison) {
+                    const dmg = Math.max(1, Math.ceil(heroStats(h).maxhp * 0.06));
+                    h.hp -= dmg;
+                    queueFx('#hc-' + idx, 'shake', '-' + dmg, '#9b59b6');
+                    anyPoison = true;
+                }
+            });
+            B.heroIdx = 0;
+            if (anyPoison) {
+                bMsg('The greyrot spreads… ☠️');
+                renderBattle();
+                flushFx();
+                if (checkBattleEnd()) return;
+                return setTimeout(promptHero, 750);
+            }
+            return promptHero();
+        }
+        const a = acts[i];
+        const delay = performAction(a);
+        renderBattle();
+        flushFx();
+        if (checkBattleEnd()) return;
+        setTimeout(() => runActions(acts, i + 1), delay);
+    }
+
+    const rnd = v => Math.round(v * (0.85 + Math.random() * 0.3));
+    function performAction(a) {
+        if (a.side === 'hero') {
+            const h = S.party[a.hero];
+            if (h.hp <= 0) return 80;
+            const H = HEROES[h.id];
+            const st = heroStats(h);
+            if (a.kind === 'attack') {
+                let t = B.enemies[a.target];
+                if (t.hp <= 0) t = aliveEnemies()[0];
+                if (!t) return 80;
+                const dmg = Math.max(1, rnd(st.atk * 2 - t.def));
+                t.hp -= dmg;
+                sfx('hit');
+                // the attacker moves too — enemies already lunge on their turn,
+                // heroes used to just stand there while the target shook
+                queueFx('#hc-' + a.hero, 'lungeUp');
+                queueFx('#en-' + t.idx, 'shake', '-' + dmg, '#f1c40f');
+                bMsg(H.name + ' strikes ' + t.name + ' — <b>' + dmg + '</b> damage!' + (t.hp <= 0 ? ' 💥 down!' : ''));
+                return 750;
+            }
+            if (a.kind === 'defend') {
+                B.defending[a.hero] = true;
+                h.mp = Math.min(st.maxmp, h.mp + 2);
+                bMsg(H.name + ' braces to guard. 🛡️ (Aether +2)');
+                return 550;
+            }
+            if (a.kind === 'flee') {
+                if (Math.random() < 0.6) {
+                    bMsg('Slipped away from the fight! 🏃');
+                    setTimeout(endBattle, 600);
+                    return 9999;
+                }
+                bMsg(H.name + ' tries to run… but can’t break away!');
+                return 700;
+            }
+            if (a.kind === 'capture') {
+                let t = B.enemies[a.target];
+                if (!t || t.hp <= 0) t = aliveEnemies()[0];
+                if (!t) return 80;
+                if (t.boss) { bMsg('The Press shudders — this one is far too strong to capture!'); return 700; }
+                const p = Math.min(0.85, Math.max(0.08, 0.9 * (1 - t.hp / t.maxhp)));
+                if (Math.random() < p) {
+                    t.hp = 0;
+                    t.captured = true;
+                    S.hu[t.id] = (S.hu[t.id] || 0) + 1;
+                    sfx('chest');
+                    queueFx('#en-' + t.idx, 'shake', '🏺', '#f1c40f');
+                    bMsg(H.name + ' raises the Press — ' + t.name + ' is drawn inside! 🎨');
+                } else {
+                    sfx('blip');
+                    bMsg(t.name + ' breaks free of the Press! (weaken it first — capture chance ' + Math.round(p * 100) + '%)');
+                }
+                return 800;
+            }
+            if (a.kind === 'item') {
+                if ((S.inv[a.item] || 0) <= 0) return 80;
+                const it = ITEMS[a.item];
+                S.inv[a.item]--;
+                if (it.use === 'atkAll') {
+                    sfx('spell');
+                    flash(ELEM_FLASH[it.elem] || ELEM_FLASH.none);
+                    let total = 0;
+                    for (const t of aliveEnemies()) {
+                        let mult = 1;
+                        if (t.elem && KE[it.elem] === t.elem) mult = 1.75;
+                        else if (t.elem && KE[t.elem] === it.elem) mult = 0.6;
+                        const dmg = Math.max(1, rnd((it.power - t.def * 0.4) * mult));
+                        t.hp -= dmg;
+                        total += dmg;
+                        queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : '#f1c40f');
+                    }
+                    bMsg(H.name + ' uses ' + it.name + '! ' + total + ' damage total! ' + it.e);
+                    return 850;
+                }
+                if (it.use === 'healAllCure') {
+                    sfx('heal');
+                    flash('rgba(120,255,160,0.3)');
+                    S.party.forEach((t, idx) => {
+                        if (t.hp <= 0) return;
+                        t.hp = Math.min(heroStats(t).maxhp, t.hp + it.power);
+                        B.status[idx] = {};
+                        queueFx('#hc-' + idx, null, '+' + it.power, '#2ecc71');
+                    });
+                    bMsg(H.name + ' uses a Clean Wash — clear light washes over the party. 🧼');
+                    return 800;
+                }
+                applyItem(it, S.party[a.target]);
+                sfx(it.use === 'heal' ? 'heal' : 'item');
+                if (it.use === 'heal') queueFx('#hc-' + a.target, null, '+' + it.power, '#2ecc71');
+                bMsg(H.name + ' uses ' + it.name + ' on ' + HEROES[S.party[a.target].id].name + '. ' + it.e);
+                return 700;
+            }
+            if (a.kind === 'spell') {
+                const sp = SPELLS[a.spell];
+                if (h.mp < sp.mp) return 80;
+                h.mp -= sp.mp;
+                if (sp.kind === 'dmg' || sp.kind === 'dmgAll' || sp.kind === 'physAll') {
+                    sfx('spell');
+                    flash(ELEM_FLASH[sp.elem] || ELEM_FLASH.none);
+                    queueFx('#hc-' + a.hero, 'lungeUp');
+                    const power = sp.kind === 'physAll' ? st.atk * sp.mult : sp.power + st.mag * 1.6;
+                    const targets = (sp.kind === 'dmg')
+                        ? [B.enemies[a.target] && B.enemies[a.target].hp > 0 ? B.enemies[a.target] : aliveEnemies()[0]]
+                        : aliveEnemies();
+                    let total = 0, note = '';
+                    for (const t of targets.filter(Boolean)) {
+                        let mult = 1;
+                        if (sp.elem && t.elem && KE[sp.elem] === t.elem) { mult = 1.75; note = ' <i class="good">clashing hue!</i>'; }
+                        else if (sp.elem && t.elem && KE[t.elem] === sp.elem) { mult = 0.6; note = ' <i style="color:#95a5a6">…the hue is dampened.</i>'; }
+                        const dmg = Math.max(1, rnd((power - t.def * 0.5) * mult));
+                        t.hp -= dmg;
+                        total += dmg;
+                        queueFx('#en-' + t.idx, 'shake', '-' + dmg, mult > 1 ? '#ff8c42' : mult < 1 ? '#95a5a6' : '#f1c40f');
+                    }
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b>! ' + total + ' damage total! ✨' + note);
+                    return 800;
+                }
+                if (sp.kind === 'heal') {
+                    const t = S.party[a.target];
+                    const heal = rnd(sp.power + st.mag * 1.6);
+                    t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                    if (B.status[a.target]) B.status[a.target].poison = false;
+                    sfx('heal');
+                    queueFx('#hc-' + a.target, null, '+' + heal, '#2ecc71');
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b> — ' + HEROES[t.id].name + ' recovers ' + heal + ' HP! 💚');
+                    return 750;
+                }
+                if (sp.kind === 'healAll') {
+                    sfx('heal');
+                    flash('rgba(120,255,160,0.3)');
+                    for (const t of aliveHeroes()) {
+                        const idx = S.party.indexOf(t);
+                        const heal = rnd(sp.power + st.mag * 1.2);
+                        t.hp = Math.min(heroStats(t).maxhp, t.hp + heal);
+                        if (B.status[idx]) B.status[idx].poison = false;
+                        queueFx('#hc-' + idx, null, '+' + heal, '#2ecc71');
+                    }
+                    bMsg(H.name + ' casts <b>' + sp.name + '</b> — soft light bathes the whole party! 💚');
+                    return 800;
+                }
+                if (sp.kind === 'protect') {
+                    B.status[a.target] = { ...(B.status[a.target] || {}), protect: true };
+                    sfx('heal');
+                    queueFx('#hc-' + a.target, null, '🛡️', '#3498db');
+                    bMsg(H.name + ' paints a <b>Warding Sigil</b> — ' + HEROES[S.party[a.target].id].name + ' is shielded!');
+                    return 750;
+                }
+                if (sp.kind === 'revive') {
+                    const t = S.party[a.target];
+                    if (t.hp <= 0) {
+                        t.hp = Math.floor(heroStats(t).maxhp / 2);
+                        sfx('heal');
+                        queueFx('#hc-' + a.target, null, '🌟', '#f1c40f');
+                        bMsg(H.name + ' casts <b>Rekindle</b> — ' + HEROES[t.id].name + ' rises again! 🌟');
+                    }
+                    return 800;
+                }
+            }
+            return 80;
+        }
+        // enemy action
+        const e = B.enemies[a.enemy];
+        if (!e || e.hp <= 0) return 80;
+        e.turn++;
+        const heroes = aliveHeroes();
+        if (!heroes.length) return 80;
+        queueFx('#en-' + e.idx, 'lunge');
+        if (e.spell && e.turn % 3 === 0) {
+            const sp = ENEMY_SPELLS[e.spell];
+            sfx('spell');
+            flash('rgba(160,40,60,0.45)');
+            for (const h of heroes) {
+                const idx = S.party.indexOf(h);
+                const st = heroStats(h);
+                let dmg = Math.max(1, rnd(sp.power + e.atk * 0.6 - st.def * 0.4));
+                if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
+                if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
+                h.hp -= dmg;
+                if (B.status[idx]) B.status[idx].sleep = false;
+                queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
+            }
+            bMsg(e.name + ' unleashes <b>' + sp.name + '</b> across the whole party! 🔥');
+            return 900;
+        }
+        const h = heroes[Math.floor(Math.random() * heroes.length)];
+        const idx = S.party.indexOf(h);
+        const st = heroStats(h);
+        let dmg = Math.max(1, rnd(e.atk * 2 - st.def));
+        if (B.defending[idx]) dmg = Math.ceil(dmg / 2);
+        if ((B.status[idx] || {}).protect) dmg = Math.ceil(dmg * 0.6);
+        h.hp -= dmg;
+        sfx('hurt');
+        queueFx('#hc-' + idx, 'shake', '-' + dmg, '#e74c3c');
+        let suffix = h.hp <= 0 ? ' 😵' : '';
+        const stt = B.status[idx] = B.status[idx] || {};
+        if (stt.sleep) { stt.sleep = false; suffix += ' (jolted awake!)'; }
+        else if (h.hp > 0 && e.inflict && !stt[e.inflict] && Math.random() < 0.28) {
+            stt[e.inflict] = true;
+            suffix += e.inflict === 'poison' ? ' <b style="color:#9b59b6">☠️ greyrot!</b>' : ' <b style="color:#8ea6c9">💤 lulled to sleep!</b>';
+        }
+        bMsg(e.name + ' strikes ' + HEROES[h.id].name + ' — <b>' + dmg + '</b> damage!' + suffix);
+        return 750;
+    }
+
+    function checkBattleEnd() {
+        if (!aliveEnemies().length) { setTimeout(victory, 700); return true; }
+        if (!aliveHeroes().length) { setTimeout(defeat, 700); return true; }
+        return false;
+    }
+
+    let lastBoss = null;
+    function victory() {
+        const q = questBattle;
+        questBattle = null;
+        lastBoss = B.enemies[0].id;
+        const xp = B.enemies.reduce((s, e) => s + (e.captured ? Math.floor(e.xp / 2) : e.xp), 0);
+        const gold = B.enemies.reduce((s, e) => s + (e.captured ? 0 : e.gold), 0);
+        S.gold += gold;
+        sfx('fanfare');
+        const msgs = ['<b class="good">Victory!</b> XP +' + xp + ' · <span class="gold">+' + gold + ' coin</span>'];
+        for (const h of aliveHeroes()) {
+            h.xp += xp;
+            while (h.lv < MAXLV && h.xp >= xpNext(h.lv)) {
+                h.xp -= xpNext(h.lv);
+                h.lv++;
+                const st = heroStats(h);
+                h.hp = st.maxhp; h.mp = st.maxmp;
+                const newSpell = HEROES[h.id].spells.find(s => s.lv === h.lv);
+                msgs.push('⬆️ <b>' + HEROES[h.id].name + '</b> reached level ' + h.lv + '! ' +
+                    (newSpell ? ' Learned <b>' + SPELLS[newSpell.id].name + '</b>! ✨' : ''));
+            }
+        }
+        const wasBoss = B.isBoss;
+        endBattle();
+        say(msgs.map(m => ['', m]), wasBoss ? () => bossVictory() : (q ? () => questReward(q) : null));
+        save();
+    }
+    function bossVictory() {
+        const D = DUNGEONS[dungeonId];
+        if (D.crystal) {
+            // recovering a Prism floods its region back to full color
+            S.flags.crystals[D.crystal] = true;
+            S.flags.color[D.colorZone] = true;
+            S.flags.color.world = true;   // the world map warms a little with each
+            sfx('crystal');
+            startTrack('memory');
+            say(CRYSTAL_VISIONS[D.crystal], () => exitDungeon('The Prism’s light carries you back out into the open air — and this whole reach of the world is in color again.'));
+            save();
+        } else if (dungeonId === 'tomb') {
+            // optional: the Palette Vault yields Wren's finest brush
+            S.flags.reforged = true;
+            S.party[0].weapon = WEAPONS.auron.length - 1;
+            sfx('crystal');
+            say([
+                ['', '<i>The Warden of Hues sinks to its knees, and the vault it kept swings open. Inside, on a bed of dust, lies a single brush that seems to hold every color that ever was.</i>'],
+                ['Ochre', 'That’s a Truename brush — the guild’s masterwork. They must have hidden it here rather than let it be unpicked with the rest.'],
+                ['', '🎨 <b>Wren takes up “the First Color”!</b> (attack greatly raised)'],
+            ], () => exitDungeon('You leave the Palette Vault with the First Color in hand.'));
+            save();
+        } else if (lastBoss === 'xuanyuan_w') {
+            // Phase 2: freeing the drained color looses the grief it was binding
+            S.party.forEach(h => { const st = heroStats(h); h.hp = st.maxhp; h.mp = st.maxmp; });
+            save();
+            say([
+                ['', '<i>The Loomkeeper Prime sinks to the loom’s floor, and the last knot slips loose in Wren’s hands. For one breath, all the drained color of the world hangs free — and then it does not flow home. It gathers. It remembers.</i>'],
+                ['the Loomkeeper', '(fading) No — child, don’t… you’ve loosed what we spent everything to bind. All the grief we drew out of the world… it has nowhere left to go but <i>up</i>—'],
+                ['', '<i>The freed color folds inward into a towering, colorless shape: every unwept tear of a whole age, given a body. The Hollow Bloom.</i>'],
+                ['the Hollow Bloom', '(a thousand small voices) …stay grey with us. it doesn’t have to hurt. nothing ever has to hurt again.'],
+                ['Cobalt', 'That’s the thing they were so afraid of. It isn’t a monster, Wren. It’s just… all the sorrow, with nowhere left to land.'],
+                ['Ochre', 'Then we don’t destroy it. You can’t kill grief. We stand in front of it until it’s spent — together, all three.'],
+                ['', '<b class="good">Wren raises the three Prisms, and their color pours through the party — everyone is fully restored!</b>'],
+            ], () => startBattle(['shihun'], true));
+        } else {
+            S.flags.malachorDown = true;
+            S.flags.color.full = true;   // color crashes back into the whole world
+            save();
+            say([
+                ['', '<i>The three of them stand into the grey and strike not to destroy but to <b>hold</b>. Wren paints the Bloom’s sorrow back into color, stroke by stroke — the grief stays, but it is grief in color now, which a heart can carry. The Bloom shudders, breaks softly apart, and everywhere its ash falls, something green comes up.</i>'],
+                ['', '<i>Color crashes back into the world like a tide let in at last. Sky. Blood. Rust. Spring. It will all wilt again now — all change and age and be lost. And it will all, first, be <b>alive</b>.</i>'],
+                ['Wren', '…There you are, Sable. Look at it. It won’t last. Isn’t it beautiful.'],
+                ['Ochre', 'Not all the Faded will wake. But their children get to.'],
+                ['Cobalt', '(quietly) …I’d forgotten what blue looked like.'],
+            ], showEnding);
+        }
+    }
+    // ---- 煉妖壺：收妖、煉化、合成 ----
+    let fuseSel = null;
+    function openHu() {
+        $('menu').classList.remove('open');
+        mode = 'hu';
+        fuseSel = null;
+        $('huMsg').textContent = '';
+        $('hu').classList.add('open');
+        renderHu();
+    }
+    function renderHu() {
+        const list = $('huList');
+        list.innerHTML = '';
+        const ids = Object.keys(S.hu).filter(k => S.hu[k] > 0);
+        if (!ids.length) {
+            list.innerHTML = '<div style="color:#95a5a6;font-size:13px">The Press is empty. Weaken a Faded in battle, then “Capture” it!</div>';
+            return;
+        }
+        for (const id of ids) {
+            const m = MON[id];
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex;gap:6px;align-items:center;justify-content:space-between;' +
+                'background:#1a2230;border:1px solid ' + (fuseSel === id ? '#f1c40f' : '#2c3e50') +
+                ';border-radius:8px;padding:6px 10px;font-size:13px';
+            row.innerHTML = '<span>' + m.e + ' ' + m.name + ' <b style="color:' + ELEM_COLOR[m.elem] + '">' +
+                ELEM_LABEL[m.elem] + '</b> ×' + S.hu[id] + '</span>';
+            const btns = document.createElement('span');
+            btns.style.cssText = 'display:flex;gap:6px';
+            const rb = document.createElement('button');
+            rb.textContent = 'press → ' + ITEMS[m.refine].name;
+            rb.style.fontSize = '12px';
+            rb.addEventListener('click', () => refineMon(id));
+            const fb = document.createElement('button');
+            fb.textContent = fuseSel === id ? 'picked' : 'blend';
+            fb.style.fontSize = '12px';
+            fb.addEventListener('click', () => fusePick(id));
+            btns.appendChild(rb); btns.appendChild(fb);
+            row.appendChild(btns);
+            list.appendChild(row);
+        }
+    }
+    function takeMon(id) {
+        S.hu[id]--;
+        if (S.hu[id] <= 0) delete S.hu[id];
+    }
+    function refineMon(id) {
+        const m = MON[id];
+        takeMon(id);
+        S.inv[m.refine] = (S.inv[m.refine] || 0) + 1;
+        sfx('item');
+        $('huMsg').textContent = 'pressed: ' + m.name + ' → ' + ITEMS[m.refine].e + ' ' + ITEMS[m.refine].name;
+        if (fuseSel && !S.hu[fuseSel]) fuseSel = null;
+        save();
+        renderHu();
+    }
+    function fusePick(id) {
+        if (!fuseSel) {
+            fuseSel = id;
+            $('huMsg').textContent = 'picked ' + MON[id].name + ' — choose another to blend.';
+            renderHu();
+            return;
+        }
+        const a = fuseSel, b = id;
+        if (a === b && (S.hu[a] || 0) < 2) {
+            $('huMsg').textContent = 'same kind — you need two of them!';
+            return;
+        }
+        const eA = MON[a].elem, eB = MON[b].elem;
+        let result;
+        if (eA === eB) result = 'neidan';
+        else if (SHENG[eA] === eB) result = ELEM_FU[eB];
+        else if (SHENG[eB] === eA) result = ELEM_FU[eA];
+        else result = 'qingxin';
+        takeMon(a); takeMon(b);
+        S.inv[result] = (S.inv[result] || 0) + 1;
+        fuseSel = null;
+        sfx('crystal');
+        const rel = eA === eB ? 'same hue' : (SHENG[eA] === eB || SHENG[eB] === eA) ? 'harmony' : 'clash';
+        $('huMsg').textContent = 'blended (' + ELEM_LABEL[eA] + ' + ' + ELEM_LABEL[eB] + ', ' + rel + '): ' +
+            ITEMS[result].e + ' ' + ITEMS[result].name + '!';
+        save();
+        renderHu();
+    }
+    $('huLeave').addEventListener('click', () => {
+        $('hu').classList.remove('open');
+        mode = prevMode;
+        draw();
+    });
+
+    function defeat() {
+        sfx('gameover');
+        startTrack(null);
+        // Respawn: revive party at the starting village shrine, lose half gold
+        say([
+            ['', '<b class="bad">The party has Faded…</b>'],
+            ['', 'You wake in the shrine at Marrow’s End, half your coin spent on salves.'],
+        ], () => {
+            S.gold = Math.floor(S.gold / 2);
+            S.party.forEach(fullHeal);
+            // move to town1 position
+            outer: for (let y = 0; y < WORLD.length; y++)
+                for (let x = 0; x < WORLD[0].length; x++)
+                    if (WORLD[y][x] === '1') { S.x = x; S.y = y + 1; break outer; }
+            endBattle(true);
+            mode = 'world';
+            dungeonId = null;
+            startTrack('overworld');
+            save();
+            draw();
+        });
+    }
+    function endBattle(silent) {
+        $('battle').classList.remove('open');
+        B = null;
+        if (!silent) {
+            mode = dungeonId ? 'dungeon' : 'world';
+            startTrack(mapTrack());
+        }
+        updateHud();
+        draw();
+    }
+
+    function showEnding() {
+        mode = 'ending';
+        $('battle').classList.remove('open');
+        startTrack('ending');
+        const epilogue = {
+            auron: 'reopened Sable’s dye-shop in Marrow’s End, and painted the first spring — knowing, now, that its worth was in the wilting.',
+            lyra: 'covered a whole town wall in a mural of every face the Greydawn took, so the color of them would be remembered while it changed.',
+            zephyr: 'ground a lens that splits grey daylight back into all its hues, and left a set in every window of Hollowmere.',
+        };
+        $('endText').innerHTML =
+            'Color keeps its old bargain again: everything that blooms will wilt, everything loved will be lost, everything alive will end. ' +
+            'The world took that bargain back willingly — because the other name for it is <b>being alive at all</b>.<br><br>' +
+            'The Loomkeepers’ long grey watch is over. The world’s brief bright one has just begun.<br><br>' +
+            S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> (Lv ' + h.lv + ') ' + epilogue[h.id]).join('<br><br>') +
+            '<br><br>💰 ' + S.gold + ' coin · thank you for playing Lumenfall.';
+        $('ending').classList.add('open');
+    }
+    $('btnEndTitle').addEventListener('click', () => {
+        $('ending').classList.remove('open');
+        showTitle();
+    });
+
+    // =========================================================================
+    //  SAVE / LOAD / TITLE
+    // =========================================================================
+    function save() {
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch {}
+    }
+    function load() {
+        try {
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (!raw) return null;
+            const s = JSON.parse(raw);
+            if (!(s && s.party && s.party.length)) return null;
+            s.hu = s.hu || {};
+            s.flags.quests = s.flags.quests || { nest: 0, caravan: 0 };
+            return s;
+        } catch { return null; }
+    }
+    function showTitle() {
+        mode = 'title';
+        startTrack('title');
+        $('btnContinue').disabled = !load();
+        $('title').classList.add('open');
+    }
+    function startNew() {
+        S = newState();
+        // find start
+        for (let y = 0; y < WORLD.length; y++)
+            for (let x = 0; x < WORLD[0].length; x++)
+                if (WORLD[y][x] === 'S') { S.x = x; S.y = y; }
+        S.party.forEach(fullHeal);
+        $('title').classList.remove('open');
+        mode = 'world';
+        startTrack('overworld');
+        draw();
+        say([
+            ['', '<i>Sable’s dye-shop, the morning of the Greydawn’s first anniversary. The last red in the pots has gone to rust-grey overnight.</i>'],
+            ['Sable', 'Wren. Come here, child. Look at my hands.'],
+            ['Wren', '…They’re grey. Sable — your hands are going grey.'],
+            ['Sable', 'It was always coming for me. I’ve had longer than most. Listen, now — there isn’t much time and there’s a great deal I never told you.'],
+            ['Sable', 'The color isn’t dying. It is being <i>drawn out</i>, thread by thread, and carried to the Wellspring at the world’s heart. There are three Prisms left — the last wild color. Find them. Carry them to the Wellspring. You’ll understand when you get there.'],
+            ['Wren', 'Then come with me. We’ll go together—'],
+            ['Sable', '<i>(smiling, already paler)</i> Paint something bright for me, Wren. Something that won’t last. …That was always the whole point of it.'],
+            ['', '<b>Sable has Faded.</b> Where she stood, a grey stillness settles, and is at peace.'],
+            ['', '<i>Cross east to Marrow’s End. In battle, weaken a Faded then “Capture” it into your kit; press or blend pigments from the Menu.</i>'],
+        ]);
+        S.flags.intro = true;
+        save();
+    }
+    $('btnNew').addEventListener('click', startNew);
+    $('btnContinue').addEventListener('click', () => {
+        const s = load();
+        if (!s) return;
+        S = s;
+        $('title').classList.remove('open');
+        mode = 'world';
+        dungeonId = null;
+        startTrack('overworld');
+        draw();
+    });
+
+    // =========================================================================
+    //  INPUT
+    // =========================================================================
+    const DIRS = {
+        ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0],
+        ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1],
+    };
+    const held = {};
+    document.addEventListener('keydown', e => {
+        if (mode === 'dialog' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); return nextDialog(); }
+        if (DIRS[e.key]) {
+            e.preventDefault();
+            stopAutoWalk();
+            held[e.key] = true;
+            if (!e.repeat) tryMove(...DIRS[e.key]);
+        } else if (e.key === 'm' || e.key === 'Escape') openMenu();
+    });
+    document.addEventListener('keyup', e => { delete held[e.key]; });
+    window.addEventListener('blur', () => { for (const k in held) delete held[k]; });
+    setInterval(() => {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        for (const k in held) if (DIRS[k]) { tryMove(...DIRS[k]); return; }
+    }, 150);
+
+    // ---- click / tap to walk: BFS pathfinding ----
+    let walkPath = [], walkTimer = null;
+    walkTarget = null;
+    function walkableTile(x, y) { return !BLOCKED[mapAt(x, y)]; }
+    function pathTo(tx, ty) {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        const p = curPos();
+        if ((tx === p.x && ty === p.y) || !walkableTile(tx, ty)) return;
+        const m = mode === 'dungeon' ? DMAPS[dungeonId] : WORLD;
+        const W = m[0].length, H = m.length;
+        const key = (x, y) => y * W + x;
+        const prev = new Map([[key(p.x, p.y), null]]);
+        const q = [[p.x, p.y]];
+        let found = false;
+        while (q.length && !found) {
+            const [cx, cy] = q.shift();
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = cx + dx, ny = cy + dy;
+                if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+                if (!walkableTile(nx, ny) || prev.has(key(nx, ny))) continue;
+                prev.set(key(nx, ny), [cx, cy]);
+                if (nx === tx && ny === ty) { found = true; break; }
+                q.push([nx, ny]);
+            }
+        }
+        if (!found) return;
+        const path = [];
+        let cur = [tx, ty];
+        while (cur && !(cur[0] === p.x && cur[1] === p.y)) {
+            path.unshift(cur);
+            cur = prev.get(key(cur[0], cur[1]));
+        }
+        walkPath = path;
+        walkTarget = { x: tx, y: ty };
+        clearInterval(walkTimer);
+        walkTimer = setInterval(stepAutoWalk, 150);
+        sfx('blip');
+    }
+    function stepAutoWalk() {
+        if (mode !== 'world' && mode !== 'dungeon') return stopAutoWalk();
+        if (!walkPath.length) return stopAutoWalk();
+        const p = curPos();
+        const [nx, ny] = walkPath[0];
+        if (Math.abs(nx - p.x) + Math.abs(ny - p.y) !== 1) return stopAutoWalk();
+        walkPath.shift();
+        tryMove(nx - p.x, ny - p.y);
+    }
+    function stopAutoWalk() {
+        walkPath = [];
+        walkTarget = null;
+        clearInterval(walkTimer);
+    }
+    function canvasTile(clientX, clientY) {
+        const r = canvas.getBoundingClientRect();
+        const vx = Math.floor((clientX - r.left) * (canvas.width / r.width) / TILE);
+        const vy = Math.floor((clientY - r.top) * (canvas.height / r.height) / TILE);
+        const p = curPos();
+        return [p.x - Math.floor(VW / 2) + vx, p.y - Math.floor(VH / 2) + vy];
+    }
+    canvas.addEventListener('click', e => {
+        if (mode !== 'world' && mode !== 'dungeon') return;
+        pathTo(...canvasTile(e.clientX, e.clientY));
+    });
+    let tX = 0, tY = 0;
+    canvas.addEventListener('touchstart', e => {
+        e.preventDefault();
+        tX = e.touches[0].clientX; tY = e.touches[0].clientY;
+    });
+    canvas.addEventListener('touchend', e => {
+        e.preventDefault();
+        const dx = e.changedTouches[0].clientX - tX, dy = e.changedTouches[0].clientY - tY;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) {
+            if (mode === 'world' || mode === 'dungeon') pathTo(...canvasTile(tX, tY));
+            return;
+        }
+        stopAutoWalk();
+        if (Math.abs(dx) > Math.abs(dy)) tryMove(dx > 0 ? 1 : -1, 0);
+        else tryMove(0, dy > 0 ? 1 : -1);
+    });
+
+    // =========================================================================
+    //  DEBUG HOOKS (used by automated tests)
+    // =========================================================================
+    window.DBG = {
+        state: () => ({ mode, dungeonId, S, B }),
+        tp(x, y) { const p = curPos(); p.x = x; p.y = y; draw(); },
+        buff(lv) { S.party.forEach(h => { h.lv = lv; fullHeal(h); }); updateHud(); },
+        gold(g) { S.gold = g; updateHud(); },
+        crystals() { S.flags.crystals = { earth: true, fire: true, water: true }; updateHud(); },
+        noEnc() { stepCount = -1e9; },
+        // Jump straight to a boss fight. Also places you on that dungeon's entry
+        // tile: setting dungeonId alone leaves S.dpos null, and the draw after the
+        // battle then throws in curPos().
+        boss(id) {
+            const d = Object.keys(DUNGEONS).find(k => DUNGEONS[k].boss === id);
+            if (d) {
+                dungeonId = d;
+                const m = DMAPS[d];
+                if (m && !S.dpos) for (let yy = 0; yy < m.length; yy++)
+                    for (let xx = 0; xx < m[0].length; xx++)
+                        if (m[yy][xx] === 'S') S.dpos = { x: xx, y: yy };
+            }
+            startBattle([id], true);
+        },
+        troop(ids) { startBattle(ids, false); },
+        track: () => track,
+        weaken() { if (B) for (const e of B.enemies) if (e.hp > 0) e.hp = 1; },
+        give(id, n) { S.hu[id] = (S.hu[id] || 0) + (n || 1); },
+        maps: { WORLD, DMAPS },
+    };
+
+    // Boot
+    showTitle();
+    </script>
+</body>
+</html>
