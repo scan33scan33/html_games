@@ -2509,20 +2509,26 @@
             save();
             say([
                 ['', '<i>The Loomkeeper Prime sinks to the loom’s floor. The last knot of the world’s color hangs loose in Wren’s two hands — the three Prisms, and every thread the grey ever drew out, all of it waiting on what she does next.</i>'],
-                ['the Loomkeeper', '(fading) There… you feel it now. Pull the knot tight, and the world sleeps — gentle, and forever. Cut it, and you let all the grief back in with the light. …Sable left the choosing to you. Cruel of her. …Merciful of her. I could never tell which. Choose, child.'],
-                ['Ochre', 'Umber Vale wasn’t telling stories. The grey did save them, once.'],
-                ['Cobalt', 'And Stillwater doesn’t want waking. …Whichever way, Wren, it’s the whole world you’re doing it to. Both answers cost. …But it’s yours. She made sure of that.'],
+                ['the Loomkeeper', '(fading) There… you feel it now. Pull it tight and the world sleeps, gentle and forever. Cut it and you let all the grief back in with the light. …And know this before you choose: here, at the loom, the ones the grey has taken are not gone. They are only… <i>held</i>.'],
+                ['', '<i>Held. Wren feels it before she can understand it — a warmth low in the grey threads, familiar as a hand laid on her shoulder. And then, soft, from everywhere and nowhere at once:</i>'],
+                ['Sable', '…There you are. I always knew it would be you, at the end. Don’t look so stricken, child — I am not lost. I am <i>resting</i>. Do you know I had not rested, not truly, in sixty years? The grey is not the dark you take it for. It is the first good quiet after a very long day.'],
+                ['Sable', 'I won’t tell you which to choose — I gave my life to make certain I never would. But I won’t lie to you either, so hear the plain shape of it. Cut the knot: the color comes back, and every ache that rides in with it, and I <i>stay here</i> — you will have to lose me the whole long rest of your life. Tie it: the tired world lies down… and you lie down beside me, where it does not hurt, and we are not apart. Not ever again.'],
+                ['Sable', 'Both are love, Wren. One is the love that keeps a bright thing though it scalds your hands. The other is the love that finally, finally lets it rest. I could have been proud of you for either. I mean that. Truly.'],
+                ['Ochre', '(hoarse) …I’ll walk into the color at your side, girl, gladly. But I’ll not call you wrong for the quiet. God help me — some worn-down part of me wants it too.'],
+                ['Cobalt', '…She’s right that they’re both love. That is the whole cruelty of it. …It’s yours, Wren. It always was.'],
             ], () => finaleChoice());
         } else {
             S.flags.malachorDown = true;
             S.flags.color.full = true;   // color crashes back into the whole world
             save();
             say([
-                ['', '<i>The three of them stand into the grey and strike not to destroy but to <b>hold</b>. Wren paints the Bloom’s sorrow back into color, stroke by stroke — the grief stays, but it is grief in color now, which a heart can carry. The Bloom shudders, breaks softly apart, and everywhere its ash falls, something green comes up.</i>'],
-                ['', '<i>Color crashes back into the world like a tide let in at last. Sky. Blood. Rust. Spring. It will all wilt again now — all change and age and be lost. And it will all, first, be <b>alive</b>.</i>'],
-                ['Wren', '…There you are, Sable. Look at it. It won’t last. Isn’t it beautiful.'],
-                ['Ochre', 'Not all the Faded will wake. But their children get to.'],
-                ['Cobalt', '(quietly) …I’d forgotten what blue looked like.'],
+                ['', '<i>Wren cuts the knot — and feels the warmth in the grey threads thin, and loosen, and let go. Somewhere in it, a hand lifts from her shoulder for the last time. She does not stop cutting. It is the hardest thing she has ever done.</i>'],
+                ['', '<i>The three of them stand into the grey and strike not to destroy the Bloom but to <b>hold</b> it. Wren paints its sorrow back into color, stroke by stroke — the grief stays, but it is grief in color now, which a living heart can carry. The Bloom shudders, breaks softly apart, and everywhere its ash falls, something green comes up.</i>'],
+                ['', '<i>Color crashes back into the world like a tide let in at last. Sky. Blood. Rust. Spring. It will all wilt again now — all of it change and age and be lost. And it will all, first, be <b>alive</b>.</i>'],
+                ['Wren', '(quiet, not looking away from the light) …You didn’t come back. I knew you wouldn’t. That was the cost, and I chose it with my eyes open — and I will grieve you every bright day I have left.'],
+                ['Wren', '…And I would choose it again. Look, Sable. Look what stayed. It won’t last. That was always, <i>always</i> the whole point of it.'],
+                ['Ochre', 'Not every Faded will wake. But their children will — and this one’ll paint them so fierce the grey never dares come back.'],
+                ['Cobalt', '(quietly) …I’d forgotten what blue looked like. …I’d forgotten that it aches.'],
             ], showEnding);
         }
     }
@@ -2544,9 +2550,9 @@
     }
     function finaleChoice() {
         showChoice(
-            'The knot is in your hands. Every color the grey ever took hangs on it — and so does every grief it spared the world. <b>Wren must choose.</b>',
-            [{ label: '🎨 Cut the knot — let the color back in', fn: wakeWorld },
-             { label: '🌫️ Pull it tight — let the world rest', fn: restWorld }]);
+            'The knot is in your hands. Cut it, and the world wakes — every color, every ache, and the losing of her, all your days. Tie it, and the world lies down to rest — and you rest beside Sable, and are not apart. <b>Both are love. Wren must choose.</b>',
+            [{ label: '🎨 Cut the knot — wake the world, and lose her', fn: wakeWorld },
+             { label: '🕊️ Tie it tight — rest, together, in the quiet', fn: restWorld }]);
     }
     // WAKE: releasing the color looses the bound grief — the Hollow Bloom — which
     // must be faced and accepted before color can truly return. Feeds the existing
@@ -2571,9 +2577,10 @@
         say([
             ['', '<i>Wren gathers the three Prisms to her chest and does not cut the knot — she ties it. The last wild color unwinds through her fingers and is gone, and the grief that strained to break loose settles, quiet, and is at last wholly still.</i>'],
             ['', '<i>The world greys to its final thread. No more wilting. No more parting. No more of the long ache of loving things that end — because nothing here will ever end again. It is not death. It is rest: a whole world, at rest.</i>'],
-            ['Wren', '…I’m sorry, Sable. And I’m not. You wanted it to be mine. This is what I chose. Sleep now — all of you. It doesn’t have to hurt anymore.'],
-            ['Ochre', '(fading, at peace) …quiet hands. …good.'],
-            ['Cobalt', '(a last soft breath) …thank you, Wren. …thank—'],
+            ['Wren', '…I’m not sorry, Sable. You wanted the choosing to be mine, and I choose the quiet. I choose to stop losing you. …Is there room, in the rest, for one more?'],
+            ['', '<i>The warmth in the grey threads folds around her like an old shawl drawn up in the cold. She is not apart from her anymore. She never will be again.</i>'],
+            ['Ochre', '(fading, at peace) …quiet hands, at last. …good. This is good.'],
+            ['Cobalt', '(a last soft breath) …thank you, Wren. It doesn’t hurt. It truly doesn’t. …thank—'],
         ], () => showEnding(true));
     }
     // ---- 煉妖壺：收妖、煉化、合成 ----
@@ -2705,9 +2712,9 @@
         $('endEmoji').textContent = grey ? '🕊️' : '🌅';
         $('endTitle').textContent = grey ? 'The Long Rest' : 'The First Spring';
         const epilogue = grey ? {
-            auron: 'laid down her brushes at the Wellspring and let the grey take her last of all — the final color in the world, and then not. She did not weep. There was nothing left that could be lost.',
-            lyra: 'stopped mixing grey to match the sky, because there was no more sky to match; and rested, his great hands finally still.',
-            zephyr: 'set down his lens with a small, tired smile. There was nothing left to split into color — and, to his own surprise, he found he did not mind.',
+            auron: 'laid down her brushes at the loom and let the grey take her last of all, the final color in the world — and went into the quiet not alone, but held, beside the one she had crossed a whole grey world rather than keep losing.',
+            lyra: 'set his great hands to rest at last, done mixing grey to match a sky that no longer needed matching. The ache he had carried since his town Faded around him finally, gently, let him go.',
+            zephyr: 'set down his lens with a small, tired smile. There was nothing left to split into color — and, to his own surprise, he found the quiet was not empty. It was full. He minded nothing at all.',
         } : {
             auron: 'reopened Sable’s dye-shop in Marrow’s End, and painted the first spring — knowing, now, that its worth was in the wilting.',
             lyra: 'covered a whole town wall in a mural of every face the Greydawn took, so the color of them would be remembered while it changed.',

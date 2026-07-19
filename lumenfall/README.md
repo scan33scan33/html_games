@@ -31,11 +31,22 @@ beating the **Loomkeeper Prime**, Wren holds the knot, and you decide:
 - **Pull it tight** — complete the unweaving. No fight; the world is laid gently,
   permanently to sleep, at peace and beyond all further loss → *The Long Rest*.
 
-Neither is the "right" answer — one is life-with-suffering, the other
-peace-without-life — and the optional lore-towns (Umber Vale, Loomrest,
-Stillwater) exist to make that choice genuinely hard. The theme: impermanence and
-art — the courage to weigh a brief, bright, mortal life against a safe grey rest,
-and *choose*.
+Neither is the "right" answer, and the game works to keep the scales even. The
+weakness of an earlier draft was that grey was voiced only by the antagonist and
+the dying, so the narration's thumb was on color. The finale now gives grey a
+**beloved, clear-eyed advocate**: at the loom Wren hears **Sable** herself — not
+broken or deluded, just tired and at peace — making the *positive* case for grey
+(rest earned after a long weariness; release; and that the Faded are not gone but
+*held* — choosing grey means **reunion** with her). And color is given a **felt
+personal cost**: cut the knot and Sable stays gone; you keep the whole bright
+world but lose the one person you crossed it to save, and grieve her every day.
+So the real choice is *wake the world and lose her* vs. *rest, together, in the
+quiet* — both framed, before the button, as love. The optional lore-towns (Umber
+Vale, Loomrest, Stillwater) and a forced, concrete vision of the Vivid Age's
+"Bright Madness" back up why the grey was ever a mercy.
+
+The theme: impermanence and art — the courage to weigh a brief, bright, mortal
+life against a safe grey rest, and *choose*, with neither answer handed to you.
 
 ## The color mechanic (the engine's new feature)
 
