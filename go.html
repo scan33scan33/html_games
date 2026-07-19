@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Go — 19×19</title>
+<style>
+    :root {
+        --ink: #2c3e50; --paper: #f4f4f9; --card: #fff; --muted: #7f8c8d;
+        --wood: #e0b45c; --line: #4a3212; --shadow: rgba(0,0,0,.25);
+        --accent: #2c3e50;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+        background: var(--paper); font-family: Arial, Helvetica, sans-serif; color: var(--ink);
+        -webkit-tap-highlight-color: transparent;
+    }
+    h1 { margin: 20px 0 2px; font-size: 24px; }
+    p.sub { color: var(--muted); margin: 0 0 12px; font-size: 14px; }
+    a.back { position: fixed; top: 14px; left: 16px; color: var(--muted); text-decoration: none; font-size: 14px; }
+    a.back:hover { color: var(--ink); }
+
+    .wrap { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; justify-content: center; padding: 0 12px 40px; }
+    .boardbox { background: var(--card); border-radius: 12px; box-shadow: 0 6px 20px var(--shadow); padding: 10px; }
+    canvas { display: block; border-radius: 6px; cursor: pointer; touch-action: manipulation; }
+
+    .panel { width: 260px; max-width: 92vw; }
+    .turn { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; margin-bottom: 12px; }
+    .dot { width: 20px; height: 20px; border-radius: 50%; box-shadow: 0 1px 2px var(--shadow); }
+    .dot.b { background: radial-gradient(circle at 35% 30%, #666, #000); }
+    .dot.w { background: radial-gradient(circle at 35% 30%, #fff, #bbb); border: 1px solid #999; }
+
+    .stat { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); padding: 4px 0; border-bottom: 1px solid #eee; }
+    .stat b { color: var(--ink); }
+    .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+    .controls button {
+        border: none; background: var(--accent); color: #ecf0f1; border-radius: 8px; padding: 12px 0;
+        font-size: 14px; font-weight: bold; cursor: pointer; transition: transform .1s, opacity .1s;
+    }
+    .controls button:hover { transform: translateY(-2px); }
+    .controls button.ghost { background: #fff; color: var(--accent); border: 2px solid var(--accent); padding: 10px 0; }
+    .msg { min-height: 20px; font-size: 14px; color: var(--ink); margin: 6px 0; font-weight: bold; }
+    .komi { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .komi input { width: 56px; padding: 4px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; }
+    .log { font-family: "SF Mono", Menlo, monospace; font-size: 12px; color: var(--muted); max-height: 180px; overflow-y: auto;
+        background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 8px; white-space: pre-wrap; }
+    label.side { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+    <a class="back" href="index.html">← games</a>
+    <h1>⚫⚪ Go — 19×19</h1>
+    <p class="sub">You are <b>Black</b> and move first. Click an intersection to place a stone.</p>
+
+    <div class="wrap">
+        <div class="boardbox"><canvas id="board"></canvas></div>
+        <div class="panel">
+            <div class="turn"><span class="dot b" id="turnDot"></span><span id="turnText">Black to move</span></div>
+            <div class="msg" id="msg">&nbsp;</div>
+
+            <div class="stat"><span>Move</span><b id="sMove">0</b></div>
+            <div class="stat"><span>Black captures</span><b id="sBcap">0</b></div>
+            <div class="stat"><span>White captures</span><b id="sWcap">0</b></div>
+
+            <div class="komi" style="margin-top:10px;">Komi (White) <input id="komi" type="number" step="0.5" value="7.5"></div>
+            <label class="side"><input type="checkbox" id="bothChk"> Let me play both sides</label>
+
+            <div class="controls">
+                <button id="passBtn">Pass</button>
+                <button id="resignBtn">Resign</button>
+                <button class="ghost" id="undoBtn">Undo</button>
+                <button class="ghost" id="newBtn">New game</button>
+            </div>
+
+            <div class="log" id="log">Game start. Black to play.</div>
+        </div>
+    </div>
+
+<script>
+(() => {
+    "use strict";
+    const N = 19, EMPTY = 0, BLACK = 1, WHITE = 2;
+    const COLS = "ABCDEFGHJKLMNOPQRST";
+    const coordStr = (r, c) => COLS[c] + (N - r);
+
+    // ---- Game state ----
+    let board, toMove, captures, passes, lastMove, moveNum, gameOver, result, seen, history, moves, humanColor;
+    function fresh() {
+        board = Array.from({ length: N }, () => new Array(N).fill(EMPTY));
+        toMove = BLACK; captures = { [BLACK]: 0, [WHITE]: 0 }; passes = 0;
+        lastMove = null; moveNum = 0; gameOver = false; result = null;
+        seen = new Set([hashOf(board, BLACK)]);
+        history = []; moves = []; humanColor = BLACK;
+    }
+    function hashOf(b, side) {
+        let s = side + "|";
+        for (let r = 0; r < N; r++) s += b[r].join("");
+        return s;
+    }
+    function clone(b) { return b.map(row => row.slice()); }
+
+    const inB = (r, c) => r >= 0 && r < N && c >= 0 && c < N;
+    function neighbors(r, c) {
+        const out = [];
+        if (r > 0) out.push([r - 1, c]);
+        if (r < N - 1) out.push([r + 1, c]);
+        if (c > 0) out.push([r, c - 1]);
+        if (c < N - 1) out.push([r, c + 1]);
+        return out;
+    }
+    // Flood-fill a group; return {stones:[[r,c]...], libs:Set}
+    function groupAt(b, r, c) {
+        const color = b[r][c], stack = [[r, c]], seenL = new Set([r + "," + c]);
+        const stones = [], libs = new Set();
+        while (stack.length) {
+            const [cr, cc] = stack.pop();
+            stones.push([cr, cc]);
+            for (const [nr, nc] of neighbors(cr, cc)) {
+                const v = b[nr][nc];
+                if (v === EMPTY) libs.add(nr + "," + nc);
+                else if (v === color && !seenL.has(nr + "," + nc)) { seenL.add(nr + "," + nc); stack.push([nr, nc]); }
+            }
+        }
+        return { stones, libs };
+    }
+
+    // Try a move for `color` at r,c on a fresh clone. Returns {ok, board, captured, reason}.
+    function tryMove(r, c, color) {
+        if (gameOver) return { ok: false, reason: "game is over" };
+        if (!inB(r, c)) return { ok: false, reason: "off board" };
+        if (board[r][c] !== EMPTY) return { ok: false, reason: "occupied" };
+        const opp = color === BLACK ? WHITE : BLACK;
+        const nb = clone(board);
+        nb[r][c] = color;
+        let captured = 0;
+        for (const [nr, nc] of neighbors(r, c)) {
+            if (nb[nr][nc] === opp) {
+                const g = groupAt(nb, nr, nc);
+                if (g.libs.size === 0) { for (const [sr, sc] of g.stones) nb[sr][sc] = EMPTY; captured += g.stones.length; }
+            }
+        }
+        if (groupAt(nb, r, c).libs.size === 0 && captured === 0) return { ok: false, reason: "suicide" };
+        const h = hashOf(nb, opp);
+        if (seen.has(h)) return { ok: false, reason: "ko (repeats a previous position)" };
+        return { ok: true, board: nb, captured, hash: h };
+    }
+
+    function pushHistory() {
+        history.push({ board: clone(board), toMove, captures: { ...captures }, passes, lastMove, moveNum, seen: new Set(seen), moves: moves.slice() });
+        if (history.length > 400) history.shift();
+    }
+
+    function place(r, c) {
+        const color = toMove;
+        const t = tryMove(r, c, color);
+        if (!t.ok) { flash("Illegal: " + t.reason); return { ok: false, reason: t.reason }; }
+        pushHistory();
+        board = t.board; toMove = color === BLACK ? WHITE : BLACK;
+        captures[color] += t.captured; passes = 0; lastMove = [r, c]; moveNum++;
+        seen.add(t.hash);
+        moves.push({ n: moveNum, color, coord: coordStr(r, c) });
+        logMove(moveNum, color, coordStr(r, c) + (t.captured ? "  (captured " + t.captured + ")" : ""));
+        render(); updatePanel();
+        return { ok: true, captured: t.captured };
+    }
+
+    function pass() {
+        if (gameOver) return;
+        pushHistory();
+        const color = toMove;
+        passes++; toMove = color === BLACK ? WHITE : BLACK; moveNum++;
+        lastMove = null; seen.add(hashOf(board, toMove));
+        moves.push({ n: moveNum, color, coord: "pass" });
+        logMove(moveNum, color, "pass");
+        if (passes >= 2) endGame(scoreText());
+        render(); updatePanel();
+    }
+
+    function resign() {
+        if (gameOver) return;
+        const who = toMove === BLACK ? "Black" : "White";
+        const winner = toMove === BLACK ? "White" : "Black";
+        endGame(who + " resigns — " + winner + " wins.");
+    }
+
+    function endGame(text) { gameOver = true; result = text; flash(text); appendLog("\n== " + text + " =="); updatePanel(); }
+
+    // ---- Chinese (area) scoring ----
+    function scoreArea() {
+        const b = board;
+        let bl = 0, wh = 0;
+        const visited = Array.from({ length: N }, () => new Array(N).fill(false));
+        for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+            if (b[r][c] === BLACK) bl++;
+            else if (b[r][c] === WHITE) wh++;
+            else if (!visited[r][c]) {
+                const stack = [[r, c]], region = []; visited[r][c] = true;
+                let touchB = false, touchW = false;
+                while (stack.length) {
+                    const [cr, cc] = stack.pop(); region.push([cr, cc]);
+                    for (const [nr, nc] of neighbors(cr, cc)) {
+                        const v = b[nr][nc];
+                        if (v === BLACK) touchB = true;
+                        else if (v === WHITE) touchW = true;
+                        else if (!visited[nr][nc]) { visited[nr][nc] = true; stack.push([nr, nc]); }
+                    }
+                }
+                if (touchB && !touchW) bl += region.length;
+                else if (touchW && !touchB) wh += region.length;
+            }
+        }
+        const komi = parseFloat(document.getElementById("komi").value) || 0;
+        return { black: bl, white: wh + komi, komi };
+    }
+    function scoreText() {
+        const s = scoreArea();
+        const diff = s.black - s.white;
+        const who = diff > 0 ? "Black" : "White";
+        const margin = Math.abs(diff).toFixed(1).replace(/\.0$/, "");
+        return "Two passes — area score: Black " + s.black + ", White " + s.white.toFixed(1).replace(/\.0$/, "") +
+            " (komi " + s.komi + "). " + (diff === 0 ? "Tie." : who + " wins by " + margin + ".");
+    }
+
+    // ---- Rendering ----
+    const canvas = document.getElementById("board"), ctx = canvas.getContext("2d");
+    const CELL = 32, MARGIN = 30, PX = MARGIN * 2 + CELL * (N - 1);
+    const STAR = [3, 9, 15];
+    let hover = null;
+    function setup() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = PX * dpr; canvas.height = PX * dpr;
+        const cssW = Math.min(PX, window.innerWidth - 60);
+        canvas.style.width = cssW + "px"; canvas.style.height = cssW + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    const px = i => MARGIN + i * CELL;
+    function render() {
+        ctx.fillStyle = "#e0b45c"; ctx.fillRect(0, 0, PX, PX);
+        ctx.strokeStyle = "#4a3212"; ctx.lineWidth = 1; ctx.fillStyle = "#3a2810";
+        ctx.font = "11px Arial"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for (let i = 0; i < N; i++) {
+            ctx.beginPath(); ctx.moveTo(px(0), px(i)); ctx.lineTo(px(N - 1), px(i)); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(px(i), px(0)); ctx.lineTo(px(i), px(N - 1)); ctx.stroke();
+            ctx.fillText(COLS[i], px(i), MARGIN - 16);
+            ctx.fillText(COLS[i], px(i), PX - MARGIN + 16);
+            ctx.fillText(String(N - i), MARGIN - 18, px(i));
+            ctx.fillText(String(N - i), PX - MARGIN + 18, px(i));
+        }
+        for (const r of STAR) for (const c of STAR) {
+            ctx.beginPath(); ctx.arc(px(c), px(r), 3, 0, 7); ctx.fillStyle = "#3a2810"; ctx.fill();
+        }
+        for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (board[r][c] !== EMPTY) drawStone(r, c, board[r][c], 1);
+        if (hover && !gameOver && board[hover[0]][hover[1]] === EMPTY && (document.getElementById("bothChk").checked || toMove === humanColor))
+            drawStone(hover[0], hover[1], toMove, 0.35);
+        if (lastMove) {
+            const [r, c] = lastMove;
+            ctx.beginPath(); ctx.arc(px(c), px(r), 4, 0, 7);
+            ctx.fillStyle = board[r][c] === BLACK ? "#eee" : "#333"; ctx.fill();
+        }
+    }
+    function drawStone(r, c, color, alpha) {
+        const x = px(c), y = px(r), rad = CELL * 0.46;
+        ctx.save(); ctx.globalAlpha = alpha;
+        if (alpha === 1) { ctx.beginPath(); ctx.arc(x + 1.5, y + 2, rad, 0, 7); ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fill(); }
+        const g = ctx.createRadialGradient(x - rad * 0.35, y - rad * 0.4, rad * 0.15, x, y, rad);
+        if (color === BLACK) { g.addColorStop(0, "#6a6a6a"); g.addColorStop(1, "#000"); }
+        else { g.addColorStop(0, "#fff"); g.addColorStop(1, "#c8c8c8"); }
+        ctx.beginPath(); ctx.arc(x, y, rad, 0, 7); ctx.fillStyle = g; ctx.fill();
+        if (color === WHITE) { ctx.strokeStyle = "#aaa"; ctx.lineWidth = 0.5; ctx.stroke(); }
+        ctx.restore();
+    }
+
+    function eventXY(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scale = PX / rect.width;
+        const cx = (e.clientX - rect.left) * scale, cy = (e.clientY - rect.top) * scale;
+        const c = Math.round((cx - MARGIN) / CELL), r = Math.round((cy - MARGIN) / CELL);
+        if (!inB(r, c)) return null;
+        if (Math.hypot(cx - px(c), cy - px(r)) > CELL * 0.5) return null;
+        return [r, c];
+    }
+    canvas.addEventListener("mousemove", e => { const p = eventXY(e); if ((p && (!hover || p[0] !== hover[0] || p[1] !== hover[1])) || (!p && hover)) { hover = p; render(); } });
+    canvas.addEventListener("mouseleave", () => { hover = null; render(); });
+    canvas.addEventListener("click", e => {
+        const p = eventXY(e); if (!p) return;
+        if (gameOver) { flash("Game over. Start a new game."); return; }
+        if (!document.getElementById("bothChk").checked && toMove !== humanColor) { flash("It's White's move (Claude)."); return; }
+        place(p[0], p[1]);
+    });
+
+    // ---- Panel / log ----
+    function updatePanel() {
+        const b = toMove === BLACK;
+        document.getElementById("turnDot").className = "dot " + (b ? "b" : "w");
+        document.getElementById("turnText").textContent = gameOver ? "Game over" : (b ? "Black to move" : "White to move");
+        document.getElementById("sMove").textContent = moveNum;
+        document.getElementById("sBcap").textContent = captures[BLACK];
+        document.getElementById("sWcap").textContent = captures[WHITE];
+    }
+    let msgTimer = null;
+    function flash(t) { const m = document.getElementById("msg"); m.textContent = t; clearTimeout(msgTimer); msgTimer = setTimeout(() => { m.innerHTML = "&nbsp;"; }, 4000); }
+    function logMove(n, color, txt) { appendLog((color === BLACK ? "B" : "W") + " " + n + ". " + txt); }
+    function appendLog(line) { const el = document.getElementById("log"); el.textContent += "\n" + line; el.scrollTop = el.scrollHeight; }
+
+    // ---- Controls ----
+    document.getElementById("passBtn").addEventListener("click", () => {
+        if (!document.getElementById("bothChk").checked && toMove !== humanColor) { flash("It's White's move (Claude)."); return; }
+        pass();
+    });
+    document.getElementById("resignBtn").addEventListener("click", resign);
+    document.getElementById("undoBtn").addEventListener("click", () => {
+        if (!history.length) { flash("Nothing to undo."); return; }
+        const s = history.pop();
+        board = s.board; toMove = s.toMove; captures = s.captures; passes = s.passes;
+        lastMove = s.lastMove; moveNum = s.moveNum; seen = s.seen; moves = s.moves;
+        gameOver = false; result = null;
+        document.getElementById("log").textContent = "Undo to move " + moveNum + ". " + (toMove === BLACK ? "Black" : "White") + " to play.";
+        render(); updatePanel();
+    });
+    document.getElementById("newBtn").addEventListener("click", () => {
+        fresh(); document.getElementById("log").textContent = "Game start. Black to play.";
+        flash("New game."); render(); updatePanel();
+    });
+    window.addEventListener("resize", () => { setup(); render(); });
+
+    // ---- Public API (for Claude to play White) ----
+    function asciiBoard() {
+        let s = "   " + COLS.split("").join(" ") + "\n";
+        for (let r = 0; r < N; r++) {
+            const num = String(N - r).padStart(2, " ");
+            const row = board[r].map(v => v === EMPTY ? "." : v === BLACK ? "X" : "O").join(" ");
+            s += num + " " + row + " " + num + "\n";
+        }
+        s += "   " + COLS.split("").join(" ") + "\n(X=Black  O=White)";
+        return s;
+    }
+    function parseCoord(str) {
+        str = String(str).trim().toUpperCase();
+        const col = COLS.indexOf(str[0]);
+        const rowNum = parseInt(str.slice(1), 10);
+        if (col < 0 || isNaN(rowNum)) return null;
+        const r = N - rowNum;
+        if (!inB(r, col)) return null;
+        return [r, col];
+    }
+    window.GO = {
+        state() {
+            return {
+                toMove: toMove === BLACK ? "B" : "W",
+                moveNumber: moveNum,
+                lastMove: lastMove ? coordStr(lastMove[0], lastMove[1]) : (moves.length && moves[moves.length - 1].coord === "pass" ? "pass" : null),
+                captures: { black: captures[BLACK], white: captures[WHITE] },
+                gameOver, result,
+                ascii: asciiBoard(),
+                board: board.map(row => row.slice())
+            };
+        },
+        play(coord) {
+            const p = typeof coord === "string" ? parseCoord(coord) : coord;
+            if (!p) return { ok: false, reason: "bad coordinate" };
+            return place(p[0], p[1]);
+        },
+        pass() { pass(); return { ok: true }; },
+        legalFor(coord) {
+            const p = typeof coord === "string" ? parseCoord(coord) : coord;
+            if (!p) return { ok: false, reason: "bad coordinate" };
+            return tryMove(p[0], p[1], toMove);
+        },
+        reset() { fresh(); document.getElementById("log").textContent = "Game start."; render(); updatePanel(); }
+    };
+
+    // ---- Init ----
+    fresh(); setup(); render(); updatePanel();
+})();
+</script>
+</body>
+</html>
