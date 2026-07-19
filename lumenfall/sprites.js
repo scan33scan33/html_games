@@ -45,8 +45,10 @@
         v: '#e8622a', V: '#f1c40f',   // fire orange / yellow
         j: '#8a8578', J: '#615d52',   // stone / stone dark
         D: '#2a2440',                 // dark navy
-        Y: '#b5892f', Z: '#8a6522',   // ochre / ochre dark (墨璃)
-        W: '#f4f4f4',                 // fox white (青璇)
+        Y: '#b5892f', Z: '#8a6522',   // ochre / ochre dark (Ochre, the muralist)
+        W: '#f4f4f4',                 // pale cloth
+        I: '#3563cf', i: '#24418a',   // cobalt / cobalt shadow (Cobalt, the lens-grinder)
+        G: '#cfe6ff',                 // pale glass (a ground lens)
         // landmarks
         q: '#d94f2b', Q: '#a3341a',   // torii vermilion / shadow
         z: '#4a5160',                 // cold cut stone (幽都之門)
@@ -68,9 +70,9 @@
             '....hSssssS.....',
             '.....kSSSk......',
             '....kbbbbbk.....',
-            '...rRrrrrRr.g...',
-            '..rRRrrrrRRr.g..',
-            '..rRRrrrrRRr.k..',
+            '...rRrrrrRr.q...',
+            '..rRRrrrrRRr.t..',
+            '..rRRrrrrRRr.t..',
             '..rRRrrrrRRr....',
             '...RRr..rRR.....',
             '...kk....kk.....',
@@ -85,9 +87,9 @@
             '....hSssssS.....',
             '.....kSSSk......',
             '....kbbbbbk.....',
-            '...rRrrrrRr.g...',
-            '..rRRrrrrRRr.g..',
-            '..rRRrrrrRRr.k..',
+            '...rRrrrrRr.q...',
+            '..rRRrrrrRRr.t..',
+            '..rRRrrrrRRr.t..',
             '..rRRrrrrRRr....',
             '...RRr..rRR.....',
             '.........kk.....',
@@ -102,9 +104,9 @@
             '....hSssssS.....',
             '.....kSSSk......',
             '....kbbbbbk.....',
-            '...rRrrrrRr.g...',
-            '..rRRrrrrRRr.g..',
-            '..rRRrrrrRRr.k..',
+            '...rRrrrrRr.q...',
+            '..rRRrrrrRRr.t..',
+            '..rRRrrrrRRr.t..',
             '..rRRrrrrRRr....',
             '...RRr..rRR.....',
             '...kk...........',
@@ -228,22 +230,22 @@
             '................',
             '................',
         ],
-        // 青璇 — nine-tailed fox spirit, white robes, orange ears & tail
+        // Cobalt — the lens-grinder, in a deep-blue coat, holding up a ground lens.
         qingxuan: [
             '................',
-            '...v......v.....',
-            '...vk....kv.....',
-            '....khhhhk......',
-            '...khssssh......',
+            '....hhhhhh......',
+            '...hhssssh......',
             '...hsesesh......',
             '...hSssssS......',
-            '....kWWWk.......',
-            '...WWWWWWW..vv..',
-            '..WWWWWWWWW.vvv.',
-            '..WWWWWWWWW.vv..',
-            '..WWWWWWWWW.....',
-            '...WWW.WWW......',
+            '....kIIIk.......',
+            '...IiIIIIi..GG..',
+            '..IiIIIIIi.GVG..',
+            '..IiIIIIIi..GG..',
+            '..IiIIIIIi......',
+            '...IiIIIi.......',
+            '...IiI.IiI......',
             '...kk...kk......',
+            '................',
             '................',
             '................',
         ],

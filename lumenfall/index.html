@@ -571,141 +571,136 @@
     let soundOn = localStorage.getItem('xySound') !== '0';
     let seqTimer = null, seqStep = 0, seqTime = 0, track = null;
     const fq = m => 440 * Math.pow(2, (m - 69) / 12);
-    // 8 bars x 8 steps per track, all in the Chinese pentatonic scale (宮商角徵羽).
-    // 玄淵's motif (A-G-E-C descending) hides in the town theme's last bar and drives the boss theme.
+    // ------------------------------------------------------------------
+    // Lumenfall's score: arrangements of PUBLIC-DOMAIN folk & classical tunes,
+    // one matched to each scene's mood. Every source is pre-1900 folk or a
+    // composer dead well over a century, so these are transcribed directly (a
+    // storybook-European palette that fits a painterly Western fantasy — and,
+    // unlike copyrighted songs, safe to quote outright). 8 bars × 8 steps;
+    // MIDI notes, 0 = rest; a quarter note is a note followed by a held 0.
+    // ------------------------------------------------------------------
     const TRACKS = {
-        overworld: { step: 0.16, bassEvery: 4, arpEvery: 1, drums: 'k--h--h-',
+        // "May Song" (traditional folk, Suzuki Bk1) — bright walking tune for the road.
+        overworld: { step: 0.17, bassEvery: 4, arpEvery: 1, drums: 'k--h--h-',
             lead: [
-                [72, 0, 74, 0, 76, 0, 79, 76], [74, 0, 76, 0, 79, 0, 81, 79],
-                [76, 0, 79, 0, 84, 0, 81, 79], [76, 74, 72, 0, 74, 0, 76, 0],
-                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 79, 0, 76, 0, 74, 76],
-                [79, 0, 76, 0, 74, 0, 72, 74], [74, 72, 69, 0, 72, 0, 0, 0]],
-            bass: [48, 50, 45, 43, 48, 50, 43, 48],
-            chords: [[60, 64, 67], [62, 67, 69], [57, 60, 64], [55, 62, 67],
-                     [60, 64, 67], [62, 67, 69], [55, 62, 67], [60, 64, 67]] },
-        town: { step: 0.21, bassEvery: 4, arpEvery: 2, drums: '--------',
+                [76, 0, 74, 0, 72, 0, 74, 0], [76, 0, 76, 0, 76, 0, 0, 0],
+                [74, 0, 74, 0, 74, 0, 0, 0], [76, 0, 79, 0, 79, 0, 0, 0],
+                [76, 0, 74, 0, 72, 0, 74, 0], [76, 0, 76, 0, 76, 0, 76, 0],
+                [74, 0, 74, 0, 76, 0, 74, 0], [72, 0, 0, 0, 72, 0, 0, 0]],
+            bass: [48, 48, 50, 43, 48, 48, 43, 48],
+            chords: [[60, 64, 67], [60, 64, 67], [62, 65, 69], [55, 59, 62],
+                     [60, 64, 67], [60, 64, 67], [55, 59, 62], [60, 64, 67]] },
+        // "Lightly Row" (German folk) — homely and bright, for Marrow's End.
+        town: { step: 0.2, bassEvery: 4, arpEvery: 2, drums: '--------',
             lead: [
-                [76, 0, 0, 74, 0, 0, 72, 0], [74, 0, 0, 72, 0, 0, 69, 0],
-                [72, 0, 0, 69, 0, 0, 67, 0], [69, 0, 67, 0, 64, 0, 0, 0],
-                [76, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 76, 0, 0, 74, 0],
-                [72, 0, 0, 76, 0, 0, 72, 0], [69, 0, 67, 0, 64, 0, 60, 0]],
-            bass: [45, 43, 41, 40, 45, 43, 41, 43],
-            chords: [[57, 60, 64], [55, 62, 67], [53, 60, 65], [52, 57, 64],
-                     [57, 60, 64], [55, 62, 67], [53, 60, 65], [55, 62, 67]] },
-        battle: { step: 0.11, bassEvery: 2, arpEvery: 1, drums: 'k-hk-h-h',
+                [79, 0, 76, 0, 76, 0, 0, 0], [77, 0, 74, 0, 74, 0, 0, 0],
+                [72, 0, 74, 0, 76, 0, 77, 0], [79, 0, 79, 0, 79, 0, 0, 0],
+                [79, 0, 76, 0, 76, 0, 0, 0], [77, 0, 74, 0, 74, 0, 0, 0],
+                [72, 0, 76, 0, 79, 0, 76, 0], [72, 0, 0, 0, 72, 0, 0, 0]],
+            bass: [48, 43, 48, 55, 48, 43, 55, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [60, 64, 67], [55, 59, 65],
+                     [60, 64, 67], [55, 59, 62], [55, 59, 65], [60, 64, 67]] },
+        // "In the Hall of the Mountain King" (Grieg, 1875) — creeping, driving battle theme.
+        battle: { step: 0.11, bassEvery: 2, arpEvery: 2, drums: 'k-hk-h-h',
             lead: [
-                [69, 69, 0, 72, 74, 0, 76, 74], [67, 67, 0, 69, 72, 0, 74, 72],
-                [64, 64, 0, 67, 69, 0, 72, 69], [62, 64, 67, 69, 76, 69, 67, 64],
-                [69, 69, 0, 72, 74, 0, 79, 76], [67, 67, 0, 74, 72, 0, 69, 72],
-                [64, 67, 72, 76, 79, 76, 72, 69], [62, 0, 62, 62, 74, 0, 62, 0]],
-            bass: [45, 43, 40, 38, 45, 43, 40, 38],
-            chords: [[57, 60, 64], [55, 62, 67], [52, 57, 64], [50, 57, 62],
-                     [57, 60, 64], [55, 62, 67], [52, 57, 64], [50, 57, 62]] },
-        dungeon: { step: 0.19, bassEvery: 4, arpEvery: 2, drums: 'k-------',
+                [69, 0, 71, 0, 72, 0, 74, 0], [76, 0, 72, 0, 76, 0, 0, 0],
+                [68, 0, 71, 0, 72, 0, 71, 0], [72, 0, 68, 0, 0, 0, 0, 0],
+                [69, 0, 71, 0, 72, 0, 74, 0], [76, 0, 72, 0, 76, 0, 79, 0],
+                [77, 0, 74, 0, 71, 0, 74, 0], [69, 0, 69, 0, 0, 0, 0, 0]],
+            bass: [45, 45, 44, 44, 45, 45, 43, 45],
+            chords: [[57, 60, 64], [57, 60, 64], [56, 59, 62], [56, 59, 62],
+                     [57, 60, 64], [57, 60, 64], [55, 59, 62], [57, 60, 64]] },
+        // "Greensleeves" (English trad, 16th c.) — minor, moody; the grey dungeons.
+        dungeon: { step: 0.2, bassEvery: 4, arpEvery: 2, drums: 'k-------',
             lead: [
-                [62, 0, 0, 65, 0, 0, 62, 0], [67, 0, 0, 65, 0, 0, 62, 0],
-                [72, 0, 0, 69, 0, 0, 67, 0], [62, 0, 0, 0, 0, 0, 0, 0],
-                [62, 0, 0, 65, 0, 0, 67, 0], [69, 0, 0, 67, 0, 0, 65, 0],
-                [65, 0, 0, 62, 0, 0, 60, 0], [62, 0, 0, 0, 0, 0, 0, 0]],
-            bass: [38, 36, 33, 31, 38, 36, 33, 38],
-            chords: [[50, 55, 57], [48, 53, 55], [45, 50, 52], [43, 48, 50],
-                     [50, 55, 57], [48, 53, 55], [45, 50, 52], [50, 55, 57]] },
-        boss: { step: 0.105, bassEvery: 2, arpEvery: 1, drums: 'kkh-k-h-',
+                [69, 0, 72, 0, 74, 0, 76, 0], [77, 0, 76, 0, 74, 0, 71, 0],
+                [67, 0, 69, 0, 71, 0, 72, 0], [69, 0, 69, 0, 68, 0, 69, 0],
+                [69, 0, 72, 0, 74, 0, 76, 0], [77, 0, 76, 0, 74, 0, 71, 0],
+                [67, 0, 68, 0, 71, 0, 68, 0], [69, 0, 0, 0, 69, 0, 0, 0]],
+            bass: [45, 41, 40, 45, 45, 41, 40, 45],
+            chords: [[57, 60, 64], [53, 57, 60], [52, 56, 59], [57, 61, 64],
+                     [57, 60, 64], [53, 57, 60], [52, 56, 59], [57, 60, 64]] },
+        // Beethoven, Symphony No. 5 opening motif (1808) — fate-knocking boss theme.
+        boss: { step: 0.115, bassEvery: 2, arpEvery: 2, drums: 'kkh-k-h-',
             lead: [
-                [69, 0, 67, 0, 64, 0, 60, 0], [69, 69, 67, 67, 64, 64, 62, 60],
-                [72, 0, 69, 0, 67, 0, 62, 0], [64, 62, 64, 62, 64, 0, 57, 0],
-                [69, 0, 72, 0, 76, 0, 72, 0], [79, 76, 79, 76, 79, 0, 67, 0],
-                [72, 69, 72, 69, 72, 0, 62, 0], [64, 64, 64, 64, 62, 62, 62, 62]],
-            bass: [45, 45, 43, 40, 45, 45, 43, 45],
-            chords: [[57, 60, 64], [57, 60, 64], [55, 62, 67], [52, 57, 64],
-                     [57, 60, 64], [50, 57, 62], [55, 62, 67], [52, 57, 64]] },
-        // 憶 — a tender 《魯冰花》-style ballad (original melody in that gentle
-        // major-pentatonic idiom): slow, flute-forward, lots of breathing space.
-        // Used for remembrance visions, the master's memory, and the ending.
+                [0, 0, 76, 76, 76, 0, 72, 0], [0, 0, 74, 74, 74, 0, 71, 0],
+                [72, 0, 76, 0, 79, 0, 72, 0], [71, 71, 74, 74, 67, 0, 0, 0],
+                [0, 0, 76, 76, 76, 0, 72, 0], [0, 0, 74, 74, 74, 0, 71, 0],
+                [72, 0, 76, 0, 84, 0, 79, 0], [76, 0, 72, 0, 69, 0, 0, 0]],
+            bass: [45, 45, 41, 43, 45, 45, 40, 45],
+            chords: [[57, 60, 64], [53, 57, 60], [57, 60, 64], [55, 59, 62],
+                     [57, 60, 64], [53, 57, 60], [57, 60, 64], [52, 56, 59]] },
+        // "Go Tell Aunt Rhody" (trad, mel. from Rousseau 18th c.) — a lament for
+        // "the old grey goose is dead": the visions, memory, the Faded. Uncannily apt.
         memory: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
             lead: [
-                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
-                [69, 0, 72, 0, 74, 0, 0, 0], [72, 0, 69, 0, 67, 0, 0, 0],
-                [72, 0, 74, 0, 76, 0, 0, 0], [79, 0, 76, 0, 74, 0, 72, 0],
-                [69, 0, 67, 0, 69, 0, 72, 0], [69, 0, 67, 0, 64, 0, 0, 0]],
-            bass: [48, 45, 41, 43, 48, 45, 40, 43],
-            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
-                     [60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62]] },
+                [76, 0, 76, 0, 74, 0, 72, 0], [74, 0, 74, 0, 72, 0, 0, 0],
+                [76, 0, 76, 0, 74, 0, 72, 0], [67, 0, 0, 0, 72, 0, 0, 0],
+                [72, 0, 72, 0, 74, 0, 72, 0], [71, 0, 71, 0, 72, 0, 0, 0],
+                [76, 0, 74, 0, 72, 0, 71, 0], [72, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [48, 50, 48, 43, 48, 43, 47, 48],
+            chords: [[60, 64, 67], [62, 65, 69], [60, 64, 67], [55, 59, 62],
+                     [60, 64, 67], [55, 59, 62], [55, 59, 62], [60, 64, 67]] },
 
-        // ------------------------------------------------------------------
-        // The five tracks below are ORIGINAL melodies written in the Taiwanese
-        // folk/ballad idiom. Nothing here is transcribed from a real song —
-        // 《望春風》《雨夜花》《魯冰花》 and the like are studied for their
-        // *devices*, which are then applied to new tunes:
-        //   · anhemitonic pentatonic — 宮商角徵羽 only, no 4th/7th (fa/ti)
-        //   · 起承轉合 — four two-bar phrases: open, answer, turn, resolve.
-        //     The 轉 (bars 5-6) is where the mode darkens or the register jumps.
-        //   · stepwise descent into the cadence, tonic landed on a long note
-        //   · 羽 mode (minor pentatonic on la) for grief, 宮 (do) for warmth
-        //   · wide opening leap answered by a slow climb down — the Hengchun
-        //     恆春民謠 gesture, used here for the desert
-        // ------------------------------------------------------------------
-
-        // 序曲 — title. Stately and open; the game opened on the town theme before.
-        // 宮 mode on C. 起 rises through the pentatonic, 轉 drops to 羽 for shade.
-        title: { step: 0.26, bassEvery: 4, arpEvery: 2, drums: '--------',
+        // "Long, Long Ago" (T.H. Bayly, 1833) — "tales that to me were so dear";
+        // the wistful title tune. (Requested by name — public domain.)
+        title: { step: 0.24, bassEvery: 4, arpEvery: 2, drums: '--------',
             lead: [
-                [72, 0, 0, 76, 0, 0, 79, 0], [81, 0, 79, 0, 76, 0, 0, 0],
-                [74, 0, 0, 76, 0, 0, 79, 0], [76, 0, 74, 0, 72, 0, 0, 0],
-                [69, 0, 0, 72, 0, 0, 74, 0], [76, 0, 74, 0, 72, 0, 69, 0],
-                [72, 0, 76, 0, 79, 0, 84, 0], [81, 0, 79, 0, 76, 74, 72, 0]],
-            bass: [48, 45, 50, 48, 45, 43, 48, 48],
-            chords: [[60, 64, 67], [57, 60, 64], [62, 67, 69], [60, 64, 67],
-                     [57, 60, 64], [55, 62, 67], [60, 64, 67], [60, 64, 67]] },
+                [67, 0, 72, 0, 72, 0, 71, 0], [72, 0, 74, 0, 72, 0, 0, 0],
+                [67, 0, 72, 0, 72, 0, 71, 0], [72, 0, 74, 0, 72, 0, 0, 0],
+                [74, 0, 74, 0, 76, 0, 74, 0], [72, 0, 71, 0, 69, 0, 0, 0],
+                [67, 0, 72, 0, 72, 0, 71, 0], [72, 0, 74, 0, 72, 0, 0, 0]],
+            bass: [48, 55, 48, 55, 50, 45, 48, 55],
+            chords: [[60, 64, 67], [55, 59, 65], [60, 64, 67], [55, 59, 65],
+                     [62, 65, 69], [57, 60, 64], [60, 64, 67], [55, 59, 65]] },
 
-        // 青丘 — the fox village (青丘寨). 徵 mode on G, lilting and playful:
-        // repeated-note upbeats and quick turns, the liveliness of a work song.
-        fox: { step: 0.17, bassEvery: 4, arpEvery: 1, drums: '--h--h--',
+        // "Song of the Wind" (traditional folk, Suzuki Bk1) — gentle, airy;
+        // the half-Faded lakeside town of Hollowmere.
+        fox: { step: 0.18, bassEvery: 4, arpEvery: 2, drums: '--h--h--',
             lead: [
-                [79, 79, 0, 81, 0, 76, 0, 74], [72, 0, 74, 76, 0, 79, 0, 0],
-                [81, 81, 0, 84, 0, 79, 0, 76], [79, 0, 76, 74, 0, 72, 0, 0],
-                [76, 0, 79, 0, 81, 0, 84, 0], [86, 0, 84, 0, 81, 79, 0, 0],
-                [74, 74, 0, 76, 0, 79, 0, 81], [79, 0, 76, 0, 72, 0, 0, 0]],
-            bass: [55, 60, 57, 55, 52, 55, 50, 55],
-            chords: [[55, 62, 67], [60, 64, 67], [57, 60, 64], [55, 62, 67],
-                     [64, 67, 72], [62, 67, 69], [57, 60, 64], [55, 62, 67]] },
+                [79, 0, 79, 0, 76, 0, 79, 0], [81, 0, 81, 0, 79, 0, 0, 0],
+                [79, 0, 79, 0, 76, 0, 79, 0], [72, 0, 0, 0, 74, 0, 0, 0],
+                [76, 0, 79, 0, 81, 0, 79, 0], [77, 0, 76, 0, 74, 0, 0, 0],
+                [72, 0, 74, 0, 76, 0, 74, 0], [72, 0, 0, 0, 72, 0, 0, 0]],
+            bass: [48, 53, 48, 50, 45, 43, 48, 48],
+            chords: [[60, 64, 67], [53, 57, 60], [60, 64, 67], [62, 65, 69],
+                     [57, 60, 64], [53, 57, 60], [60, 64, 67], [60, 64, 67]] },
 
-        // 望川 — the desert trade town (望川鎮). 羽 mode on A, sparse and arid:
-        // each phrase opens on a bare leap and walks back down alone.
-        desert: { step: 0.23, bassEvery: 4, arpEvery: 2, drums: '--------',
+        // Minuet in G (Petzold, long attrib. Bach, ~1725) — a crafter's poise;
+        // Kiln Row, the kiln-warmed makers' town.
+        desert: { step: 0.19, bassEvery: 4, arpEvery: 2, drums: '--------',
             lead: [
-                [69, 0, 0, 0, 76, 0, 0, 0], [74, 0, 72, 0, 69, 0, 0, 0],
-                [72, 0, 0, 0, 79, 0, 0, 0], [76, 0, 74, 0, 72, 0, 0, 0],
-                [81, 0, 0, 79, 0, 0, 76, 0], [74, 0, 0, 72, 0, 0, 69, 0],
-                [67, 0, 69, 0, 72, 0, 74, 0], [69, 0, 0, 0, 0, 0, 0, 0]],
-            bass: [45, 41, 40, 45, 43, 40, 38, 45],
-            chords: [[57, 60, 64], [53, 60, 65], [52, 57, 64], [57, 60, 64],
-                     [57, 64, 69], [53, 60, 65], [55, 62, 67], [57, 60, 64]] },
+                [74, 0, 67, 0, 69, 0, 71, 0], [72, 0, 74, 0, 67, 0, 0, 0],
+                [76, 0, 72, 0, 74, 0, 71, 0], [72, 0, 69, 0, 67, 0, 0, 0],
+                [71, 0, 72, 0, 74, 0, 71, 0], [69, 0, 67, 0, 66, 0, 67, 0],
+                [69, 0, 71, 0, 67, 0, 62, 0], [67, 0, 0, 0, 67, 0, 0, 0]],
+            bass: [55, 47, 48, 43, 55, 43, 55, 55],
+            chords: [[55, 59, 62], [52, 55, 60], [60, 64, 67], [55, 59, 62],
+                     [59, 62, 67], [52, 55, 60], [55, 59, 62], [55, 59, 62]] },
 
-        // 劍爐 — the sword-tomb forge (劍塚). 羽 mode, low and ritual; the kick
-        // on 1 and 5 is the hammer. 轉 flares as the forge relights, then falls.
-        forge: { step: 0.2, bassEvery: 2, arpEvery: 2, drums: 'k---k---',
+        // "Scarborough Fair" (English trad) — modal, spare and old; the hush of
+        // the optional Palette Vault.
+        forge: { step: 0.24, bassEvery: 4, arpEvery: 2, drums: 'k-------',
             lead: [
-                [57, 0, 0, 0, 60, 0, 0, 0], [62, 0, 0, 0, 64, 0, 0, 0],
-                [69, 0, 0, 67, 0, 0, 64, 0], [60, 0, 0, 0, 0, 0, 0, 0],
-                [57, 0, 60, 0, 64, 0, 67, 0], [69, 0, 0, 72, 0, 0, 76, 0],
-                [79, 0, 76, 0, 72, 0, 69, 0], [69, 0, 0, 0, 0, 0, 0, 0]],
-            bass: [33, 33, 36, 36, 33, 33, 40, 33],
-            chords: [[45, 52, 57], [48, 55, 60], [45, 52, 57], [48, 52, 55],
-                     [45, 52, 57], [57, 60, 64], [52, 57, 64], [45, 52, 57]] },
+                [57, 0, 0, 0, 64, 0, 0, 0], [64, 0, 65, 0, 64, 0, 62, 0],
+                [64, 0, 60, 0, 57, 0, 0, 0], [60, 0, 62, 0, 55, 0, 0, 0],
+                [57, 0, 0, 0, 60, 0, 62, 0], [64, 0, 60, 0, 62, 0, 60, 0],
+                [59, 0, 57, 0, 55, 0, 57, 0], [57, 0, 0, 0, 0, 0, 0, 0]],
+            bass: [45, 40, 45, 43, 45, 41, 43, 45],
+            chords: [[57, 60, 64], [52, 55, 59], [57, 60, 64], [55, 58, 62],
+                     [57, 60, 64], [53, 57, 60], [55, 58, 62], [57, 60, 64]] },
 
-        // 終曲 — the ending. Opens on 憶's exact first phrase (G-A-C) so the
-        // callback is unmistakable, then refuses its falling cadence and climbs
-        // an octave instead: the same memory, finally resolved.
-        ending: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+        // "Ode to Joy" (Beethoven, Symphony No. 9, 1824) — the world blooms back
+        // into color; "being alive at all." The triumphant finale.
+        ending: { step: 0.2, bassEvery: 4, arpEvery: 1, drums: 'k--hk--h',
             lead: [
-                [67, 0, 69, 0, 72, 0, 0, 0], [74, 0, 72, 0, 69, 0, 67, 0],
-                [69, 0, 72, 0, 76, 0, 0, 0], [74, 0, 72, 0, 69, 0, 0, 0],
-                [72, 0, 76, 0, 79, 0, 0, 0], [81, 0, 79, 0, 76, 0, 74, 0],
-                [76, 0, 79, 0, 84, 0, 0, 0], [84, 0, 0, 0, 79, 0, 72, 0]],
-            bass: [48, 45, 41, 43, 48, 45, 43, 48],
-            chords: [[60, 64, 67], [57, 60, 64], [53, 57, 60], [55, 59, 62],
-                     [60, 64, 67], [57, 60, 64], [55, 62, 67], [60, 64, 67]] },
+                [76, 0, 76, 0, 77, 0, 79, 0], [79, 0, 77, 0, 76, 0, 74, 0],
+                [72, 0, 72, 0, 74, 0, 76, 0], [76, 0, 0, 74, 0, 0, 74, 0],
+                [76, 0, 76, 0, 77, 0, 79, 0], [79, 0, 77, 0, 76, 0, 74, 0],
+                [72, 0, 72, 0, 74, 0, 76, 0], [74, 0, 0, 72, 0, 0, 72, 0]],
+            bass: [48, 55, 45, 55, 48, 55, 50, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [57, 60, 64], [55, 59, 62],
+                     [60, 64, 67], [55, 59, 62], [62, 65, 67], [60, 64, 67]] },
     };
     function ensureAudio() {
         if (audio) { if (audio.state === 'suspended') audio.resume(); return; }

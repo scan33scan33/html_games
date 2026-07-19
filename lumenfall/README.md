@@ -87,8 +87,35 @@ their display names, stats, sprites, and story changed. This kept the proven
 battle/save/render machinery untouched. The reforge sub-quest was dropped; three
 Prisms lead straight to the Wellspring.
 
-Still carried over from `xuanyuan/` and not yet re-themed: the pixel sprites (party
-and terrain) and the music tracks. They function; they're just not bespoke yet.
+## Music — public-domain folk & classical
+
+The whole score (`TRACKS` in `index.html`) is arrangements of **public-domain**
+folk and classical melodies, one matched to each scene's mood — a
+storybook-European palette that fits the painterly setting. Every source is
+pre-1900 folk or a composer dead well over a century, so they're transcribed
+directly (unlike copyrighted songs, which have to be avoided):
+
+| scene | tune |
+|---|---|
+| title | *Long, Long Ago* (T.H. Bayly, 1833) |
+| overworld / road | *May Song* (traditional) |
+| Marrow's End | *Lightly Row* (German folk) |
+| Hollowmere | *Song of the Wind* (traditional) |
+| Kiln Row | *Minuet in G* (Petzold) |
+| dungeons | *Greensleeves* (English trad., 16th c.) |
+| Palette Vault | *Scarborough Fair* (English trad.) |
+| battle | *In the Hall of the Mountain King* (Grieg, 1875) |
+| boss | *Beethoven, Symphony No. 5* opening (1808) |
+| visions / memory | *Go Tell Aunt Rhody* — a lament for "the old grey goose is dead" |
+| ending | *Ode to Joy* (Beethoven, 1824) |
+
+## Art
+
+The three party members are bespoke pixel sprites matching their roles: **Wren**
+(teal dyer with a dye-brush), **Ochre** (ochre-robed muralist), **Cobalt**
+(deep-blue lens-grinder holding a ground lens). Terrain and monster art still
+carry over from `xuanyuan/` — functional, and mostly seen under the grey filter
+anyway — and are the clear next art pass.
 
 ## Testing
 
