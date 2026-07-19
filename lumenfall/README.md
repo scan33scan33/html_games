@@ -97,17 +97,27 @@ directly (unlike copyrighted songs, which have to be avoided):
 
 | scene | tune |
 |---|---|
+| prologue (Sable Fades) | *Londonderry Air / Danny Boy* (Irish trad.) |
 | title | *Long, Long Ago* (T.H. Bayly, 1833) |
 | overworld / road | *May Song* (traditional) |
 | Marrow's End | *Lightly Row* (German folk) |
 | Hollowmere | *Song of the Wind* (traditional) |
 | Kiln Row | *Minuet in G* (Petzold) |
-| dungeons | *Greensleeves* (English trad., 16th c.) |
-| Palette Vault | *Scarborough Fair* (English trad.) |
+| the shop | *Country Gardens* (English Morris dance) |
+| the Ashwood | *The Ash Grove* (Welsh trad.) |
+| the Emberhollow | *Toccata in D minor* (Bach, BWV 565) |
+| the Sunken Gallery | *The Water Is Wide / Waly Waly* (English trad.) |
+| the Wellspring (finale) | *Canon in D* (Pachelbel, ~1690) |
+| the Palette Vault | *Scarborough Fair* (English trad.) |
+| generic dungeon (fallback) | *Greensleeves* (English trad., 16th c.) |
 | battle | *In the Hall of the Mountain King* (Grieg, 1875) |
 | boss | *Beethoven, Symphony No. 5* opening (1808) |
 | visions / memory | *Go Tell Aunt Rhody* — a lament for "the old grey goose is dead" |
 | ending | *Ode to Joy* (Beethoven, 1824) |
+
+Each of the three story regions and the Wellspring now has its own theme (the
+Ashwood even gets *The Ash Grove* by name); the shop and the prologue each got
+one too.
 
 ## Art
 

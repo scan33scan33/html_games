@@ -34,10 +34,25 @@ const vis = s => p.isVisible(s).catch(()=>false);
 async function drain(n=40){for(let i=0;i<n;i++){if(!(await vis('#dialog')))return;await p.keyboard.press('Enter');await p.waitForTimeout(45);}}
 await p.evaluate(()=>localStorage.removeItem('lumenfallSave'));
 await p.reload();
-console.log('\ntitle track:', await p.evaluate(()=>{ showTitle&&showTitle(); return DBG?DBG.track():'?'; }).catch(()=>'n/a'));
-await p.click('#btnNew'); await drain();
-console.log('overworld track:', await p.evaluate(()=>DBG.track()));
-await p.evaluate(()=>openTown(1)); await p.waitForTimeout(120);
-console.log('Marrow\'s End track:', await p.evaluate(()=>DBG.track()));
+console.log('\n-- which track plays where --');
+async function expect(label, want, got) {
+    const ok = got === want;
+    if (!ok) bad++;
+    console.log(`${ok?'ok  ':'FAIL'} ${label.padEnd(22)} ${got}${ok?'':' (want '+want+')'}`);
+}
+await expect('title', 'title', await p.evaluate(()=>{ showTitle(); return DBG.track(); }));
+await p.click('#btnNew');
+await expect('prologue (intro)', 'prologue', await p.evaluate(()=>DBG.track()));
+await drain();
+await expect('overworld (post-intro)', 'overworld', await p.evaluate(()=>DBG.track()));
+await expect("Marrow's End", 'town', await p.evaluate(()=>{ openTown(1); return DBG.track(); }));
+await expect('shop', 'shop', await p.evaluate(()=>{ openShop(1); return DBG.track(); }));
+await p.evaluate(()=>{ $('shop').classList.remove('open'); mode='world'; });
+// region themes via mapTrack (no draw, so no dpos needed)
+for (const [id,want] of [['earth','ashwood'],['fire','emberhollow'],['water','gallery'],['castle','wellspring']]) {
+    await expect('region '+id, want, await p.evaluate(i=>{ dungeonId=i; return mapTrack(); }, id));
+}
+await p.evaluate(()=>{ dungeonId=null; });
+console.log(bad ? `\n${bad} problem(s)` : '\nall tracks well-formed and wired to the right scenes');
 await b.close();
 process.exit(bad?1:0);

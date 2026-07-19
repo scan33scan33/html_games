@@ -701,6 +701,78 @@
             bass: [48, 55, 45, 55, 48, 55, 50, 48],
             chords: [[60, 64, 67], [55, 59, 62], [57, 60, 64], [55, 59, 62],
                      [60, 64, 67], [55, 59, 62], [62, 65, 67], [60, 64, 67]] },
+
+        // "Canon in D" (Pachelbel, ~1690) — its endless hopeful ground bass, for
+        // the Wellspring: the grand, building destination at the world's heart.
+        wellspring: { step: 0.18, bassEvery: 2, arpEvery: 1, drums: 'k--h--h-',
+            lead: [
+                [78, 0, 76, 0, 74, 0, 73, 0], [71, 0, 69, 0, 71, 0, 73, 0],
+                [74, 0, 73, 0, 71, 0, 69, 0], [67, 0, 66, 0, 67, 0, 64, 0],
+                [66, 0, 62, 0, 64, 0, 66, 0], [67, 0, 69, 0, 71, 0, 73, 0],
+                [74, 0, 71, 0, 69, 0, 67, 0], [66, 0, 69, 0, 69, 0, 69, 0]],
+            bass: [50, 45, 47, 42, 43, 38, 43, 45],
+            chords: [[62, 66, 69], [57, 61, 64], [59, 62, 66], [54, 57, 61],
+                     [55, 59, 62], [50, 54, 57], [55, 59, 62], [57, 61, 64]] },
+
+        // "The Ash Grove" (Welsh trad.) — the name even matches; a warm waltzing
+        // lilt for the greyed woodland of the Ashwood.
+        ashwood: { step: 0.19, bassEvery: 4, arpEvery: 2, drums: 'k--h--h-',
+            lead: [
+                [67, 0, 72, 0, 76, 0, 79, 0], [81, 0, 79, 0, 77, 0, 0, 0],
+                [76, 0, 74, 0, 72, 0, 74, 0], [76, 0, 72, 0, 0, 0, 0, 0],
+                [67, 0, 72, 0, 76, 0, 79, 0], [81, 0, 79, 0, 77, 0, 0, 0],
+                [76, 0, 74, 0, 72, 0, 71, 0], [72, 0, 0, 0, 72, 0, 0, 0]],
+            bass: [48, 43, 50, 48, 48, 43, 43, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [62, 65, 69], [60, 64, 67],
+                     [60, 64, 67], [55, 59, 62], [55, 59, 62], [60, 64, 67]] },
+
+        // "Toccata in D minor" (Bach, BWV 565) — the iconic organ flourish;
+        // dramatic and dark for the burning depths of the Emberhollow.
+        emberhollow: { step: 0.13, bassEvery: 2, arpEvery: 2, drums: 'k-hk-h-h',
+            lead: [
+                [81, 0, 79, 81, 0, 0, 0, 0], [69, 0, 0, 0, 0, 0, 0, 0],
+                [74, 0, 73, 0, 70, 0, 69, 0], [67, 0, 65, 0, 64, 0, 62, 0],
+                [69, 69, 67, 67, 65, 65, 64, 64], [62, 0, 0, 0, 69, 0, 0, 0],
+                [70, 0, 69, 0, 67, 0, 65, 0], [64, 0, 0, 0, 62, 0, 0, 0]],
+            bass: [50, 50, 45, 43, 41, 38, 45, 50],
+            chords: [[62, 65, 69], [57, 61, 64], [58, 62, 65], [55, 58, 62],
+                     [53, 57, 60], [50, 53, 57], [57, 61, 64], [50, 53, 57]] },
+
+        // "The Water Is Wide" / "Waly Waly" (English trad.) — a gentle, aching
+        // folk tune for the drowned halls of the Sunken Gallery.
+        gallery: { step: 0.22, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 72, 0, 72, 0, 74, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [72, 0, 76, 0, 79, 0, 77, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [79, 0, 77, 0, 76, 0, 74, 0], [72, 0, 74, 0, 76, 0, 0, 0],
+                [72, 0, 74, 0, 72, 0, 71, 0], [72, 0, 0, 0, 72, 0, 0, 0]],
+            bass: [48, 43, 45, 48, 43, 48, 55, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [57, 60, 64], [60, 64, 67],
+                     [55, 59, 62], [60, 64, 67], [55, 59, 62], [60, 64, 67]] },
+
+        // "Country Gardens" (English Morris dance, trad.) — bustling and cheery,
+        // for the shop counter.
+        shop: { step: 0.15, bassEvery: 4, arpEvery: 1, drums: 'k-h-k-h-',
+            lead: [
+                [67, 0, 64, 0, 60, 0, 64, 0], [67, 0, 72, 0, 72, 0, 0, 0],
+                [71, 0, 69, 0, 67, 0, 65, 0], [64, 0, 0, 0, 64, 0, 0, 0],
+                [67, 0, 64, 0, 60, 0, 64, 0], [67, 0, 72, 0, 74, 0, 0, 0],
+                [76, 0, 74, 0, 72, 0, 71, 0], [72, 0, 0, 0, 72, 0, 0, 0]],
+            bass: [48, 43, 55, 48, 48, 43, 55, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [55, 59, 62], [60, 64, 67],
+                     [60, 64, 67], [55, 59, 62], [55, 59, 62], [60, 64, 67]] },
+
+        // "Londonderry Air" / "Danny Boy" (Irish trad.) — the most tender tune of
+        // all, for the prologue: Sable's fading, the loss the whole game turns on.
+        prologue: { step: 0.3, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [60, 0, 64, 0, 65, 0, 67, 0], [72, 0, 76, 0, 74, 0, 72, 0],
+                [67, 0, 64, 0, 60, 0, 64, 0], [65, 0, 64, 0, 62, 0, 0, 0],
+                [60, 0, 64, 0, 65, 0, 67, 0], [72, 0, 76, 0, 79, 0, 77, 0],
+                [76, 0, 72, 0, 69, 0, 72, 0], [67, 0, 0, 0, 60, 0, 0, 0]],
+            bass: [48, 45, 43, 50, 48, 45, 41, 48],
+            chords: [[60, 64, 67], [57, 60, 64], [55, 59, 62], [62, 65, 69],
+                     [60, 64, 67], [57, 60, 64], [53, 57, 60], [60, 64, 67]] },
     };
     function ensureAudio() {
         if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
@@ -789,7 +861,10 @@
     }
     // the ambient track for whichever map you're standing on. The sword-tomb is a
     // forge rather than a monster den, so it gets its own theme.
-    const mapTrack = () => !dungeonId ? 'overworld' : dungeonId === 'tomb' ? 'forge' : 'dungeon';
+    // each region has its own theme now; 'dungeon' (Greensleeves) is the fallback
+    const DUNGEON_TRACK = { earth: 'ashwood', fire: 'emberhollow', water: 'gallery',
+                            castle: 'wellspring', tomb: 'forge' };
+    const mapTrack = () => !dungeonId ? 'overworld' : (DUNGEON_TRACK[dungeonId] || 'dungeon');
     function startTrack(name) {
         track = name;
         if (!audio) return;
@@ -1601,6 +1676,7 @@
         mode = 'shop';
         $('town').classList.remove('open');
         $('shop').classList.add('open');
+        startTrack('shop');
         renderShop(tier);
     }
     let shopTier = 1;
@@ -1660,8 +1736,8 @@
     }
     $('shopLeave').addEventListener('click', () => {
         $('shop').classList.remove('open');
-        if (townId) { mode = 'town'; $('town').classList.add('open'); }
-        else { mode = 'world'; draw(); }
+        if (townId) { mode = 'town'; $('town').classList.add('open'); startTrack(TOWN_TRACK[townId] || 'town'); }
+        else { mode = 'world'; startTrack('overworld'); draw(); }
     });
 
     // =========================================================================
@@ -2538,7 +2614,8 @@
         S.party.forEach(fullHeal);
         $('title').classList.remove('open');
         mode = 'world';
-        startTrack('overworld');
+        startTrack('prologue');   // Londonderry Air over Sable's fading; the road-
+                                  // theme (overworld) begins once the intro closes
         draw();
         say([
             ['', '<i>Sable’s dye-shop, the morning of the Greydawn’s first anniversary. The last red in the pots has gone to rust-grey overnight.</i>'],
@@ -2550,7 +2627,7 @@
             ['Sable', '<i>(smiling, already paler)</i> Paint something bright for me, Wren. Something that won’t last. …That was always the whole point of it.'],
             ['', '<b>Sable has Faded.</b> Where she stood, a grey stillness settles, and is at peace.'],
             ['', '<i>Cross east to Marrow’s End. In battle, weaken a Faded then “Capture” it into your kit; press or blend pigments from the Menu.</i>'],
-        ]);
+        ], () => startTrack('overworld'));   // the road begins where the grief ends
         S.flags.intro = true;
         save();
     }
