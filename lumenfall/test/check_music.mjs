@@ -48,6 +48,10 @@ await expect('overworld (post-intro)', 'overworld', await p.evaluate(()=>DBG.tra
 await expect("Marrow's End", 'town', await p.evaluate(()=>{ openTown(1); return DBG.track(); }));
 await expect('shop', 'shop', await p.evaluate(()=>{ openShop(1); return DBG.track(); }));
 await p.evaluate(()=>{ $('shop').classList.remove('open'); mode='world'; });
+for (const [id,want] of [[4,'umber'],[5,'loomrest'],[6,'stillwater']]) {
+    await expect('town '+id, want, await p.evaluate(i=>{ openTown(i); return DBG.track(); }, id));
+    await p.evaluate(()=>{ $('town').classList.remove('open'); mode='world'; });
+}
 // region themes via mapTrack (no draw, so no dpos needed)
 for (const [id,want] of [['earth','ashwood'],['fire','emberhollow'],['water','gallery'],['castle','wellspring']]) {
     await expect('region '+id, want, await p.evaluate(i=>{ dungeonId=i; return mapTrack(); }, id));

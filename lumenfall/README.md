@@ -44,6 +44,27 @@ game canvas, driven by story state (`colorFilter()` in `index.html`):
 It's cheap (the filter string is only written when it changes) and it makes story
 progress *visible*: the world you're saving literally comes back to life around you.
 
+## The towns
+
+Three towns sit on the critical path — **Marrow's End** (home), **Hollowmere**
+(where Cobalt joins), **Kiln Row** — and three more are **optional lore-towns**,
+off the road, that fill in the full backstory and turn the ending from an obvious
+"fix it" into a real dilemma:
+
+- **Umber Vale** (east plains) — the one town that outlived the *Vivid Age*, and
+  remembers why the grey came: a world so full of feeling it tore itself apart
+  (the *Bright Madness*). The mercy was real.
+- **Loomrest** (a former-Loomkeeper enclave) — reveals the order was **split**:
+  some wanted the grey made permanent, others wanted a reprieve with a way back
+  left open. The twist — **Sable was a dissenter who hid the three Prisms herself
+  and left them to be found, so the choice to wake the world would be Wren's, not
+  the order's.** "Paint something bright… that was the whole point" reframes.
+- **Stillwater** (south coast) — a town that walked into the grey *by choice* and
+  is glad of it. Restoring color would lift the weight of mortality back onto
+  people who gladly set it down — so the finale is a genuine choice, not a gimme.
+
+They're optional, repeatable, and gate nothing.
+
 ## Combat — visible D20 dice
 
 Every **weapon attack rolls a d20**, shown on screen (a tumbling die that settles
@@ -103,6 +124,9 @@ directly (unlike copyrighted songs, which have to be avoided):
 | Marrow's End | *Lightly Row* (German folk) |
 | Hollowmere | *Song of the Wind* (traditional) |
 | Kiln Row | *Minuet in G* (Petzold) |
+| Umber Vale | *Wayfaring Stranger* (American folk) |
+| Loomrest | *Aura Lee* (1861) |
+| Stillwater | *Shenandoah* (American folk) |
 | the shop | *Country Gardens* (English Morris dance) |
 | the Ashwood | *The Ash Grove* (Welsh trad.) |
 | the Emberhollow | *Toccata in D minor* (Bach, BWV 565) |

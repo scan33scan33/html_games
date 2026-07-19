@@ -311,6 +311,11 @@
     WORLD[6] = WORLD[6].slice(0, 31) + 'J' + WORLD[6].slice(32);
     WORLD[20] = WORLD[20].slice(0, 16) + 'n' + WORLD[20].slice(17);
     WORLD[26] = WORLD[26].slice(0, 25) + 'x' + WORLD[26].slice(26);
+    // three OPTIONAL lore-towns, off the critical path (4 Umber Vale, 5 Loomrest,
+    // 6 Stillwater) — visit for backstory, not required to finish.
+    WORLD[11] = WORLD[11].slice(0, 33) + '4' + WORLD[11].slice(34);
+    WORLD[14] = WORLD[14].slice(0, 30) + '5' + WORLD[14].slice(31);
+    WORLD[31] = WORLD[31].slice(0, 27) + '6' + WORLD[31].slice(28);
 
     const DMAPS = {
         earth: [
@@ -514,6 +519,13 @@
              flavor: 'a lakeside town where the half-Faded drift, quiet and kind.' },
         3: { name: 'Kiln Row', emoji: '🏭', inn: 80, tier: 3,
              flavor: 'a crafters’ row below the Emberhollow, hoarding the last warm light.' },
+        // optional lore-towns (off the critical path)
+        4: { name: 'Umber Vale', emoji: '🏚️', inn: 30, tier: 2,
+             flavor: 'a half-ruined town on the east plains that outlived the Vivid Age.' },
+        5: { name: 'Loomrest', emoji: '🏛️', inn: 60, tier: 3,
+             flavor: 'a hushed enclave where old Loomkeepers see out their grey years.' },
+        6: { name: 'Stillwater', emoji: '🏘️', inn: 60, tier: 3,
+             flavor: 'a southern coast town that made its peace with the grey, and is glad of it.' },
     };
 
     // =========================================================================
@@ -773,6 +785,42 @@
             bass: [48, 45, 43, 50, 48, 45, 41, 48],
             chords: [[60, 64, 67], [57, 60, 64], [55, 59, 62], [62, 65, 69],
                      [60, 64, 67], [57, 60, 64], [53, 57, 60], [60, 64, 67]] },
+
+        // "Wayfaring Stranger" (American folk, 19th c.) — a haunting minor tune
+        // for the ruin-town of Umber Vale, which remembers the Vivid Age.
+        umber: { step: 0.24, bassEvery: 4, arpEvery: 2, drums: 'k-------',
+            lead: [
+                [69, 0, 72, 0, 74, 0, 76, 0], [76, 0, 74, 0, 72, 0, 69, 0],
+                [69, 0, 72, 0, 76, 0, 79, 0], [76, 0, 74, 0, 72, 0, 0, 0],
+                [69, 0, 72, 0, 74, 0, 76, 0], [79, 0, 76, 0, 74, 0, 72, 0],
+                [72, 0, 71, 0, 69, 0, 68, 0], [69, 0, 0, 0, 69, 0, 0, 0]],
+            bass: [45, 41, 40, 45, 45, 43, 40, 45],
+            chords: [[57, 60, 64], [53, 57, 60], [52, 56, 59], [57, 60, 64],
+                     [57, 60, 64], [55, 59, 62], [52, 56, 59], [57, 61, 64]] },
+
+        // "Aura Lee" (W.W. Fosdick / G.R. Poulton, 1861) — gentle and reflective,
+        // for the old Loomkeepers seeing out their grey years at Loomrest.
+        loomrest: { step: 0.24, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [67, 0, 69, 0, 71, 0, 72, 0], [71, 0, 69, 0, 67, 0, 0, 0],
+                [64, 0, 65, 0, 67, 0, 69, 0], [67, 0, 65, 0, 64, 0, 0, 0],
+                [67, 0, 69, 0, 71, 0, 72, 0], [74, 0, 72, 0, 71, 0, 0, 0],
+                [72, 0, 71, 0, 69, 0, 67, 0], [64, 0, 67, 0, 72, 0, 0, 0]],
+            bass: [48, 43, 45, 48, 48, 43, 43, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [57, 60, 64], [60, 64, 67],
+                     [60, 64, 67], [62, 65, 69], [55, 59, 62], [60, 64, 67]] },
+
+        // "Shenandoah" (American folk, 19th c.) — a serene, wide-flowing river tune
+        // for the coast town of Stillwater, at peace with the grey.
+        stillwater: { step: 0.26, bassEvery: 4, arpEvery: 2, drums: '--------',
+            lead: [
+                [60, 0, 64, 0, 67, 0, 69, 0], [67, 0, 64, 0, 60, 0, 0, 0],
+                [64, 0, 67, 0, 69, 0, 67, 0], [72, 0, 69, 0, 67, 0, 0, 0],
+                [67, 0, 69, 0, 72, 0, 69, 0], [67, 0, 64, 0, 60, 0, 0, 0],
+                [60, 0, 64, 0, 67, 0, 64, 0], [60, 0, 0, 0, 60, 0, 0, 0]],
+            bass: [48, 43, 45, 48, 43, 48, 55, 48],
+            chords: [[60, 64, 67], [55, 59, 62], [57, 60, 64], [60, 64, 67],
+                     [55, 59, 62], [60, 64, 67], [55, 59, 62], [60, 64, 67]] },
     };
     function ensureAudio() {
         if (audio) { if (audio.state === 'suspended') audio.resume(); return; }
@@ -930,6 +978,7 @@
                       '#': '#242c3a', l: '#93331f', w: '#2e5d7d', S: '#4f7249', T: '#3a2d1e', B: '#33582f',
                       1: '#4f7249', 2: '#33582f', 3: '#c9b077', A: '#4f7249', K: '#7a7469', C: '#c9b077',
                       J: '#33582f', n: '#33582f', x: '#c9b077',
+                      4: '#4f7249', 5: '#4f7249', 6: '#c9b077',
                       d: '#8d6e4b' };
     // Each dungeon gets its own floor; TCOLORS is shared with the world map, whose
     // grass green has no business inside a volcano. Covers the tiles that are
@@ -970,14 +1019,15 @@
             ctx.globalAlpha = 1;
         }
     }
-    const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', A: '⛩️', B: '🌋', C: '🏯', K: '🌑', J: '🛕', n: '🕸️', x: '🏕️',
+    const TEMOJI = { f: '🎋', '^': '🗻', 1: '🏮', 2: '🏮', 3: '🏮', 4: '🏚️', 5: '🏛️', 6: '🏘️', A: '⛩️', B: '🌋', C: '🏯', K: '🌑', J: '🛕', n: '🕸️', x: '🏕️',
                      l: '🔥', w: '🌊', T: '📦', '~': null };
     // Terrain rendered as procedural pixel sprites (sprites.js); tiles not listed
     // fall back to the emoji in TEMOJI. Two chars mean different things depending
     // on the map — 'B' is a volcano outdoors but a boss underground, and 'S' is the
     // start clearing outdoors but the exit door underground — so the lookup is
     // split by mode rather than keyed on the char alone.
-    const TILE_SPRITE = { f: 'tree', '^': 'peak', 1: 'house', 2: 'house', 3: 'house', w: 'wave' };
+    const TILE_SPRITE = { f: 'tree', '^': 'peak', 1: 'house', 2: 'house', 3: 'house',
+                          4: 'house', 5: 'house', 6: 'house', w: 'wave' };
     const WORLD_SPRITE = { A: 'shrine', B: 'volcano', C: 'pagoda', J: 'tomb', K: 'gate',
                            n: 'nest', x: 'camp' };
     const DUNGEON_SPRITE = { T: 'chest', S: 'door', l: 'lava' };
@@ -1130,7 +1180,7 @@
                 blendEdges(ch, x, y, px0, py0, base);
 
                 // -------- textured details --------
-                if (ch === '.' || ch === 'S' || '123AC'.includes(ch)) {
+                if (ch === '.' || ch === 'S' || '123456AC'.includes(ch)) {
                     ctx.fillStyle = 'rgba(0,0,0,0.10)';
                     for (let i = 0; i < 3; i++) {
                         ctx.fillRect(px0 + th(x, y, i) * (TILE - 4) + 2, py0 + th(x, y, i + 5) * (TILE - 4) + 2, 2, 2);
@@ -1327,7 +1377,7 @@
 
     function enterTile(ch, x, y) {
         if (mode === 'world') {
-            if ('123'.includes(ch)) return openTown(Number(ch));
+            if ('123456'.includes(ch)) return openTown(Number(ch));
             if (ch === 'n') return nestEvent();
             if (ch === 'x') return caravanEvent();
             for (const [id, D] of Object.entries(DUNGEONS)) {
@@ -1543,7 +1593,7 @@
     let townId = null;
     // 桃源村 keeps the homely town theme; the fox village and the desert town
     // get their own so the three don't blur together
-    const TOWN_TRACK = { 2: 'fox', 3: 'desert' };
+    const TOWN_TRACK = { 2: 'fox', 3: 'desert', 4: 'umber', 5: 'loomrest', 6: 'stillwater' };
     function openTown(id) {
         townId = id;
         mode = 'town';
@@ -1667,6 +1717,32 @@
                 ['Kiln-keeper', 'And a plain word: don’t be a miser. Up ahead a Salve stops a cut but not <i>that</i> — lay in <b>Rich Salve 🫙</b>, all you can carry. The coin you save won’t buy a life back.'],
             ]);
         }
+        // ---- optional lore-towns: they complete the picture ----
+        // Umber Vale — WHY the grey came. The mercy was real.
+        if (id === 4) return say([
+            ['Vale-warden', 'Mind where you tread, color-bearer — Umber Vale is mostly rubble now. But it is <i>old</i> rubble. We are the one town that stood clear through the Vivid Age, and we are the only ones left who remember why the grey ever came.'],
+            ['Vale-warden', 'You take the Loomkeepers for thieves. Child, they acted out of <i>terror</i>, not spite. In the Vivid Age every feeling was a fire with no hearth. Love too fierce to bear a parting would burn a house down sooner than let anyone leave it. Grief would tear a whole town apart rather than let the dead lie dead.'],
+            ['Vale-warden', 'They named the end of it the Bright Madness — a world so full of feeling it could not stop feeling, and so could not stop <i>doing</i>. We very nearly unmade ourselves. The grey did not kill the world. The grey is the scar drawn over the wound.'],
+            ['Ochre', '…So the mercy wasn’t a story they told themselves. It truly did save everyone.'],
+            ['Vale-warden', 'It truly did. Which is the hard part, is it not. Now go and decide what to do with that.'],
+        ]);
+        // Loomrest — the order was SPLIT, and Sable's true intent. The twist.
+        if (id === 5) return say([
+            ['Loom-elder', 'Prisms. <i>Real</i> ones, cupped in a child’s two hands. …Then it has begun, and you don’t even know yet what you carry. Sit. You have earned the truth of us.'],
+            ['Loom-elder', 'The Loomkeepers were never one mind. When the Bright Madness ended, half of us wanted the grey made <b>permanent</b> — the world put safely to sleep, and kept asleep. The rest of us called that a second death, only slower. We wanted the grey to be a <b>reprieve</b>. A long winter, not a grave — a pause with a way back left open, for whenever the world grew strong enough to feel again.'],
+            ['Loom-elder', 'We lost that argument. The Prime sealed the Wellspring to finish the unweaving for good. So the dissenters did the one thing still left to us — we hid the last three colors where no unweaving could reach: three Prisms, scattered, and waiting.'],
+            ['Wren', '…Waiting for what?'],
+            ['Loom-elder', 'For someone to find them and carry them back <b>by choice</b>. Not to complete the grey, child — to hold, in one pair of hands, the power to end it <i>or</i> wake it. The Prisms were never the Prime’s tools. They were our <i>ballot</i>. And the one who hid the last of them — who made certain some bright, stubborn child would one day come looking — her name was Sable.'],
+            ['Cobalt', '(quietly) She didn’t grey you to spare you the choosing, Wren. She spent her whole life making sure the choice would be <b>yours</b>.'],
+        ]);
+        // Stillwater — the grey's genuine appeal. The choice is real.
+        if (id === 6) return say([
+            ['Stillwater elder', 'You bring color into Stillwater. How <i>loud</i> it is in here. …I mean no unkindness. Only — we chose this quiet. We are not a town the grey came and <i>took</i>. We are a town that walked into it on purpose, and has not once regretted the step.'],
+            ['Faded fisher', '(mild, far-off) …no ache. no hurry. no one here is afraid of the morning, because the morning is only today, kept. …you could stay. so many do.'],
+            ['Stillwater elder', 'Before you go waking the world, understand what you’d be waking us <i>to</i>. Wilting. Parting. The whole long weight of loving things that end. Some of us set that weight down gladly. You would be lifting it back onto every shoulder here, whether we asked it or no.'],
+            ['Ochre', '…And there’s the knot of it. It isn’t saving them, if they never wanted saving.'],
+            ['Stillwater elder', 'Now you feel the true size of what you carry. Choose well at the Wellspring, color-bearer — for all of us. The ones still aching for color, and the ones who have finally, finally stopped.'],
+        ]);
     }
 
     // =========================================================================
