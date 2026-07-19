@@ -8,9 +8,30 @@
     :root {
         --ink: #2c3e50;
         --paper: #f4f4f9;
+        --card: #ffffff;
         --accent: #2c3e50;
+        --key: #2c3e50;
+        --keyText: #ecf0f1;
+        --muted: #7f8c8d;
+        --faint: #b0b8bf;
+        --chip: #ecf0f1;
         --good: #27ae60;
         --bad: #e74c3c;
+        --shadow: rgba(44,62,80,.12);
+    }
+    body.dark {
+        --ink: #e6ebf0;
+        --paper: #161c24;
+        --card: #232d3a;
+        --accent: #7aa2c8;
+        --key: #3c4a5c;
+        --keyText: #eaf0f6;
+        --muted: #9aa7b4;
+        --faint: #6b7784;
+        --chip: #33404f;
+        --good: #2ecc71;
+        --bad: #ff6b5e;
+        --shadow: rgba(0,0,0,.35);
     }
     * { box-sizing: border-box; }
     body {
@@ -22,15 +43,16 @@
         background: var(--paper);
         font-family: Arial, Helvetica, sans-serif;
         color: var(--ink);
+        transition: background .2s, color .2s;
         -webkit-tap-highlight-color: transparent;
     }
     h1 { margin: 24px 0 2px; font-size: 26px; }
-    p.sub { color: #7f8c8d; margin: 0 0 14px; font-size: 14px; }
+    p.sub { color: var(--muted); margin: 0 0 14px; font-size: 14px; }
 
     .pills { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; justify-content: center; }
     .pills button {
         border: 2px solid var(--accent);
-        background: #fff;
+        background: transparent;
         color: var(--accent);
         border-radius: 20px;
         padding: 6px 16px;
@@ -38,53 +60,51 @@
         cursor: pointer;
         transition: all .12s;
     }
-    .pills button.active { background: var(--accent); color: #fff; }
+    .pills button.active { background: var(--accent); color: var(--card); }
 
-    .checks { display: flex; gap: 18px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
-    label.chk { font-size: 13px; color: #7f8c8d; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .checks { display: flex; gap: 18px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; max-width: 460px; }
+    label.chk { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; cursor: pointer; }
 
     .stage {
         position: relative;
-        background: #fff;
+        background: var(--card);
         border-radius: 14px;
-        box-shadow: 0 6px 20px rgba(44,62,80,.12);
+        box-shadow: 0 6px 20px var(--shadow);
         padding: 10px 20px 16px;
         width: 360px;
         max-width: 92vw;
+        transition: background .2s;
     }
     .stage svg { width: 100%; height: auto; display: block; }
-
-    .clef-label { text-align: center; color: #95a5a6; font-size: 13px; margin: 2px 0 0; letter-spacing: .5px; }
+    .clef-label { text-align: center; color: var(--muted); font-size: 13px; margin: 2px 0 0; letter-spacing: .5px; }
 
     .replay {
-        position: absolute;
-        top: 12px; right: 12px;
-        border: none;
-        background: #ecf0f1;
-        color: var(--accent);
-        border-radius: 8px;
-        padding: 6px 10px;
-        font-size: 15px;
-        cursor: pointer;
-        transition: background .12s;
+        position: absolute; top: 12px; right: 12px;
+        border: none; background: var(--chip); color: var(--accent);
+        border-radius: 8px; padding: 6px 10px; font-size: 15px; cursor: pointer; transition: background .12s;
     }
-    .replay:hover { background: #dfe6e9; }
+    .replay:hover { filter: brightness(.95); }
+
+    .mnemonic { font-size: 13px; color: var(--muted); text-align: center; height: 18px; margin: 8px 0 0; }
+    .mnemonic .hit { color: var(--accent); font-weight: bold; }
 
     .feedback { text-align: center; height: 26px; font-size: 18px; font-weight: bold; margin: 8px 0 4px; }
     .feedback.good { color: var(--good); }
     .feedback.bad { color: var(--bad); }
 
+    .accbar { display: flex; gap: 8px; justify-content: center; margin: 2px 0 8px; height: 40px; }
+    .accbar.hidden { display: none; }
+    .accbar button {
+        border: 2px solid var(--accent); background: transparent; color: var(--accent);
+        width: 46px; border-radius: 8px; font-size: 20px; cursor: pointer; transition: all .1s;
+    }
+    .accbar button.active { background: var(--accent); color: var(--card); }
+
     .keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 360px; max-width: 92vw; margin-top: 6px; }
     .keys button {
-        border: none;
-        background: var(--accent);
-        color: #ecf0f1;
-        border-radius: 8px;
-        padding: 16px 0;
-        font-size: 20px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: transform .1s, background .1s;
+        border: none; background: var(--key); color: var(--keyText);
+        border-radius: 8px; padding: 16px 0; font-size: 18px; font-weight: bold;
+        cursor: pointer; transition: transform .1s, background .1s;
     }
     .keys button:hover { transform: translateY(-2px); }
     .keys button:active { transform: translateY(0); }
@@ -92,20 +112,33 @@
     .keys button.flash-bad { background: var(--bad); }
     .keys button:disabled { opacity: .55; cursor: default; transform: none; }
 
-    .stats { display: flex; gap: 26px; margin: 16px 0 4px; font-size: 14px; color: #7f8c8d; }
+    .stats { display: flex; gap: 26px; margin: 16px 0 4px; font-size: 14px; color: var(--muted); }
     .stats b { color: var(--ink); font-size: 18px; }
     .stats .col { text-align: center; }
-
-    .reset { background: none; border: none; color: #b0b8bf; font-size: 12px; cursor: pointer; text-decoration: underline; }
+    .reset { background: none; border: none; color: var(--faint); font-size: 12px; cursor: pointer; text-decoration: underline; }
     .reset:hover { color: var(--bad); }
 
-    .foot { margin: 6px 0 30px; font-size: 12px; color: #b0b8bf; text-align: center; padding: 0 16px; }
-    a.back { position: fixed; top: 14px; left: 16px; color: #95a5a6; text-decoration: none; font-size: 14px; }
+    .mastery { display: flex; gap: 6px; align-items: flex-end; margin: 14px 0 0; height: 58px; }
+    .mastery .m {
+        width: 34px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+        font-size: 11px; color: var(--muted);
+    }
+    .mastery .bar { width: 22px; border-radius: 3px 3px 0 0; background: var(--chip); transition: height .25s, background .25s; }
+    .mastery .lbl { margin-top: 3px; }
+
+    .foot { margin: 12px 0 30px; font-size: 12px; color: var(--faint); text-align: center; padding: 0 16px; max-width: 460px; }
+    a.back { position: fixed; top: 14px; left: 16px; color: var(--muted); text-decoration: none; font-size: 14px; }
     a.back:hover { color: var(--ink); }
+    .theme-toggle {
+        position: fixed; top: 12px; right: 16px; border: none; background: var(--chip); color: var(--ink);
+        border-radius: 8px; padding: 6px 10px; font-size: 15px; cursor: pointer;
+    }
 </style>
 </head>
 <body>
     <a class="back" href="index.html">← games</a>
+    <button class="theme-toggle" id="themeBtn" title="Toggle dark mode">🌙</button>
+
     <h1>🎼 Note Reading Trainer</h1>
     <p class="sub">Name the note. No timer — take your time.</p>
 
@@ -120,9 +153,15 @@
         <button data-diff="ledger">+ Ledger lines</button>
     </div>
 
+    <div class="pills" id="namings">
+        <button data-naming="letters" class="active">A B C</button>
+        <button data-naming="solfege">Do Re Mi</button>
+    </div>
+
     <div class="checks">
-        <label class="chk"><input type="checkbox" id="hintChk"> Learning mode — reveal the name</label>
+        <label class="chk"><input type="checkbox" id="hintChk"> Learning mode</label>
         <label class="chk"><input type="checkbox" id="soundChk" checked> 🔊 Play the pitch</label>
+        <label class="chk"><input type="checkbox" id="accChk"> ♯ ♭ Accidentals</label>
     </div>
 
     <div class="stage">
@@ -131,7 +170,14 @@
         <div class="clef-label" id="clefLabel"></div>
     </div>
 
+    <div class="mnemonic" id="mnemonic">&nbsp;</div>
     <div class="feedback" id="feedback">&nbsp;</div>
+
+    <div class="accbar hidden" id="accbar">
+        <button data-acc="" class="active" title="natural">♮</button>
+        <button data-acc="#" title="sharp">♯</button>
+        <button data-acc="b" title="flat">♭</button>
+    </div>
 
     <div class="keys" id="keys"></div>
 
@@ -143,48 +189,55 @@
     </div>
     <button class="reset" id="resetBtn">reset progress</button>
 
-    <p class="foot">Tip: press <b>A–G</b> to answer. Missed notes come back more often. The staff adds ledger lines above and below when needed.</p>
+    <div class="mastery" id="mastery"></div>
+
+    <p class="foot">Tip: press <b>A–G</b> to answer (<b>+</b>/<b>−</b> for sharp/flat). Missed notes come back more often; the bars above show your per-note accuracy.</p>
 
 <script>
 (() => {
     "use strict";
 
     const LETTERS = ["A","B","C","D","E","F","G"];
-    const C_SCALE = ["C","D","E","F","G","A","B"];        // for octave math
-    const SEMIS = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };  // for pitch
+    const C_SCALE = ["C","D","E","F","G","A","B"];
+    const SEMIS = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+    const SOLFEGE = { C:"Do", D:"Re", E:"Mi", F:"Fa", G:"Sol", A:"La", B:"Ti" };
 
-    // Staff geometry (in SVG user units)
-    const LEFT = 20, RIGHT = 280;      // staff line span
-    const STAFF_TOP = 70;              // y of top staff line
-    const GAP = 16;                    // distance between staff lines
-    const HALF = GAP / 2;              // one diatonic step
-    const BOTTOM = STAFF_TOP + 4 * GAP;// y of bottom staff line
-    const NOTE_X = 190;                // x of the notehead
+    // Standard black-key spellings only (avoid E#, B#, Cb, Fb).
+    const SHARPABLE = new Set(["C","D","F","G","A"]);
+    const FLATABLE  = new Set(["D","E","G","A","B"]);
 
-    // A "position" d: 0 = bottom staff line, +1 per diatonic step upward.
-    // Even d = a line, odd d = a space. Lines are at d = 0,2,4,6,8.
+    // Staff geometry
+    const LEFT = 20, RIGHT = 280, STAFF_TOP = 70, GAP = 16, HALF = GAP / 2;
+    const BOTTOM = STAFF_TOP + 4 * GAP, NOTE_X = 190;
     const yFor = d => BOTTOM - d * HALF;
 
-    // Bottom-line letter per clef, and starting octave, so we can name any position.
-    // treble bottom line = E4 ; bass bottom line = G2.
     const CLEFS = {
         treble: { glyph: "𝄞", glyphSize: 96, glyphY: STAFF_TOP + 3.0 * GAP, bottomLetter: "E", bottomOctave: 4, name: "Treble clef" },
         bass:   { glyph: "𝄢", glyphSize: 78, glyphY: STAFF_TOP + 1.55 * GAP, bottomLetter: "G", bottomOctave: 2, name: "Bass clef" }
     };
-
-    // Difficulty → range of d. "staff" keeps everything on the staff (d 0..8);
-    // "ledger" opens a couple ledger positions each way.
     const RANGES = { staff: [0, 8], ledger: [-3, 11] };
 
-    // Full note (letter + octave) for a clef position, so we can name and sound it.
+    // Line/space mnemonics (bottom → top for lines, bottom → top for spaces)
+    const MNEMONIC = {
+        treble: { lineWords: ["Every","Good","Boy","Does","Fine"], spaceWords: ["F","A","C","E"], spaceName: "FACE" },
+        bass:   { lineWords: ["Good","Boys","Do","Fine","Always"], spaceWords: ["All","Cows","Eat","Grass"], spaceName: "All Cows Eat Grass" }
+    };
+
     function noteInfo(clef, d) {
         const c = CLEFS[clef];
         const abs = c.bottomOctave * 7 + C_SCALE.indexOf(c.bottomLetter) + d;
         const octave = Math.floor(abs / 7);
         const letter = C_SCALE[((abs % 7) + 7) % 7];
-        return { letter, octave, midi: (octave + 1) * 12 + SEMIS[letter] };
+        return { letter, octave };
     }
     const letterAt = (clef, d) => noteInfo(clef, d).letter;
+    const accSym = a => a === "#" ? "♯" : a === "b" ? "♭" : "";
+    function midiOf(clef, d, acc) {
+        const { letter, octave } = noteInfo(clef, d);
+        return (octave + 1) * 12 + SEMIS[letter] + (acc === "#" ? 1 : acc === "b" ? -1 : 0);
+    }
+    function displayName(letter) { return naming === "solfege" ? SOLFEGE[letter] : letter; }
+    function fullName(letter, acc) { return displayName(letter) + accSym(acc); }
 
     const svg = document.getElementById("staff");
     const SVGNS = "http://www.w3.org/2000/svg";
@@ -195,9 +248,9 @@
         return n;
     }
 
-    // ---- Persistent state (localStorage) --------------------------------
+    // ---- Persistent state ----
     const SKEY = "noteread.v1";
-    const DEFAULT_STATE = { correct: 0, total: 0, streak: 0, best: 0, weights: {} };
+    const DEFAULT_STATE = { correct: 0, total: 0, streak: 0, best: 0, weights: {}, letters: {}, theme: null };
     function loadState() {
         try { return Object.assign({}, DEFAULT_STATE, JSON.parse(localStorage.getItem(SKEY)) || {}); }
         catch (e) { return Object.assign({}, DEFAULT_STATE); }
@@ -205,13 +258,13 @@
     function saveState() { try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) {} }
     let state = loadState();
 
-    let mode = "both";
-    let difficulty = "staff";
-    let currentClef = "treble";
-    let currentD = 0;
-    let answered = false;
+    let mode = "both", difficulty = "staff", naming = "letters", accidentalsOn = false;
+    let currentClef = "treble", currentD = 0, currentAcc = "", selectedAcc = "", answered = false;
+    let lastReveal = null;
 
-    // ---- Audio (WebAudio pitch playback) --------------------------------
+    const themeInk = () => document.body.classList.contains("dark") ? "#e6ebf0" : "#2c3e50";
+
+    // ---- Audio ----
     let audioCtx = null;
     function playPitch(midi) {
         if (!document.getElementById("soundChk").checked) return;
@@ -220,23 +273,21 @@
             if (audioCtx.state === "suspended") audioCtx.resume();
             const freq = 440 * Math.pow(2, (midi - 69) / 12);
             const t = audioCtx.currentTime;
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
+            const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
             osc.type = "triangle";
             osc.frequency.value = freq;
             gain.gain.setValueAtTime(0.0001, t);
             gain.gain.linearRampToValueAtTime(0.25, t + 0.02);
             gain.gain.exponentialRampToValueAtTime(0.0008, t + 0.9);
             osc.connect(gain).connect(audioCtx.destination);
-            osc.start(t);
-            osc.stop(t + 0.95);
-        } catch (e) { /* audio unavailable — silent */ }
+            osc.start(t); osc.stop(t + 0.95);
+        } catch (e) {}
     }
-    function playCurrent() { playPitch(noteInfo(currentClef, currentD).midi); }
+    const playCurrent = () => playPitch(midiOf(currentClef, currentD, currentAcc));
 
-    // ---- Adaptive note selection ----------------------------------------
+    // ---- Adaptive selection ----
     const posKey = (clef, d) => clef + ":" + d;
-    function weightFor(clef, d) { return state.weights[posKey(clef, d)] || 1; }
+    const weightFor = (clef, d) => state.weights[posKey(clef, d)] || 1;
     function bumpWeight(clef, d, delta) {
         const k = posKey(clef, d);
         state.weights[k] = Math.max(1, Math.min(12, (state.weights[k] || 1) + delta));
@@ -245,69 +296,87 @@
         const [lo, hi] = RANGES[difficulty];
         const cands = [];
         for (let d = lo; d <= hi; d++) {
-            if (clef === currentClef && d === currentD) continue; // avoid instant repeat
+            if (clef === currentClef && d === currentD) continue;
             cands.push({ d, w: weightFor(clef, d) });
         }
-        let total = cands.reduce((s, c) => s + c.w, 0);
-        let r = Math.random() * total;
+        let total = cands.reduce((s, c) => s + c.w, 0), r = Math.random() * total;
         for (const c of cands) { r -= c.w; if (r <= 0) return c.d; }
         return cands[cands.length - 1].d;
     }
+    function genAccidental(letter) {
+        if (!accidentalsOn) return "";
+        const opts = ["", ""]; // bias toward natural
+        if (SHARPABLE.has(letter)) opts.push("#");
+        if (FLATABLE.has(letter)) opts.push("b");
+        return opts[Math.floor(Math.random() * opts.length)];
+    }
 
-    // ---- Drawing --------------------------------------------------------
-    function drawStaff(clef, d, reveal) {
+    // ---- Drawing ----
+    function drawStaff(clef, d, acc, reveal) {
         svg.innerHTML = "";
+        const ink = themeInk();
+        const color = reveal === "good" ? "#27ae60" : reveal === "bad" ? "#e74c3c" : ink;
 
         for (let i = 0; i < 5; i++) {
             const y = STAFF_TOP + i * GAP;
-            svg.appendChild(el("line", { x1: LEFT, y1: y, x2: RIGHT, y2: y, stroke: "#2c3e50", "stroke-width": 1.4 }));
+            svg.appendChild(el("line", { x1: LEFT, y1: y, x2: RIGHT, y2: y, stroke: ink, "stroke-width": 1.4 }));
         }
-
         const c = CLEFS[clef];
         svg.appendChild(el("text", { x: LEFT + 6, y: c.glyphY, "font-size": c.glyphSize,
-            "font-family": "'Bravura','Noto Music','Apple Symbols','Segoe UI Symbol',serif", fill: "#2c3e50" }, c.glyph));
+            "font-family": "'Bravura','Noto Music','Apple Symbols','Segoe UI Symbol',serif", fill: ink }, c.glyph));
 
-        const ledgerW = 14;
-        if (d < 0) {
-            for (let dd = -2; dd >= d; dd -= 2)
-                svg.appendChild(el("line", { x1: NOTE_X - ledgerW, y1: yFor(dd), x2: NOTE_X + ledgerW, y2: yFor(dd), stroke: "#2c3e50", "stroke-width": 1.4 }));
-        } else if (d > 8) {
-            for (let dd = 10; dd <= d; dd += 2)
-                svg.appendChild(el("line", { x1: NOTE_X - ledgerW, y1: yFor(dd), x2: NOTE_X + ledgerW, y2: yFor(dd), stroke: "#2c3e50", "stroke-width": 1.4 }));
-        }
+        const lw = 14;
+        if (d < 0) for (let dd = -2; dd >= d; dd -= 2)
+            svg.appendChild(el("line", { x1: NOTE_X - lw, y1: yFor(dd), x2: NOTE_X + lw, y2: yFor(dd), stroke: ink, "stroke-width": 1.4 }));
+        else if (d > 8) for (let dd = 10; dd <= d; dd += 2)
+            svg.appendChild(el("line", { x1: NOTE_X - lw, y1: yFor(dd), x2: NOTE_X + lw, y2: yFor(dd), stroke: ink, "stroke-width": 1.4 }));
 
         const cy = yFor(d);
-        const color = reveal === "good" ? "#27ae60" : reveal === "bad" ? "#e74c3c" : "#2c3e50";
+        if (acc) svg.appendChild(el("text", { x: NOTE_X - 30, y: cy + 6, "font-size": 26, "font-family": "serif", fill: color }, accSym(acc)));
         svg.appendChild(el("ellipse", { cx: NOTE_X, cy: cy, rx: 9.5, ry: 7, fill: color, transform: `rotate(-20 ${NOTE_X} ${cy})` }));
+        if (d <= 4) svg.appendChild(el("line", { x1: NOTE_X + 9, y1: cy - 1, x2: NOTE_X + 9, y2: cy - GAP * 3.2, stroke: color, "stroke-width": 1.6 }));
+        else svg.appendChild(el("line", { x1: NOTE_X - 9, y1: cy + 1, x2: NOTE_X - 9, y2: cy + GAP * 3.2, stroke: color, "stroke-width": 1.6 }));
 
-        if (d <= 4)
-            svg.appendChild(el("line", { x1: NOTE_X + 9, y1: cy - 1, x2: NOTE_X + 9, y2: cy - GAP * 3.2, stroke: color, "stroke-width": 1.6 }));
-        else
-            svg.appendChild(el("line", { x1: NOTE_X - 9, y1: cy + 1, x2: NOTE_X - 9, y2: cy + GAP * 3.2, stroke: color, "stroke-width": 1.6 }));
+        if (reveal) svg.appendChild(el("text", { x: NOTE_X + 24, y: cy + 6, "font-size": 22, "font-weight": "bold",
+            "font-family": "Arial, sans-serif", fill: color }, fullName(letterAt(clef, d), acc)));
+    }
+    // Draw the current note and remember the reveal state, so theme/naming changes can redraw faithfully.
+    function render(reveal) { lastReveal = reveal; drawStaff(currentClef, currentD, currentAcc, reveal); }
 
-        // Reveal the letter right beside the notehead (learning mode / after answering)
-        if (reveal) {
-            svg.appendChild(el("text", { x: NOTE_X + 24, y: cy + 6, "font-size": 22, "font-weight": "bold",
-                "font-family": "Arial, sans-serif", fill: color }, letterAt(clef, d)));
+    // ---- Mnemonic helper ----
+    function updateMnemonic() {
+        const m = document.getElementById("mnemonic");
+        if (!document.getElementById("hintChk").checked || naming !== "letters") { m.innerHTML = "&nbsp;"; return; }
+        const info = MNEMONIC[currentClef];
+        const d = currentD;
+        if (d < 0 || d > 8) { m.textContent = "ledger-line note — count from the staff edge"; return; }
+        if (d % 2 === 0) { // line
+            const words = info.lineWords.map((w, i) => i === d / 2 ? `<span class="hit">${w}</span>` : w);
+            m.innerHTML = "Lines: " + words.join(" ");
+        } else { // space
+            const idx = (d - 1) / 2;
+            const words = info.spaceWords.map((w, i) => i === idx ? `<span class="hit">${w}</span>` : w);
+            m.innerHTML = "Spaces: " + words.join(" ");
         }
     }
 
-    // ---- Round flow -----------------------------------------------------
+    // ---- Round flow ----
     function nextNote() {
         answered = false;
+        setSelectedAcc("");
         setFeedback("", "");
-
-        if (mode === "both") currentClef = Math.random() < 0.5 ? "treble" : "bass";
-        else currentClef = mode;
-
+        currentClef = mode === "both" ? (Math.random() < 0.5 ? "treble" : "bass") : mode;
         currentD = pickPosition(currentClef);
+        currentAcc = genAccidental(letterAt(currentClef, currentD));
 
         document.getElementById("clefLabel").textContent = CLEFS[currentClef].name;
         const showName = document.getElementById("hintChk").checked;
-        drawStaff(currentClef, currentD, showName ? "hint" : null);
-        if (showName) setFeedback("this note is " + letterAt(currentClef, currentD), "");
+        render(showName ? "hint" : null);
+        if (showName) setFeedback("this note is " + fullName(letterAt(currentClef, currentD), currentAcc), "");
+        updateMnemonic();
 
         keyEls.forEach(b => { b.disabled = false; b.classList.remove("flash-good", "flash-bad"); });
+        accEls.forEach(b => b.disabled = false);
     }
 
     function setFeedback(text, kind) {
@@ -315,38 +384,46 @@
         f.textContent = text || " ";
         f.className = "feedback" + (kind ? " " + kind : "");
     }
+    function setSelectedAcc(a) {
+        selectedAcc = a;
+        accEls.forEach(b => b.classList.toggle("active", b.dataset.acc === a));
+    }
 
     function answer(letter) {
         if (answered) return;
         answered = true;
-        const correct = letterAt(currentClef, currentD);
-        state.total++;
-        keyEls.forEach(b => b.disabled = true);
+        const targetLetter = letterAt(currentClef, currentD);
+        const isRight = letter === targetLetter && selectedAcc === currentAcc;
 
+        state.total++;
+        const ls = state.letters[targetLetter] || { c: 0, t: 0 };
+        ls.t++; if (isRight) ls.c++;
+        state.letters[targetLetter] = ls;
+
+        keyEls.forEach(b => b.disabled = true);
+        accEls.forEach(b => b.disabled = true);
         const pressedBtn = keyEls.find(b => b.dataset.letter === letter);
-        const correctBtn = keyEls.find(b => b.dataset.letter === correct);
-        const isRight = letter === correct;
+        const correctBtn = keyEls.find(b => b.dataset.letter === targetLetter);
 
         if (isRight) {
-            state.correct++;
-            state.streak++;
+            state.correct++; state.streak++;
             if (state.streak > state.best) state.best = state.streak;
             bumpWeight(currentClef, currentD, -1);
             if (pressedBtn) pressedBtn.classList.add("flash-good");
-            setFeedback("✓ " + correct, "good");
+            setFeedback("✓ " + fullName(targetLetter, currentAcc), "good");
         } else {
             state.streak = 0;
             bumpWeight(currentClef, currentD, +3);
             if (pressedBtn) pressedBtn.classList.add("flash-bad");
             if (correctBtn) correctBtn.classList.add("flash-good");
-            setFeedback("✗ that was " + correct, "bad");
+            setFeedback("✗ that was " + fullName(targetLetter, currentAcc), "bad");
         }
-
-        drawStaff(currentClef, currentD, isRight ? "good" : "bad"); // reveal on the staff
+        render(isRight ? "good" : "bad");
         playCurrent();
         renderStats();
+        renderMastery();
         saveState();
-        setTimeout(nextNote, isRight ? 750 : 1350);
+        setTimeout(nextNote, isRight ? 750 : 1400);
     }
 
     function renderStats() {
@@ -355,8 +432,29 @@
         document.getElementById("sBest").textContent = state.best;
         document.getElementById("sTotal").textContent = state.total;
     }
+    function renderMastery() {
+        const wrap = document.getElementById("mastery");
+        wrap.innerHTML = "";
+        LETTERS.forEach(L => {
+            const s = state.letters[L] || { c: 0, t: 0 };
+            const acc = s.t ? s.c / s.t : 0;
+            const h = s.t ? 6 + Math.round(acc * 30) : 4;
+            const col = document.createElement("div");
+            col.className = "m";
+            const bar = document.createElement("div");
+            bar.className = "bar";
+            bar.style.height = h + "px";
+            bar.style.background = s.t ? `hsl(${Math.round(acc * 120)},65%,48%)` : "var(--chip)";
+            bar.title = s.t ? `${L}: ${s.c}/${s.t} (${Math.round(acc * 100)}%)` : `${L}: no attempts yet`;
+            const lbl = document.createElement("div");
+            lbl.className = "lbl";
+            lbl.textContent = displayName(L);
+            col.appendChild(bar); col.appendChild(lbl);
+            wrap.appendChild(col);
+        });
+    }
 
-    // ---- Wiring ---------------------------------------------------------
+    // ---- Build keys & wiring ----
     const keysWrap = document.getElementById("keys");
     const keyEls = LETTERS.map(L => {
         const b = document.createElement("button");
@@ -366,47 +464,73 @@
         keysWrap.appendChild(b);
         return b;
     });
+    function relabelKeys() { keyEls.forEach(b => b.textContent = displayName(b.dataset.letter)); }
+
+    const accEls = Array.from(document.querySelectorAll("#accbar button"));
+    accEls.forEach(b => b.addEventListener("click", () => { if (!answered) setSelectedAcc(b.dataset.acc); }));
 
     document.getElementById("hintChk").addEventListener("change", () => {
+        updateMnemonic();
         if (answered) return;
         const on = document.getElementById("hintChk").checked;
-        drawStaff(currentClef, currentD, on ? "hint" : null);
-        setFeedback(on ? "this note is " + letterAt(currentClef, currentD) : "", "");
+        render(on ? "hint" : null);
+        setFeedback(on ? "this note is " + fullName(letterAt(currentClef, currentD), currentAcc) : "", "");
     });
-
+    document.getElementById("soundChk").addEventListener("change", () => {});
+    document.getElementById("accChk").addEventListener("change", e => {
+        accidentalsOn = e.target.checked;
+        document.getElementById("accbar").classList.toggle("hidden", !accidentalsOn);
+        nextNote();
+    });
     document.getElementById("replayBtn").addEventListener("click", playCurrent);
 
-    document.querySelectorAll("#modes button").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll("#modes button").forEach(b => b.classList.remove("active"));
+    function pillGroup(sel, apply) {
+        document.querySelectorAll(sel + " button").forEach(btn => btn.addEventListener("click", () => {
+            document.querySelectorAll(sel + " button").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
-            mode = btn.dataset.mode;
-            nextNote();
-        });
-    });
-
-    document.querySelectorAll("#diffs button").forEach(btn => {
-        btn.addEventListener("click", () => {
-            document.querySelectorAll("#diffs button").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            difficulty = btn.dataset.diff;
-            nextNote();
-        });
+            apply(btn.dataset);
+        }));
+    }
+    pillGroup("#modes", d => { mode = d.mode; nextNote(); });
+    pillGroup("#diffs", d => { difficulty = d.diff; nextNote(); });
+    pillGroup("#namings", d => { naming = d.naming; relabelKeys(); renderMastery(); updateMnemonic();
+        render(lastReveal);
+        if (!answered && document.getElementById("hintChk").checked)
+            setFeedback("this note is " + fullName(letterAt(currentClef, currentD), currentAcc), "");
     });
 
     document.getElementById("resetBtn").addEventListener("click", () => {
-        state = Object.assign({}, DEFAULT_STATE, { weights: {} });
+        const theme = state.theme;
+        state = Object.assign({}, DEFAULT_STATE, { weights: {}, letters: {}, theme });
+        saveState(); renderStats(); renderMastery(); nextNote();
+    });
+
+    // ---- Theme ----
+    function applyTheme(dark) {
+        document.body.classList.toggle("dark", dark);
+        document.getElementById("themeBtn").textContent = dark ? "☀️" : "🌙";
+    }
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    applyTheme(state.theme == null ? prefersDark : state.theme);
+    document.getElementById("themeBtn").addEventListener("click", () => {
+        const dark = !document.body.classList.contains("dark");
+        applyTheme(dark);
+        state.theme = dark;
         saveState();
-        renderStats();
-        nextNote();
+        render(lastReveal);
     });
 
     document.addEventListener("keydown", e => {
         const k = e.key.toUpperCase();
-        if (LETTERS.includes(k)) { answer(k); e.preventDefault(); }
+        if (LETTERS.includes(k)) { answer(k); e.preventDefault(); return; }
+        if (!accidentalsOn || answered) return;
+        if (e.key === "+" || e.key === "=") { setSelectedAcc(selectedAcc === "#" ? "" : "#"); e.preventDefault(); }
+        else if (e.key === "-" || e.key === "_") { setSelectedAcc(selectedAcc === "b" ? "" : "b"); e.preventDefault(); }
+        else if (e.key === "0") { setSelectedAcc(""); e.preventDefault(); }
     });
 
     renderStats();
+    renderMastery();
     nextNote();
 })();
 </script>
