@@ -22,13 +22,20 @@ unbearable; draining color halts change itself, and the Faded don't suffer, they
 rest. Sable was a Loomkeeper, and gave her own color to spare Wren a bright, dying
 life. The three Prisms aren't the cure — they're the last wild color, and the
 Wellspring wants them to finish unwinding the world into painless grey forever.
-The finale is the choice: safe grey stasis, or shatter the loom and let color —
-and therefore mortality *and* joy — flood back. Two phases: the **Loomkeeper
-Prime**, then the **Hollow Bloom** (all the suppressed grief, given a body — you
-don't destroy it, you accept it, and color returns).
+**The finale is a real branching choice** — the player's, at a button. After
+beating the **Loomkeeper Prime**, Wren holds the knot, and you decide:
 
-The theme: impermanence and art — the courage to choose a brief, bright, mortal
-life over a safe grey stasis.
+- **Cut the knot** — let the color back in. The bound grief rises as the **Hollow
+  Bloom** (all the suppressed sorrow, given a body); you don't destroy it, you
+  face it until it's spent, and color floods back → *The First Spring*.
+- **Pull it tight** — complete the unweaving. No fight; the world is laid gently,
+  permanently to sleep, at peace and beyond all further loss → *The Long Rest*.
+
+Neither is the "right" answer — one is life-with-suffering, the other
+peace-without-life — and the optional lore-towns (Umber Vale, Loomrest,
+Stillwater) exist to make that choice genuinely hard. The theme: impermanence and
+art — the courage to weigh a brief, bright, mortal life against a safe grey rest,
+and *choose*.
 
 ## The color mechanic (the engine's new feature)
 

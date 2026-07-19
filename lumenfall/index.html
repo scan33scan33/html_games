@@ -241,10 +241,16 @@
         </div>
 
         <div class="overlay" id="ending">
-            <div class="big">🌅</div>
-            <h2>The First Spring</h2>
+            <div class="big" id="endEmoji">🌅</div>
+            <h2 id="endTitle">The First Spring</h2>
             <div id="endText" style="font-size:14px;color:#bdc3c7;max-width:340px;line-height:1.6"></div>
             <div class="btncol"><button class="primary" id="btnEndTitle">✨ back to the title</button></div>
+        </div>
+        <div class="overlay" id="choice">
+            <div class="big">🌀</div>
+            <h2>The Wellspring</h2>
+            <div id="choiceText" style="font-size:14px;color:#cfd6e2;max-width:360px;line-height:1.6"></div>
+            <div class="btncol" id="choiceBtns" style="margin-top:10px"></div>
         </div>
         <div id="flashFx"></div>
     </div>
@@ -1452,6 +1458,13 @@
         // losing — so Ochre says it once, at the door, where it still helps.
         const lines = [['', 'You step into <b>' + D.name + '</b>…' +
             (D.boss === 'xuanyuan_w' ? ' The drained color of a whole world sighs in the dark ahead of you.' : '')]];
+        // a threshold beat at the Wellspring: Ochre and Cobalt close their arcs
+        if (D.boss === 'xuanyuan_w' && !S.flags.malachorDown) {
+            lines.push(
+                ['Ochre', '(quiet) My town’s just south of here. I never went back — kept telling myself there was nothing left worth painting. …But I’m done matching the sky, Wren. Whatever’s down there, I mean to stand in front of it in every color I’ve got left.'],
+                ['Cobalt', 'Funny thing. I came for the Prisms — first real color I’d seen in a year. Somewhere past Hollowmere I stopped following the color and started following you two. …Turns out I did have something left to stay for after all. Don’t let it go to my head.'],
+                ['Wren', '…Then let’s go find what Sable left us. Together. All three.']);
+        }
         if (!S.flags.gearWarned && S.flags.recruited.lyra && S.party.some(h => h.weapon === 0)) {
             S.flags.gearWarned = true;
             save();   // persist it now, as every other flag-setter here does —
@@ -1513,8 +1526,10 @@
         xuanyuan_w: [
             ['the Loomkeeper', 'Wren. Sable’s apprentice. So she sent you all this way, the three Prisms cradled in your own two hands. …Of course she did. It could only ever have been you.'],
             ['Wren', 'You’re the ones draining the world. You took Sable. You took everyone I ever knew.'],
-            ['the Loomkeeper', 'We <b>spared</b> them. Child — this world was once so bright it could not be borne. Every color was a feeling, every feeling a wound, and the wounds never closed. A whole world of grief that could not stop grieving. So we found the one mercy left: grey. The Faded do not suffer. They rest.'],
-            ['the Loomkeeper', 'Sable understood it before any of us. She gave her own color to tie off the last knot — to spare <i>you</i>, most of all, a bright and dying life. And now you have carried the last three colors here yourself. One more thread drawn, and the world sleeps forever, and gently.'],
+            ['the Loomkeeper', 'We <b>spared</b> them. And you will not take my word for it — <i>see</i> it.'],
+            ['', '<i>The Prime presses two grey fingers to Wren’s brow, and the Vivid Age floods her eyes — and it is not abstract at all. A mother in a scarlet doorway who will not let them carry her dead boy out; who has painted the whole house red so the day he died can never fade, and has stood over it with a knife for forty years. A painter at a window who cannot stop, whose brush has worn his fingers to the bone and past it, because to lay it down would be to feel the loss of the last stroke. A sky the exact color of a scream. A world that felt everything, all at once, always, and could put none of it down.</i>'],
+            ['Wren', '…(shaking) …oh. That’s — that’s what the grey was <i>for</i>.'],
+            ['the Loomkeeper', 'Now you understand. And still I would not choose for you. Sable understood it before any of us, and gave her own color to tie off the last knot — to spare <i>you</i>, most of all, a bright and dying life. One more thread drawn, and the world sleeps forever, and gently.'],
             ['Ochre', 'Elder… look at your hands. The grey is eating you too.'],
             ['the Loomkeeper', 'Gladly. Ten thousand years of it, gladly. Turn back, children. Do not light a fire over a world that only survives by forgetting how much it hurt to be alive.'],
             ['Wren', 'A world with nothing left to lose isn’t saved. It’s just already dead, and too grey to know it. Sable didn’t send me to be spared. She told me to paint something bright — something that <b>wouldn’t last</b>. That was always the whole point of it.'],
@@ -2489,18 +2504,15 @@
             ], () => exitDungeon('You leave the Palette Vault with the First Color in hand.'));
             save();
         } else if (lastBoss === 'xuanyuan_w') {
-            // Phase 2: freeing the drained color looses the grief it was binding
-            S.party.forEach(h => { const st = heroStats(h); h.hp = st.maxhp; h.mp = st.maxmp; });
+            // The Loomkeeper Prime is beaten — now the choice the whole game (and
+            // Sable) has been building toward. It is genuinely the player's.
             save();
             say([
-                ['', '<i>The Loomkeeper Prime sinks to the loom’s floor, and the last knot slips loose in Wren’s hands. For one breath, all the drained color of the world hangs free — and then it does not flow home. It gathers. It remembers.</i>'],
-                ['the Loomkeeper', '(fading) No — child, don’t… you’ve loosed what we spent everything to bind. All the grief we drew out of the world… it has nowhere left to go but <i>up</i>—'],
-                ['', '<i>The freed color folds inward into a towering, colorless shape: every unwept tear of a whole age, given a body. The Hollow Bloom.</i>'],
-                ['the Hollow Bloom', '(a thousand small voices) …stay grey with us. it doesn’t have to hurt. nothing ever has to hurt again.'],
-                ['Cobalt', 'That’s the thing they were so afraid of. It isn’t a monster, Wren. It’s just… all the sorrow, with nowhere left to land.'],
-                ['Ochre', 'Then we don’t destroy it. You can’t kill grief. We stand in front of it until it’s spent — together, all three.'],
-                ['', '<b class="good">Wren raises the three Prisms, and their color pours through the party — everyone is fully restored!</b>'],
-            ], () => startBattle(['shihun'], true));
+                ['', '<i>The Loomkeeper Prime sinks to the loom’s floor. The last knot of the world’s color hangs loose in Wren’s two hands — the three Prisms, and every thread the grey ever drew out, all of it waiting on what she does next.</i>'],
+                ['the Loomkeeper', '(fading) There… you feel it now. Pull the knot tight, and the world sleeps — gentle, and forever. Cut it, and you let all the grief back in with the light. …Sable left the choosing to you. Cruel of her. …Merciful of her. I could never tell which. Choose, child.'],
+                ['Ochre', 'Umber Vale wasn’t telling stories. The grey did save them, once.'],
+                ['Cobalt', 'And Stillwater doesn’t want waking. …Whichever way, Wren, it’s the whole world you’re doing it to. Both answers cost. …But it’s yours. She made sure of that.'],
+            ], () => finaleChoice());
         } else {
             S.flags.malachorDown = true;
             S.flags.color.full = true;   // color crashes back into the whole world
@@ -2513,6 +2525,56 @@
                 ['Cobalt', '(quietly) …I’d forgotten what blue looked like.'],
             ], showEnding);
         }
+    }
+
+    // ---- the finale is a real choice, and both answers cost ----
+    function showChoice(promptHTML, options) {
+        mode = 'choice';
+        $('choiceText').innerHTML = promptHTML;
+        const box = $('choiceBtns');
+        box.innerHTML = '';
+        for (const o of options) {
+            const b = document.createElement('button');
+            b.className = 'primary';
+            b.innerHTML = o.label;
+            b.addEventListener('click', () => { $('choice').classList.remove('open'); o.fn(); });
+            box.appendChild(b);
+        }
+        $('choice').classList.add('open');
+    }
+    function finaleChoice() {
+        showChoice(
+            'The knot is in your hands. Every color the grey ever took hangs on it — and so does every grief it spared the world. <b>Wren must choose.</b>',
+            [{ label: '🎨 Cut the knot — let the color back in', fn: wakeWorld },
+             { label: '🌫️ Pull it tight — let the world rest', fn: restWorld }]);
+    }
+    // WAKE: releasing the color looses the bound grief — the Hollow Bloom — which
+    // must be faced and accepted before color can truly return. Feeds the existing
+    // phase-2 fight and the color ending.
+    function wakeWorld() {
+        S.party.forEach(h => { const st = heroStats(h); h.hp = st.maxhp; h.mp = st.maxmp; });
+        save();
+        say([
+            ['', '<i>Wren cuts the knot. The color does not simply flow home — it gathers, and remembers. All the grief the grey held down folds inward into a towering, colorless shape: the Hollow Bloom.</i>'],
+            ['the Hollow Bloom', '(a thousand small voices) …stay grey with us. it doesn’t have to hurt. nothing ever has to hurt again.'],
+            ['Cobalt', 'That’s the thing they were so afraid of. It isn’t a monster, Wren — it’s just all the sorrow, with nowhere left to land.'],
+            ['Ochre', 'Then we don’t destroy it. You can’t kill grief. We stand in front of it till it’s spent — together, all three.'],
+            ['', '<b class="good">Wren raises the three Prisms, and their color pours through the party — everyone is fully restored!</b>'],
+        ], () => startBattle(['shihun'], true));
+    }
+    // REST: tying the knot completes the unweaving. No fight — the grief never
+    // breaks loose, because the world it grieved for is laid gently to sleep.
+    function restWorld() {
+        S.flags.malachorDown = true;
+        S.flags.greyEnding = true;   // color does NOT return
+        save();
+        say([
+            ['', '<i>Wren gathers the three Prisms to her chest and does not cut the knot — she ties it. The last wild color unwinds through her fingers and is gone, and the grief that strained to break loose settles, quiet, and is at last wholly still.</i>'],
+            ['', '<i>The world greys to its final thread. No more wilting. No more parting. No more of the long ache of loving things that end — because nothing here will ever end again. It is not death. It is rest: a whole world, at rest.</i>'],
+            ['Wren', '…I’m sorry, Sable. And I’m not. You wanted it to be mine. This is what I chose. Sleep now — all of you. It doesn’t have to hurt anymore.'],
+            ['Ochre', '(fading, at peace) …quiet hands. …good.'],
+            ['Cobalt', '(a last soft breath) …thank you, Wren. …thank—'],
+        ], () => showEnding(true));
     }
     // ---- 煉妖壺：收妖、煉化、合成 ----
     let fuseSel = null;
@@ -2636,19 +2698,29 @@
         draw();
     }
 
-    function showEnding() {
+    function showEnding(grey) {
         mode = 'ending';
         $('battle').classList.remove('open');
-        startTrack('ending');
-        const epilogue = {
+        startTrack(grey ? 'prologue' : 'ending');   // Danny Boy for the rest; Ode to Joy for the waking
+        $('endEmoji').textContent = grey ? '🕊️' : '🌅';
+        $('endTitle').textContent = grey ? 'The Long Rest' : 'The First Spring';
+        const epilogue = grey ? {
+            auron: 'laid down her brushes at the Wellspring and let the grey take her last of all — the final color in the world, and then not. She did not weep. There was nothing left that could be lost.',
+            lyra: 'stopped mixing grey to match the sky, because there was no more sky to match; and rested, his great hands finally still.',
+            zephyr: 'set down his lens with a small, tired smile. There was nothing left to split into color — and, to his own surprise, he found he did not mind.',
+        } : {
             auron: 'reopened Sable’s dye-shop in Marrow’s End, and painted the first spring — knowing, now, that its worth was in the wilting.',
             lyra: 'covered a whole town wall in a mural of every face the Greydawn took, so the color of them would be remembered while it changed.',
             zephyr: 'ground a lens that splits grey daylight back into all its hues, and left a set in every window of Hollowmere.',
         };
-        $('endText').innerHTML =
-            'Color keeps its old bargain again: everything that blooms will wilt, everything loved will be lost, everything alive will end. ' +
-            'The world took that bargain back willingly — because the other name for it is <b>being alive at all</b>.<br><br>' +
-            'The Loomkeepers’ long grey watch is over. The world’s brief bright one has just begun.<br><br>' +
+        const body = grey
+            ? 'The world sleeps now, grey to its last thread, and does not dream. Nothing here will wilt, or part, or grieve again — because nothing will ever change again. ' +
+              'It is not the death the Loomkeepers feared. It is the rest they longed for. Whether it was mercy or surrender, no one is left awake to say.<br><br>' +
+              'It is only, at the very last, <b>quiet</b>.<br><br>'
+            : 'Color keeps its old bargain again: everything that blooms will wilt, everything loved will be lost, everything alive will end. ' +
+              'The world took that bargain back willingly — because the other name for it is <b>being alive at all</b>.<br><br>' +
+              'The Loomkeepers’ long grey watch is over. The world’s brief bright one has just begun.<br><br>';
+        $('endText').innerHTML = body +
             S.party.map(h => HEROES[h.id].e + ' <b>' + HEROES[h.id].name + '</b> (Lv ' + h.lv + ') ' + epilogue[h.id]).join('<br><br>') +
             '<br><br>💰 ' + S.gold + ' coin · thank you for playing Lumenfall.';
         $('ending').classList.add('open');

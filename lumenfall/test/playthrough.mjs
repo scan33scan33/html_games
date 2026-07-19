@@ -31,6 +31,12 @@ const st = () => page.evaluate(() => { const s = DBG.state(); return { mode: s.m
 
 async function drainDialog(max = 300) {
     for (let i = 0; i < max; i++) {
+        // the finale is a real choice now — take the color ending so the smoke
+        // test carries through to "The First Spring"
+        if (await vis('#choice')) {
+            const cut = page.locator('#choiceBtns button', { hasText: 'Cut the knot' }).first();
+            if (await cut.isVisible().catch(() => false)) { await cut.click().catch(() => {}); await page.waitForTimeout(150); continue; }
+        }
         if (!(await vis('#dialog'))) return;
         const txt = await page.locator('#dialogBox').innerText().catch(() => '');
         if (txt) {
