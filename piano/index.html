@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Grand Piano</title>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body {
+            margin: 0; height: 100%; overflow: hidden;
+            background: #0a0a0c; color: #ecf0f1;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none; -webkit-user-select: none;
+            touch-action: none;
+        }
+        #app { display: flex; flex-direction: column; height: 100%; }
+
+        /* ---------- top bar ---------- */
+        #topbar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: #060608;
+            border-bottom: 1px solid #1c1c22;
+        }
+        .pill {
+            display: flex; align-items: center; gap: 8px;
+            background: #17171d; border: 1px solid #26262e; border-radius: 22px;
+            padding: 6px 6px;
+        }
+        .seg {
+            display: flex; align-items: center; gap: 7px;
+            padding: 8px 16px; border-radius: 18px; font-size: 15px; font-weight: 600;
+            color: #aeb4be; cursor: pointer; white-space: nowrap;
+        }
+        .seg.active {
+            color: #fff;
+            background: linear-gradient(180deg, #6d4bd8, #4b2fb0);
+            box-shadow: 0 2px 10px rgba(109,75,216,0.45);
+        }
+        .seg .dot { width: 11px; height: 11px; border-radius: 50%; background: #e0402f; }
+        .spacer { flex: 1; }
+        .btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #17171d; border: 1px solid #26262e; border-radius: 16px;
+            color: #d7dbe2; padding: 9px 14px; font-size: 15px; font-weight: 600; cursor: pointer;
+        }
+        .btn.icon { width: 44px; padding: 9px 0; border-radius: 50%; font-size: 18px; }
+        .btn.on { color: #fff; border-color: #6d4bd8; background: #241a3a; }
+        .btn:active { transform: translateY(1px); }
+
+        /* ---------- toolbar ---------- */
+        #toolbar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; background: linear-gradient(180deg, #141416, #0d0d0f);
+            border-bottom: 1px solid #000;
+        }
+        #range {
+            flex: 1; display: flex; align-items: center; gap: 8px;
+            background: #050506; border: 1px solid #1c1c22; border-radius: 10px; padding: 6px 8px;
+        }
+        #miniWrap { flex: 1; height: 34px; position: relative; }
+        #mini { width: 100%; height: 100%; display: block; }
+        .rbtn {
+            width: 34px; height: 34px; flex: none; border-radius: 8px;
+            background: #23232a; border: 1px solid #34343e; color: #eee;
+            font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .rbtn:active { transform: translateY(1px); }
+        #vol { width: 110px; accent-color: #6d4bd8; }
+        .lbl { font-size: 12px; color: #8a8f99; }
+
+        /* ---------- keyboard ---------- */
+        #stage { flex: 1; position: relative; background: #000; overflow: hidden; }
+        #brand {
+            position: absolute; top: 6px; left: 0; right: 0; text-align: center;
+            font-size: 12px; letter-spacing: 3px; color: #6a5a2a; font-weight: 700; pointer-events: none; z-index: 3;
+        }
+        #felt {
+            position: absolute; top: 22px; left: 0; right: 0; height: 8px; z-index: 3; pointer-events: none;
+            background: linear-gradient(180deg, #a01a24, #6e0f16);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.6);
+        }
+        #keys { position: absolute; top: 30px; left: 0; right: 0; bottom: 0; }
+        .white {
+            position: absolute; bottom: 0; top: 0;
+            background: linear-gradient(180deg, #fdfdfd 0%, #f4f4f6 72%, #e4e6ea 100%);
+            border: 1px solid #b9bcc4; border-top: none;
+            border-radius: 0 0 7px 7px;
+            box-shadow: inset 0 -6px 8px rgba(0,0,0,0.08), 0 3px 4px rgba(0,0,0,0.35);
+            display: flex; align-items: flex-end; justify-content: center;
+            padding-bottom: 10px; z-index: 1;
+        }
+        .white.down {
+            background: linear-gradient(180deg, #e9e9ee 0%, #d7d9df 100%);
+            box-shadow: inset 0 8px 12px rgba(0,0,0,0.18);
+        }
+        .white.lit { background: linear-gradient(180deg, #e6ddff 0%, #cbb8ff 100%); }
+        .black {
+            position: absolute; top: 0; z-index: 2;
+            background: linear-gradient(180deg, #33343a 0%, #17181c 55%, #0a0a0d 100%);
+            border-radius: 0 0 5px 5px;
+            box-shadow: inset 0 -3px 4px rgba(255,255,255,0.12), 0 4px 6px rgba(0,0,0,0.6);
+            border: 1px solid #000;
+        }
+        .black::after {
+            content: ''; position: absolute; left: 12%; right: 12%; top: 3px; height: 40%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
+            border-radius: 3px;
+        }
+        .black.down { background: linear-gradient(180deg, #17181c, #050506); top: 2px; }
+        .black.lit { background: linear-gradient(180deg, #6d4bd8, #3a2778); }
+        .lab { font-size: 12px; font-weight: 600; color: #9aa0aa; pointer-events: none; }
+        .lab.c { color: #454a53; }
+        #hint {
+            position: absolute; bottom: 4px; right: 8px; z-index: 3;
+            font-size: 11px; color: rgba(255,255,255,0.28); pointer-events: none;
+        }
+        @media (max-width: 640px) { #hint, .seg.hideSm { display: none; } .seg { padding: 8px 11px; } }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div id="topbar">
+        <div class="pill">
+            <div class="seg active" id="segFree">🎹 Freestyle</div>
+            <div class="seg hideSm" id="segChord">🎶 Chords</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="btn" id="instrBtn">🎼 <span id="instrName">Grand Piano</span></div>
+        <div class="btn icon" id="gear">⚙️</div>
+    </div>
+
+    <div id="toolbar">
+        <div class="btn icon on" id="sustainBtn" title="Sustain (hold notes) — Space">🦶</div>
+        <div class="btn icon" id="labelBtn" title="Toggle note labels">🔤</div>
+        <div id="range">
+            <div class="rbtn" id="octDown" title="Lower octave (Z)">−</div>
+            <div id="miniWrap"><canvas id="mini"></canvas></div>
+            <div class="rbtn" id="octUp" title="Higher octave (X)">+</div>
+        </div>
+        <span class="lbl">Vol</span>
+        <input id="vol" type="range" min="0" max="100" value="70">
+    </div>
+
+    <div id="stage">
+        <div id="brand">IMPALA-STYLE&nbsp;&nbsp;WEB&nbsp;PIANO</div>
+        <div id="felt"></div>
+        <div id="keys"></div>
+        <div id="hint">Computer keys: A S D F G H J K L&nbsp;&nbsp;·&nbsp;&nbsp;W E T Y U (sharps)&nbsp;&nbsp;·&nbsp;&nbsp;Z / X octave&nbsp;&nbsp;·&nbsp;&nbsp;Space = sustain</div>
+    </div>
+</div>
+
+<script>
+'use strict';
+// =============================================================================
+//  AUDIO — polyphonic synth. Every note is its own voice, so any number of
+//  keys sound together (multi-touch, multiple computer keys, mouse chords).
+// =============================================================================
+let ac = null, master = null, comp = null;
+const voices = new Map();   // noteId -> { oscs:[], gain, midi, released }
+const MAX_VOICES = 48;
+let volume = 0.7;
+
+const INSTRUMENTS = {
+    grand:   { name: 'Grand Piano', partials: [[1, 1, 'triangle'], [2, 0.32, 'sine'], [3, 0.12, 'sine']], decay: 3.2, cutoff: 5200, release: 0.28 },
+    electric:{ name: 'Electric Piano', partials: [[1, 1, 'sine'], [2, 0.5, 'sine'], [4, 0.14, 'triangle']], decay: 2.4, cutoff: 4200, release: 0.32 },
+    organ:   { name: 'Church Organ', partials: [[1, 0.9, 'sine'], [2, 0.7, 'sine'], [3, 0.5, 'sine'], [4, 0.3, 'sine']], decay: 40, cutoff: 6000, release: 0.12, hold: true },
+    synth:   { name: 'Synth Lead', partials: [[1, 1, 'sawtooth'], [2, 0.25, 'square']], decay: 30, cutoff: 3400, release: 0.18, hold: true },
+};
+let instrument = 'grand';
+let sustain = true;
+
+function ensureAudio() {
+    if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+    ac = new (window.AudioContext || window.webkitAudioContext)();
+    comp = ac.createDynamicsCompressor();     // keeps big chords from clipping
+    comp.threshold.value = -18; comp.knee.value = 24; comp.ratio.value = 3;
+    comp.attack.value = 0.003; comp.release.value = 0.25;
+    master = ac.createGain();
+    master.gain.value = volume;
+    master.connect(comp); comp.connect(ac.destination);
+}
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+
+function noteOn(midi, vel) {
+    ensureAudio();
+    const id = midi;
+    if (voices.has(id)) releaseVoice(id, true);   // retrigger
+    if (voices.size >= MAX_VOICES) {               // steal oldest
+        releaseVoice(voices.keys().next().value, true);
+    }
+    const t = ac.currentTime;
+    const I = INSTRUMENTS[instrument];
+    const peak = (0.16 + 0.12 * (vel || 1)) ;
+    const g = ac.createGain();
+    const filt = ac.createBiquadFilter();
+    filt.type = 'lowpass'; filt.frequency.value = I.cutoff;
+    filt.Q.value = 0.6;
+    g.connect(filt); filt.connect(master);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.006);          // attack
+    if (!I.hold) {
+        g.gain.exponentialRampToValueAtTime(peak * 0.3, t + 0.35);  // early decay
+        g.gain.exponentialRampToValueAtTime(0.0001, t + I.decay);   // long tail
+    } else {
+        g.gain.exponentialRampToValueAtTime(peak * 0.85, t + 0.25); // sustain
+    }
+    const oscs = [];
+    const f0 = mtof(midi);
+    for (const [mult, amp, type] of I.partials) {
+        const o = ac.createOscillator();
+        o.type = type; o.frequency.value = f0 * mult;
+        o.detune.value = (Math.random() * 6 - 3);
+        const og = ac.createGain(); og.gain.value = amp;
+        o.connect(og); og.connect(g);
+        o.start(t); oscs.push(o);
+    }
+    voices.set(id, { oscs, gain: g, midi, released: false, hold: I.hold });
+    lightKey(midi, true);
+    updateVoiceReadout();
+}
+
+function releaseVoice(id, immediate) {
+    const v = voices.get(id);
+    if (!v) return;
+    const t = ac.currentTime;
+    const rel = immediate ? 0.03 : (INSTRUMENTS[instrument].release || 0.25);
+    try {
+        v.gain.gain.cancelScheduledValues(t);
+        const cur = Math.max(0.0001, v.gain.gain.value);
+        v.gain.gain.setValueAtTime(cur, t);
+        v.gain.gain.exponentialRampToValueAtTime(0.0001, t + rel);
+    } catch (e) {}
+    for (const o of v.oscs) { try { o.stop(t + rel + 0.02); } catch (e) {} }
+    voices.delete(id);
+    setTimeout(updateVoiceReadout, 0);
+}
+
+const heldPhysically = new Set();   // notes whose input is currently held down
+function noteOff(midi) {
+    heldPhysically.delete(midi);
+    if (sustain) { lightKey(midi, false); return; }   // pedal down: keep ringing
+    releaseVoice(midi, false);
+    lightKey(midi, false);
+}
+function pressNote(midi, vel) { heldPhysically.add(midi); noteOn(midi, vel); }
+
+function setSustain(on) {
+    sustain = on;
+    sustainBtn.classList.toggle('on', on);
+    if (!on) {   // lift pedal: release everything not still physically held
+        for (const id of [...voices.keys()]) {
+            if (!heldPhysically.has(id)) { releaseVoice(id, false); lightKey(id, false); }
+        }
+    }
+}
+
+// =============================================================================
+//  KEYBOARD RENDERING
+// =============================================================================
+const NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const WHITE_SET = [0, 2, 4, 5, 7, 9, 11];
+const isBlack = m => [1, 3, 6, 8, 10].includes(((m % 12) + 12) % 12);
+const noteName = m => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
+
+let LOW = 48, HIGH = 84;         // visible midi range (C3..C6), rebuilt on resize
+const keyEls = new Map();        // midi -> element
+let showLabels = true;
+let kbOctave = 4;                // base octave for computer-keyboard mapping
+
+function buildKeyboard() {
+    const keys = document.getElementById('keys');
+    keys.innerHTML = '';
+    keyEls.clear();
+    const whites = [];
+    for (let m = LOW; m <= HIGH; m++) if (!isBlack(m)) whites.push(m);
+    const n = whites.length;
+    const ww = 100 / n;
+    // white keys
+    whites.forEach((m, i) => {
+        const el = document.createElement('div');
+        el.className = 'white';
+        el.style.left = (i * ww) + '%';
+        el.style.width = ww + '%';
+        const oct = Math.floor(m / 12) - 1;
+        const nm = NAMES[m % 12] + oct;
+        el.innerHTML = '<span class="lab' + (m % 12 === 0 ? ' c' : '') + '">' + nm + '</span>';
+        el.dataset.midi = m;
+        keys.appendChild(el);
+        keyEls.set(m, el);
+    });
+    // black keys positioned relative to preceding white key
+    for (let m = LOW; m <= HIGH; m++) {
+        if (!isBlack(m)) continue;
+        const leftWhite = whites.filter(w => w < m).length - 1;   // index of white key just below
+        const el = document.createElement('div');
+        el.className = 'black';
+        el.style.left = ((leftWhite + 1) * ww - ww * 0.3) + '%';
+        el.style.width = (ww * 0.6) + '%';
+        el.style.height = '62%';
+        el.dataset.midi = m;
+        keys.appendChild(el);
+        keyEls.set(m, el);
+    }
+    document.querySelectorAll('.lab').forEach(l => l.style.display = showLabels ? '' : 'none');
+    drawMini();
+}
+
+function lightKey(midi, on) {
+    const el = keyEls.get(midi);
+    if (el) el.classList.toggle('lit', on);
+}
+
+function fitRange() {
+    // choose a visible span based on width: ~ 52px per white key
+    const w = window.innerWidth;
+    const wantWhite = Math.max(10, Math.min(36, Math.round(w / 54)));
+    // center around C4 (60); snap low to a C
+    let low = 60 - Math.round(wantWhite / 2 / 7 * 12);
+    low = Math.round(low / 12) * 12;                 // snap to C
+    low = Math.max(24, low);
+    let count = 0, m = low;
+    while (count < wantWhite) { if (!isBlack(m)) count++; m++; }
+    LOW = low; HIGH = m - 1;
+    while (isBlack(HIGH)) HIGH--;
+    buildKeyboard();
+}
+
+// mini keyboard range indicator
+function drawMini() {
+    const c = document.getElementById('mini');
+    const w = c.clientWidth, h = c.clientHeight;
+    if (!w) return;
+    c.width = w; c.height = h;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, w, h);
+    const full = 88, first = 21;   // full piano A0..C8
+    const px = i => (i / full) * w;
+    for (let i = 0; i < full; i++) {
+        const m = first + i;
+        if (isBlack(m)) continue;
+        g.fillStyle = (m >= LOW && m <= HIGH) ? '#e9e9ee' : '#3a3a44';
+        g.fillRect(px(i - first + 0.5), 3, Math.max(1, w / full * 1.4), h - 6);
+    }
+    // highlight window
+    g.strokeStyle = '#6d4bd8'; g.lineWidth = 2;
+    const a = px(LOW - first), b = px(HIGH - first + 1);
+    g.strokeRect(a, 1, b - a, h - 2);
+}
+
+// =============================================================================
+//  POINTER INPUT (mouse + multi-touch) with glissando
+// =============================================================================
+const pointerNote = new Map();   // pointerId -> midi currently sounding for that pointer
+function midiAtPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    if (!el) return null;
+    const k = el.closest('.white, .black');
+    if (!k) return null;
+    return Number(k.dataset.midi);
+}
+function onPointerDown(e) {
+    if (e.target.closest('#toolbar, #topbar')) return;
+    const m = midiAtPoint(e.clientX, e.clientY);
+    if (m == null) return;
+    e.preventDefault();
+    pointerNote.set(e.pointerId, m);
+    pressNote(m, 1);
+}
+function onPointerMove(e) {
+    if (!pointerNote.has(e.pointerId)) return;
+    const m = midiAtPoint(e.clientX, e.clientY);
+    const prev = pointerNote.get(e.pointerId);
+    if (m == null || m === prev) return;
+    noteOff(prev);
+    pointerNote.set(e.pointerId, m);
+    pressNote(m, 1);
+}
+function onPointerUp(e) {
+    if (!pointerNote.has(e.pointerId)) return;
+    noteOff(pointerNote.get(e.pointerId));
+    pointerNote.delete(e.pointerId);
+}
+const stage = document.getElementById('stage');
+stage.addEventListener('pointerdown', onPointerDown);
+stage.addEventListener('pointermove', onPointerMove);
+window.addEventListener('pointerup', onPointerUp);
+window.addEventListener('pointercancel', onPointerUp);
+
+// =============================================================================
+//  COMPUTER KEYBOARD  (multiple simultaneous keys = chords)
+// =============================================================================
+const KEYMAP = {   // offset from octave base C
+    a: 0, w: 1, s: 2, e: 3, d: 4, f: 5, t: 6, g: 7, y: 8, h: 9, u: 10, j: 11,
+    k: 12, o: 13, l: 14, p: 15, ';': 16,
+};
+const downKeys = new Set();
+window.addEventListener('keydown', e => {
+    if (e.repeat) return;
+    const k = e.key.toLowerCase();
+    if (k === ' ') { e.preventDefault(); setSustain(!sustain); return; }
+    if (k === 'z') { shiftOctave(-1); return; }
+    if (k === 'x') { shiftOctave(1); return; }
+    if (k in KEYMAP && !downKeys.has(k)) {
+        downKeys.add(k);
+        const midi = 12 * (kbOctave + 1) + KEYMAP[k];
+        pressNote(midi, 1);
+        e.preventDefault();
+    }
+});
+window.addEventListener('keyup', e => {
+    const k = e.key.toLowerCase();
+    if (k in KEYMAP && downKeys.has(k)) {
+        downKeys.delete(k);
+        noteOff(12 * (kbOctave + 1) + KEYMAP[k]);
+    }
+});
+function shiftOctave(d) {
+    kbOctave = Math.max(1, Math.min(7, kbOctave + d));
+    // also scroll the visible range if the mapping falls outside
+    const base = 12 * (kbOctave + 1);
+    if (base < LOW || base + 16 > HIGH) {
+        LOW = Math.max(24, Math.round((base - 4) / 12) * 12);
+        HIGH = LOW; let c = 0;
+        while (c < (HIGH - LOW < 1 ? 24 : 24)) { HIGH++; if (!isBlack(HIGH)) c++; if (HIGH - LOW > 30) break; }
+        buildKeyboard();
+    }
+    flashRange();
+}
+function flashRange() { drawMini(); }
+
+// =============================================================================
+//  UI CONTROLS
+// =============================================================================
+const sustainBtn = document.getElementById('sustainBtn');
+sustainBtn.addEventListener('click', () => { ensureAudio(); setSustain(!sustain); });
+document.getElementById('labelBtn').addEventListener('click', () => {
+    showLabels = !showLabels;
+    document.getElementById('labelBtn').classList.toggle('on', showLabels);
+    document.querySelectorAll('.lab').forEach(l => l.style.display = showLabels ? '' : 'none');
+});
+document.getElementById('labelBtn').classList.add('on');
+document.getElementById('octDown').addEventListener('click', () => shiftVisible(-1));
+document.getElementById('octUp').addEventListener('click', () => shiftVisible(1));
+function shiftVisible(d) {
+    const span = HIGH - LOW;
+    LOW = Math.max(21, Math.min(96, LOW + d * 12));
+    HIGH = LOW + span;
+    if (HIGH > 108) { HIGH = 108; LOW = HIGH - span; }
+    buildKeyboard();
+}
+document.getElementById('vol').addEventListener('input', e => {
+    volume = e.target.value / 100;
+    if (master) master.gain.setTargetAtTime(volume, ac.currentTime, 0.02);
+});
+const instrKeys = Object.keys(INSTRUMENTS);
+document.getElementById('instrBtn').addEventListener('click', () => {
+    ensureAudio();
+    const i = (instrKeys.indexOf(instrument) + 1) % instrKeys.length;
+    instrument = instrKeys[i];
+    document.getElementById('instrName').textContent = INSTRUMENTS[instrument].name;
+});
+document.getElementById('gear').addEventListener('click', () => {
+    alert('🎹 Web Piano\n\n• Play with mouse, multi-touch, or your computer keyboard\n• Polyphonic: press many keys at once for chords\n• Sustain pedal 🦶 (Space) holds notes\n• Z / X shift the keyboard octave\n• Tap the instrument name to change the sound');
+});
+document.getElementById('segChord').addEventListener('click', () => {
+    // quick demo: play a C major chord so you can hear polyphony
+    ensureAudio();
+    [60, 64, 67, 72].forEach(m => { pressNote(m, 1); });
+    setTimeout(() => [60, 64, 67, 72].forEach(m => { heldPhysically.delete(m); if (!sustain) releaseVoice(m, false); lightKey(m, false); }), 600);
+});
+
+// unlock audio on first gesture
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => window.addEventListener(ev, ensureAudio, { once: false }));
+window.addEventListener('resize', () => { fitRange(); });
+
+// test hook
+window.PIANO = {
+    activeVoices: () => voices.size,
+    noteOn: pressNote, noteOff, setSustain: setSustain,
+    state: () => ({ voices: voices.size, sustain, instrument, LOW, HIGH, kbOctave }),
+};
+function updateVoiceReadout() {}
+
+fitRange();
+</script>
+</body>
+</html>
