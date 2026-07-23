@@ -2,18 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Grand Piano</title>
     <style>
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
+        input[type=range] { touch-action: auto; }   /* let the volume slider drag */
         html, body {
             margin: 0; height: 100%; overflow: hidden;
             background: #0a0a0c; color: #ecf0f1;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             user-select: none; -webkit-user-select: none;
-            touch-action: none;
+            touch-action: none; overscroll-behavior: none;
         }
         #app { display: flex; flex-direction: column; height: 100%; }
+
+        /* ---------- rotate-to-landscape prompt (touch devices in portrait) ---------- */
+        #rotate {
+            display: none; position: fixed; inset: 0; z-index: 99;
+            background: #0a0a0c; color: #ecf0f1;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            text-align: center; padding: 24px;
+        }
+        #rotate .ic { font-size: 64px; animation: rot 2.4s ease-in-out infinite; }
+        #rotate h2 { margin: 0; font-size: 22px; }
+        #rotate p { margin: 0; color: #9aa0aa; font-size: 15px; max-width: 320px; }
+        @keyframes rot { 0%,40% { transform: rotate(0); } 60%,100% { transform: rotate(-90deg); } }
+        @media (orientation: portrait) and (pointer: coarse) {
+            #rotate { display: flex; }
+            #app { display: none; }
+        }
 
         /* ---------- top bar ---------- */
         #topbar {
@@ -118,6 +135,11 @@
     </style>
 </head>
 <body>
+<div id="rotate">
+    <div class="ic">📱</div>
+    <h2>Rotate to landscape</h2>
+    <p>Turn your device sideways for the full keyboard. 🎹</p>
+</div>
 <div id="app">
     <div id="topbar">
         <div class="pill">
@@ -472,6 +494,37 @@ document.getElementById('segChord').addEventListener('click', () => {
 // unlock audio on first gesture
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => window.addEventListener(ev, ensureAudio, { once: false }));
 window.addEventListener('resize', () => { fitRange(); });
+window.addEventListener('orientationchange', () => setTimeout(fitRange, 150));
+
+// ---------------------------------------------------------------------------
+//  Lock out zooming so chords (two fingers) and fast taps don't zoom the page
+// ---------------------------------------------------------------------------
+// iOS pinch gesture events
+['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+// desktop trackpad / ctrl+wheel zoom
+window.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+// desktop ctrl/cmd +/-/0 zoom
+window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && ['+', '-', '=', '0'].includes(e.key)) e.preventDefault();
+});
+// double-tap zoom (iOS ignores user-scalable=no)
+let lastTap = 0;
+document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTap < 350) e.preventDefault();
+    lastTap = now;
+}, { passive: false });
+
+// best-effort native landscape lock (works in fullscreen on Android Chrome;
+// harmless no-op elsewhere — the CSS rotate prompt covers iOS)
+function tryLockLandscape() {
+    try {
+        const o = screen.orientation;
+        if (o && o.lock) o.lock('landscape').catch(() => {});
+    } catch (e) {}
+}
+window.addEventListener('pointerdown', tryLockLandscape, { once: true });
 
 // test hook
 window.PIANO = {
