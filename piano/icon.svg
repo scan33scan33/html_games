@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0a0a0c"/>
+  <rect x="70" y="150" width="372" height="230" rx="18" fill="#141416" stroke="#2a2a32" stroke-width="4"/>
+  <rect x="86" y="150" width="16" height="212" fill="#a01a24"/>
+  <!-- white keys -->
+  <g>
+    <rect x="110" y="176" width="44" height="180" rx="6" fill="#fdfdfd" stroke="#b9bcc4" stroke-width="2"/>
+    <rect x="156" y="176" width="44" height="180" rx="6" fill="#fdfdfd" stroke="#b9bcc4" stroke-width="2"/>
+    <rect x="202" y="176" width="44" height="180" rx="6" fill="#e6ddff" stroke="#b9bcc4" stroke-width="2"/>
+    <rect x="248" y="176" width="44" height="180" rx="6" fill="#fdfdfd" stroke="#b9bcc4" stroke-width="2"/>
+    <rect x="294" y="176" width="44" height="180" rx="6" fill="#fdfdfd" stroke="#b9bcc4" stroke-width="2"/>
+    <rect x="340" y="176" width="44" height="180" rx="6" fill="#cbb8ff" stroke="#b9bcc4" stroke-width="2"/>
+    <rect x="386" y="176" width="44" height="180" rx="6" fill="#fdfdfd" stroke="#b9bcc4" stroke-width="2"/>
+  </g>
+  <!-- black keys -->
+  <g fill="#17181c">
+    <rect x="142" y="176" width="26" height="112" rx="4"/>
+    <rect x="188" y="176" width="26" height="112" rx="4"/>
+    <rect x="280" y="176" width="26" height="112" rx="4"/>
+    <rect x="326" y="176" width="26" height="112" rx="4"/>
+    <rect x="372" y="176" width="26" height="112" rx="4"/>
+  </g>
+</svg>

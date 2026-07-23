@@ -3,6 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- Add to Home Screen / PWA: launches fullscreen (no browser chrome, no zoom),
+         landscape orientation where the OS allows it -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0c">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Piano">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
     <title>Grand Piano</title>
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; touch-action: none; }
@@ -16,20 +26,16 @@
         }
         #app { display: flex; flex-direction: column; height: 100%; }
 
-        /* ---------- rotate-to-landscape prompt (touch devices in portrait) ---------- */
-        #rotate {
-            display: none; position: fixed; inset: 0; z-index: 99;
-            background: #0a0a0c; color: #ecf0f1;
-            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
-            text-align: center; padding: 24px;
-        }
-        #rotate .ic { font-size: 64px; animation: rot 2.4s ease-in-out infinite; }
-        #rotate h2 { margin: 0; font-size: 22px; }
-        #rotate p { margin: 0; color: #9aa0aa; font-size: 15px; max-width: 320px; }
-        @keyframes rot { 0%,40% { transform: rotate(0); } 60%,100% { transform: rotate(-90deg); } }
+        /* On a portrait phone the OS may refuse to rotate (orientation-lock on),
+           so instead of blocking, we force the keyboard into landscape ourselves:
+           swap width/height and rotate the whole app 90°. Works locked or not. */
         @media (orientation: portrait) and (pointer: coarse) {
-            #rotate { display: flex; }
-            #app { display: none; }
+            #app {
+                position: fixed; top: 50%; left: 50%;
+                width: 100vh; height: 100vw;
+                transform: translate(-50%, -50%) rotate(90deg);
+                transform-origin: center center;
+            }
         }
 
         /* ---------- top bar ---------- */
@@ -135,11 +141,6 @@
     </style>
 </head>
 <body>
-<div id="rotate">
-    <div class="ic">📱</div>
-    <h2>Rotate to landscape</h2>
-    <p>Turn your device sideways for the full keyboard. 🎹</p>
-</div>
 <div id="app">
     <div id="topbar">
         <div class="pill">
@@ -147,7 +148,8 @@
             <div class="seg hideSm" id="segChord">🎶 Chords</div>
         </div>
         <div class="spacer"></div>
-        <div class="btn" id="instrBtn">🎼 <span id="instrName">Grand Piano</span></div>
+        <div class="btn" id="installBtn" style="display:none">⤓ <span class="hideSm">Install</span></div>
+        <div class="btn" id="instrBtn">🎼 <span id="instrName" class="hideSm">Grand Piano</span></div>
         <div class="btn icon" id="gear">⚙️</div>
     </div>
 
@@ -333,8 +335,10 @@ function lightKey(midi, on) {
 }
 
 function fitRange() {
-    // choose a visible span based on width: ~ 52px per white key
-    const w = window.innerWidth;
+    // choose a visible span based on the keyboard's actual width (#stage), which
+    // is correct even when the app is force-rotated in portrait (width = 100vh)
+    const st = document.getElementById('stage');
+    const w = (st && st.clientWidth) || window.innerWidth;
     const wantWhite = Math.max(10, Math.min(36, Math.round(w / 54)));
     // center around C4 (60); snap low to a C
     let low = 60 - Math.round(wantWhite / 2 / 7 * 12);
@@ -517,7 +521,7 @@ document.addEventListener('touchend', e => {
 }, { passive: false });
 
 // best-effort native landscape lock (works in fullscreen on Android Chrome;
-// harmless no-op elsewhere — the CSS rotate prompt covers iOS)
+// harmless no-op elsewhere — the CSS force-rotate covers everything else)
 function tryLockLandscape() {
     try {
         const o = screen.orientation;
@@ -525,6 +529,35 @@ function tryLockLandscape() {
     } catch (e) {}
 }
 window.addEventListener('pointerdown', tryLockLandscape, { once: true });
+
+// ---------------------------------------------------------------------------
+//  Add to Home Screen (PWA install)
+// ---------------------------------------------------------------------------
+const installBtn = document.getElementById('installBtn');
+let deferredInstall = null;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+// Android/Chrome: capture the native prompt and show our button
+window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstall = e;
+    if (!isStandalone) installBtn.style.display = '';
+});
+window.addEventListener('appinstalled', () => { installBtn.style.display = 'none'; deferredInstall = null; });
+// iOS has no install API — show the button with instructions instead
+if (isIOS && !isStandalone) installBtn.style.display = '';
+installBtn.addEventListener('click', async () => {
+    if (deferredInstall) {
+        deferredInstall.prompt();
+        try { await deferredInstall.userChoice; } catch (e) {}
+        deferredInstall = null;
+        installBtn.style.display = 'none';
+    } else if (isIOS) {
+        alert('Add to Home Screen (iPhone/iPad):\n\n1. Tap the Share button  ⬆️  in Safari\n2. Choose “Add to Home Screen”  ➕\n3. Open “Piano” from your home screen\n\nIt launches fullscreen in landscape — no zooming, no browser bars.');
+    } else {
+        alert('To install: open this page’s browser menu and choose “Install app” or “Add to Home Screen”.');
+    }
+});
 
 // test hook
 window.PIANO = {
