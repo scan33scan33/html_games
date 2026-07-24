@@ -243,14 +243,24 @@ const MAX_VOICES = 48;
 let volume = 0.7;
 
 const INSTRUMENTS = {
-    grand:   { name: 'Grand Piano', partials: [[1, 1, 'triangle'], [2, 0.32, 'sine'], [3, 0.12, 'sine']], decay: 3.2, cutoff: 5200, release: 0.28 },
-    electric:{ name: 'Electric Piano', partials: [[1, 1, 'sine'], [2, 0.5, 'sine'], [4, 0.14, 'triangle']], decay: 2.4, cutoff: 4200, release: 0.32 },
+    grand:   { name: 'Grand Piano', partials: [[1, 1, 'triangle'], [2, 0.35, 'sine'], [3, 0.15, 'sine'], [4, 0.075, 'sine'], [5, 0.04, 'sine'], [7, 0.02, 'sine']], decay: 3.4, cutoff: 4600, release: 0.3, inharm: 0.0005, hammer: 0.5 },
+    electric:{ name: 'Electric Piano', partials: [[1, 1, 'sine'], [2, 0.5, 'sine'], [3, 0.12, 'sine'], [4, 0.14, 'triangle']], decay: 2.6, cutoff: 4200, release: 0.34, inharm: 0.0003, hammer: 0.25 },
     organ:   { name: 'Church Organ', partials: [[1, 0.9, 'sine'], [2, 0.7, 'sine'], [3, 0.5, 'sine'], [4, 0.3, 'sine']], decay: 40, cutoff: 6000, release: 0.12, hold: true },
     synth:   { name: 'Synth Lead', partials: [[1, 1, 'sawtooth'], [2, 0.25, 'square']], decay: 30, cutoff: 3400, release: 0.18, hold: true },
 };
 let instrument = 'grand';
 let sustain = true;
 
+let reverb, reverbGain, noiseBuf;
+function makeImpulse(seconds, decay) {          // synthesized room impulse response
+    const rate = ac.sampleRate, len = Math.floor(rate * seconds);
+    const buf = ac.createBuffer(2, len, rate);
+    for (let ch = 0; ch < 2; ch++) {
+        const d = buf.getChannelData(ch);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    return buf;
+}
 function ensureAudio() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
     ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -259,7 +269,17 @@ function ensureAudio() {
     comp.attack.value = 0.003; comp.release.value = 0.25;
     master = ac.createGain();
     master.gain.value = volume;
-    master.connect(comp); comp.connect(ac.destination);
+    master.connect(comp);
+    // parallel convolution reverb for a little air/room
+    reverb = ac.createConvolver(); reverb.buffer = makeImpulse(1.9, 2.6);
+    reverbGain = ac.createGain(); reverbGain.gain.value = 0.17;
+    master.connect(reverb); reverb.connect(reverbGain); reverbGain.connect(comp);
+    comp.connect(ac.destination);
+    // shared white-noise buffer reused for per-note hammer attack
+    const nlen = Math.floor(ac.sampleRate * 0.2);
+    noiseBuf = ac.createBuffer(1, nlen, ac.sampleRate);
+    const nd = noiseBuf.getChannelData(0);
+    for (let i = 0; i < nlen; i++) nd[i] = Math.random() * 2 - 1;
 }
 const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
@@ -272,10 +292,15 @@ function noteOn(midi, vel) {
     }
     const t = ac.currentTime;
     const I = INSTRUMENTS[instrument];
-    const peak = (0.16 + 0.12 * (vel || 1)) ;
+    const v = (vel || 1);
+    const peak = (0.16 + 0.12 * v);
     const g = ac.createGain();
     const filt = ac.createBiquadFilter();
-    filt.type = 'lowpass'; filt.frequency.value = I.cutoff;
+    filt.type = 'lowpass';
+    // brightness follows velocity (harder = brighter) and pitch (higher = brighter)
+    const bright = 0.42 + 0.58 * v;
+    const pitchF = Math.max(0.55, 1 + (midi - 60) / 46);
+    filt.frequency.value = Math.min(12000, I.cutoff * bright * pitchF);
     filt.Q.value = 0.6;
     g.connect(filt); filt.connect(master);
     g.gain.setValueAtTime(0.0001, t);
@@ -288,13 +313,27 @@ function noteOn(midi, vel) {
     }
     const oscs = [];
     const f0 = mtof(midi);
+    const inh = I.inharm || 0;
     for (const [mult, amp, type] of I.partials) {
         const o = ac.createOscillator();
-        o.type = type; o.frequency.value = f0 * mult;
+        o.type = type;
+        o.frequency.value = f0 * mult * (1 + inh * mult * mult);   // slight inharmonicity
         o.detune.value = (Math.random() * 6 - 3);
         const og = ac.createGain(); og.gain.value = amp;
         o.connect(og); og.connect(g);
         o.start(t); oscs.push(o);
+    }
+    // hammer-strike transient — a very short filtered noise burst, louder when hit harder
+    if (I.hammer && noiseBuf) {
+        const nz = ac.createBufferSource(); nz.buffer = noiseBuf;
+        const bp = ac.createBiquadFilter(); bp.type = 'bandpass';
+        bp.frequency.value = Math.min(9000, f0 * 3 + 1200); bp.Q.value = 0.7;
+        const ng = ac.createGain();
+        const hp = I.hammer * (0.05 + 0.09 * v);
+        ng.gain.setValueAtTime(hp, t);
+        ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+        nz.connect(bp); bp.connect(ng); ng.connect(master);
+        nz.start(t); nz.stop(t + 0.06);
     }
     voices.set(id, { oscs, gain: g, midi, released: false, hold: I.hold });
     lightKey(midi, true);
@@ -851,6 +890,7 @@ window.PIANO = {
     songs: () => Object.keys(SONGS),
     playing: () => songPlaying,
     parseMIDI, addUserMIDI,
+    _ctx: () => ac, _comp: () => comp,
 };
 function updateVoiceReadout() {}
 
