@@ -1286,6 +1286,9 @@ window.PIANO = {
 function updateVoiceReadout() {}
 
 fitRange();
+
+// offline: once visited, the app loads with no network at all (see sw.js)
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 </body>
 </html>
