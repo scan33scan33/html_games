@@ -218,6 +218,7 @@
             <div class="seg hideSm" id="segChord">🎶 Chords</div>
         </div>
         <div class="spacer"></div>
+        <div class="btn" id="midiInd" style="display:none" title="MIDI keyboard connected"></div>
         <div class="btn" id="songsBtn">♫ <span class="hideSm">Songs</span></div>
         <div class="btn" id="installBtn" style="display:none">⤓ <span class="hideSm">Install</span></div>
         <div class="btn" id="instrBtn">🎼 <span id="instrName" class="hideSm">Grand Piano</span></div>
@@ -228,7 +229,7 @@
         <div class="btn icon on" id="sustainBtn" title="Sustain (hold notes) — Space">🦶</div>
         <div class="btn icon" id="labelBtn" title="Toggle note labels">🔤</div>
         <div class="btn icon" id="learnBtn" title="Falling-notes learn mode">🌧️</div>
-        <div class="btn icon" id="recBtn" title="Record your playing">⏺</div>
+        <div class="btn icon rec" id="recBtn" title="Record your playing">⏺</div>
         <div id="sizeSel" title="How many octaves to show">
             <span class="lbl hideSm">Size</span>
             <div class="szbtn" data-oct="2" title="2 octaves">2</div>
@@ -401,12 +402,13 @@ function releaseVoice(id, immediate) {
 
 const heldPhysically = new Set();   // notes whose input is currently held down
 function noteOff(midi) {
+    if (recording) recPush(midi, 0, 1);
     heldPhysically.delete(midi);
     if (sustain) { lightKey(midi, false); return; }   // pedal down: keep ringing
     releaseVoice(midi, false);
     lightKey(midi, false);
 }
-function pressNote(midi, vel) { heldPhysically.add(midi); noteOn(midi, vel); }
+function pressNote(midi, vel) { if (recording) recPush(midi, 1, vel); heldPhysically.add(midi); noteOn(midi, vel); }
 
 function setSustain(on) {
     sustain = on;
@@ -972,9 +974,9 @@ function saveUserSongs() {
     try { localStorage.setItem(USER_KEY, JSON.stringify(arr)); return true; }
     catch (e) { return false; }
 }
-function addUserMIDI(name, events) {
+function addUserMIDI(name, events, by) {
     const id = 'u' + Date.now() + '_' + Math.floor(performance.now());
-    SONGS[id] = { name, by: 'your MIDI', events, user: true };
+    SONGS[id] = { name, by: by || 'your MIDI', events, user: true };
     const saved = saveUserSongs();
     renderSongs();
     return { id, saved };
@@ -992,8 +994,12 @@ function renderSongs() {
             '</span><span class="by">' + esc(s.by) + '</span>';
         row.addEventListener('click', () => { songPlaying === id ? stopSong() : playSong(id); });
         if (s.user) {
+            const dl = document.createElement('span');
+            dl.className = 'del'; dl.textContent = '⬇'; dl.title = 'Download as .mid';
+            dl.addEventListener('click', ev => { ev.stopPropagation(); exportSongMidi(id); });
+            row.appendChild(dl);
             const x = document.createElement('span');
-            x.className = 'del'; x.textContent = '✕'; x.title = 'Remove this upload';
+            x.className = 'del'; x.textContent = '✕'; x.title = 'Remove';
             x.addEventListener('click', ev => {
                 ev.stopPropagation();
                 if (songPlaying === id) stopSong();
@@ -1034,6 +1040,100 @@ midiInput.addEventListener('change', async e => {
 });
 loadUserSongs();
 
+// =============================================================================
+//  RECORD your playing  →  replay + export as .mid
+// =============================================================================
+let recording = false, recStart = 0, recEvents = [];
+function recPush(midi, on, vel) {
+    recEvents.push({ t: performance.now() - recStart, midi, on, vel: Math.max(1, Math.min(127, Math.round((vel || 1) * 100))) });
+}
+function finalizeRecording() {
+    const held = {}, notes = [];
+    for (const e of recEvents) {
+        if (e.on) (held[e.midi] = held[e.midi] || []).push(e);
+        else { const a = held[e.midi]; if (a && a.length) { const s = a.shift(); notes.push([s.t, e.t, e.midi, s.vel]); } }
+    }
+    const endT = recEvents.length ? recEvents[recEvents.length - 1].t : 0;
+    for (const m in held) for (const s of held[m]) notes.push([s.t, endT + 300, +m, s.vel]);
+    notes.sort((a, b) => a[0] - b[0] || a[2] - b[2]);
+    const occ = {}, out = [];
+    for (const [st, en, midi, vel] of notes) { const k = occ[midi] | 0; occ[midi] = k + 1; out.push([Math.round(st), midi, Math.max(30, Math.round(en - st)), vel, k]); }
+    return out;
+}
+const recBtn = document.getElementById('recBtn');
+recBtn.addEventListener('click', () => {
+    ensureAudio();
+    if (!recording) {
+        recording = true; recEvents = []; recStart = performance.now();
+        recBtn.classList.add('armed'); recBtn.title = 'Stop recording';
+    } else {
+        recording = false; recBtn.classList.remove('armed'); recBtn.title = 'Record your playing';
+        const ev = finalizeRecording();
+        if (!ev.length) { alert('Nothing was recorded — play some notes, then stop.'); return; }
+        const d = new Date();
+        const nm = 'Recording ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+        addUserMIDI(nm, ev, 'recorded');
+        document.getElementById('songsModal').classList.add('open'); renderSongs();
+    }
+});
+
+// ---- build a Standard MIDI File (format 0) from our event list ----
+function pushVLQ(arr, v) { const b = [v & 0x7f]; v >>>= 7; while (v > 0) { b.unshift((v & 0x7f) | 0x80); v >>>= 7; } for (const x of b) arr.push(x); }
+function eventsToMIDI(events) {
+    const TPB = 480, tempo = 500000, perMs = TPB / (tempo / 1000);   // 0.96 ticks/ms @120bpm
+    const list = [];
+    for (const [t, midi, dur, vel] of events) {
+        if (midi < 0 || midi > 127) continue;
+        list.push([t, 0x90, midi, Math.max(1, Math.min(127, vel || 80))]);
+        list.push([t + Math.max(20, dur), 0x80, midi, 0]);
+    }
+    list.sort((a, b) => a[0] - b[0]);
+    const trk = [0x00, 0xff, 0x51, 0x03, (tempo >> 16) & 0xff, (tempo >> 8) & 0xff, tempo & 0xff];
+    let last = 0;
+    for (const [ms, st, d1, d2] of list) { const tick = Math.round(ms * perMs); pushVLQ(trk, tick - last); last = tick; trk.push(st, d1, d2); }
+    pushVLQ(trk, 0); trk.push(0xff, 0x2f, 0x00);
+    const L = trk.length;
+    return new Uint8Array([0x4d, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, (TPB >> 8) & 0xff, TPB & 0xff,
+        0x4d, 0x54, 0x72, 0x6b, (L >>> 24) & 0xff, (L >>> 16) & 0xff, (L >>> 8) & 0xff, L & 0xff, ...trk]);
+}
+function exportSongMidi(id) {
+    const s = SONGS[id]; if (!s) return;
+    const ev = s.events || normalizeEvents(s);
+    const bytes = eventsToMIDI(ev);
+    const blob = new Blob([bytes], { type: 'audio/midi' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = (s.name || 'song').replace(/[^\w \-]+/g, '_').trim() + '.mid';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+// =============================================================================
+//  Web MIDI — play (and record) from a plugged-in MIDI keyboard
+// =============================================================================
+let midiAccess = null;
+function updateMidiInd() {
+    const ind = document.getElementById('midiInd');
+    const inputs = midiAccess ? [...midiAccess.inputs.values()] : [];
+    if (inputs.length) { ind.style.display = ''; ind.textContent = '🎹 ' + (inputs[0].name || 'MIDI').slice(0, 14); }
+    else ind.style.display = 'none';
+}
+function onMIDIMessage(e) {
+    const [st, d1, d2] = e.data, cmd = st & 0xf0;
+    if (cmd === 0x90 && d2 > 0) { ensureAudio(); pressNote(d1, d2 / 127); }
+    else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) noteOff(d1);
+    else if (cmd === 0xb0 && d1 === 64) setSustain(d2 >= 64);   // sustain pedal
+}
+function initMIDI() {
+    if (midiAccess || !navigator.requestMIDIAccess) return;
+    navigator.requestMIDIAccess().then(acc => {
+        midiAccess = acc;
+        const bind = () => { for (const inp of acc.inputs.values()) inp.onmidimessage = onMIDIMessage; updateMidiInd(); };
+        bind(); acc.onstatechange = bind;
+    }).catch(() => {});
+}
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => window.addEventListener(ev, initMIDI, { once: true }));
+
 // test hook
 window.PIANO = {
     activeVoices: () => voices.size,
@@ -1042,7 +1142,9 @@ window.PIANO = {
     playSong, stopSong,
     songs: () => Object.keys(SONGS),
     playing: () => songPlaying,
-    parseMIDI, addUserMIDI,
+    parseMIDI, addUserMIDI, eventsToMIDI, exportSongMidi,
+    setRate: setSongRate, setTranspose: setSongTranspose, seek: seekSong,
+    toggleRecord: () => recBtn.click(),
     _ctx: () => ac, _comp: () => comp,
 };
 function updateVoiceReadout() {}
