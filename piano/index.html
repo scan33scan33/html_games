@@ -202,9 +202,7 @@
             <div class="szbtn" data-oct="5" title="5 octaves">5</div>
         </div>
         <div id="range">
-            <div class="rbtn" id="octDown" title="Lower octave (Z)">−</div>
             <div id="miniWrap"><canvas id="mini"></canvas></div>
-            <div class="rbtn" id="octUp" title="Higher octave (X)">+</div>
         </div>
         <span class="lbl">Vol</span>
         <input id="vol" type="range" min="0" max="100" value="70">
@@ -537,15 +535,6 @@ document.getElementById('labelBtn').addEventListener('click', () => {
     document.querySelectorAll('.lab').forEach(l => l.style.display = showLabels ? '' : 'none');
 });
 document.getElementById('labelBtn').classList.add('on');
-document.getElementById('octDown').addEventListener('click', () => shiftVisible(-1));
-document.getElementById('octUp').addEventListener('click', () => shiftVisible(1));
-function shiftVisible(d) {
-    const span = HIGH - LOW;
-    LOW = Math.max(21, Math.min(96, LOW + d * 12));
-    HIGH = LOW + span;
-    if (HIGH > 108) { HIGH = 108; LOW = HIGH - span; }
-    buildKeyboard();
-}
 document.getElementById('vol').addEventListener('input', e => {
     volume = e.target.value / 100;
     if (master) master.gain.setTargetAtTime(volume, ac.currentTime, 0.02);
