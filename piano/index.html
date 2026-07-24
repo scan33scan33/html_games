@@ -123,6 +123,7 @@
         #fall { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; display: none; }
         #fall.on { display: block; }
         #stage.learn #keys { top: 48%; }                 /* make room for falling notes */
+        #stage.learn #felt { top: calc(48% - 8px); }     /* felt follows the keys, not left mid-air */
         #stage.learn #brand { display: none; }
         #fall.on::after { content: ''; }
         .btn.icon.rec { color: #ff5a5a; }
@@ -833,21 +834,34 @@ const fallCanvas = T('fall');
 const keyRects = new Map();     // midi -> {x, w, black} relative to #stage
 function computeKeyRects() {
     if (!stage) return;
-    const sr = stage.getBoundingClientRect();
     keyRects.clear();
-    for (const [m, el] of keyEls) { const r = el.getBoundingClientRect(); keyRects.set(m, { x: r.left - sr.left, w: r.width, black: isBlack(m) }); }
+    // offsetLeft/offsetWidth are layout-space, so they stay correct under the
+    // portrait force-rotate transform (getBoundingClientRect would not)
+    for (const [m, el] of keyEls) keyRects.set(m, { x: el.offsetLeft, w: el.offsetWidth, black: isBlack(m) });
 }
 function fallActive() { return learnMode && songPlaying && !songPaused; }
 function startFall() { if (learnMode) { fallCanvas.classList.add('on'); if (!fallRAF) fallRAF = requestAnimationFrame(drawFall); } }
-function stopFall() { cancelAnimationFrame(fallRAF); fallRAF = 0; const g = fallCanvas.getContext('2d'); g && g.clearRect(0, 0, fallCanvas.width, fallCanvas.height); if (!learnMode) fallCanvas.classList.remove('on'); }
+function stopFall() {
+    cancelAnimationFrame(fallRAF); fallRAF = 0;
+    const g = fallCanvas.getContext('2d');
+    if (g) { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, fallCanvas.width, fallCanvas.height); }
+    if (!learnMode) fallCanvas.classList.remove('on');
+}
 function drawFall() {
     fallRAF = requestAnimationFrame(drawFall);
     if (!learnMode) { fallCanvas.classList.remove('on'); return; }
-    const keysEl = document.getElementById('keys'), sr = stage.getBoundingClientRect();
-    const kr = keysEl.getBoundingClientRect();
-    const H = Math.max(10, kr.top - sr.top), W = sr.width;
-    if (fallCanvas.width !== Math.round(W) || fallCanvas.height !== Math.round(H)) { fallCanvas.width = Math.round(W); fallCanvas.height = Math.round(H); computeKeyRects(); }
+    // layout-space metrics (transform-safe); size the backing store for HiDPI
+    const keysEl = document.getElementById('keys');
+    const H = Math.max(10, keysEl.offsetTop), W = stage.clientWidth;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const bw = Math.round(W * dpr), bh = Math.round(H * dpr);
+    if (fallCanvas.width !== bw || fallCanvas.height !== bh) {
+        fallCanvas.width = bw; fallCanvas.height = bh;
+        fallCanvas.style.width = W + 'px'; fallCanvas.style.height = H + 'px';
+        computeKeyRects();
+    }
     const g = fallCanvas.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
     if (!songPlaying) return;
     const now = songTimeNow(), LOOK = 2600, pxMs = H / LOOK;
