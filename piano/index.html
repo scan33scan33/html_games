@@ -174,6 +174,10 @@
         .songRow .nm2 { font-weight: 600; }
         .songRow .by { color: #8a8f99; font-size: 12px; margin-left: auto; }
         #songsClose { width: 100%; margin-top: 4px; justify-content: center; }
+        #uploadBtn { width: 100%; justify-content: center; margin: 2px 0 10px;
+            background: #241a3a; border-color: #6d4bd8; color: #fff; }
+        .songRow .del { margin-left: 8px; padding: 0 5px; border-radius: 6px; color: #8a8f99; }
+        .songRow .del:hover { color: #ff6b6b; background: #33333e; }
         @media (max-width: 640px) { #hint, .seg.hideSm { display: none; } .seg { padding: 8px 11px; } }
     </style>
 </head>
@@ -221,6 +225,8 @@
         <h3>♫ Songs</h3>
         <div class="sub2">Tap to auto-play — then play along on the keys.</div>
         <div id="songsList"></div>
+        <div class="btn" id="uploadBtn">⬆ Upload a MIDI…</div>
+        <input id="midiInput" type="file" accept=".mid,.midi,audio/midi,audio/x-midi" multiple style="display:none">
         <div class="btn" id="songsClose">Close</div>
     </div>
 </div>
@@ -703,6 +709,86 @@ function stopSong() {
     songPlaying = null;
     renderSongs();
 }
+// =============================================================================
+//  MIDI UPLOAD — a tiny Standard-MIDI-File parser, all client-side
+// =============================================================================
+// Parse an ArrayBuffer into the same [startMs, midi, durMs, velocity, retrig]
+// event format the player already uses. Walks every track, honours the tempo
+// map, and de-duplicates unison doublings — no libraries, no server.
+function parseMIDI(buf) {
+    const dv = new DataView(buf);
+    let p = 0;
+    const u8 = () => dv.getUint8(p++);
+    const u16 = () => { const v = dv.getUint16(p); p += 2; return v; };
+    const u32 = () => { const v = dv.getUint32(p); p += 4; return v; };
+    const tag = () => { let s = ''; for (let i = 0; i < 4; i++) s += String.fromCharCode(dv.getUint8(p++)); return s; };
+    const vlq = () => { let v = 0, b; do { b = u8(); v = (v << 7) | (b & 0x7f); } while (b & 0x80); return v; };
+    if (tag() !== 'MThd') throw new Error('not a MIDI file');
+    const hlen = u32(); u16(); const ntracks = u16(); const division = u16();
+    p += hlen - 6;
+    const tpb = (division & 0x8000) ? 480 : division;   // ticks per beat (SMPTE → fallback)
+    const evs = []; let seq = 0;
+    for (let t = 0; t < ntracks; t++) {
+        if (p + 8 > dv.byteLength) break;
+        if (tag() !== 'MTrk') { const l = u32(); p += l; continue; }
+        const trkLen = u32(); const end = p + trkLen;
+        let tick = 0, status = 0;
+        while (p < end) {
+            tick += vlq();
+            let ev = u8();
+            if (ev < 0x80) { p--; ev = status; } else status = ev;
+            const hi = ev & 0xf0;
+            if (ev === 0xff) { const type = u8(); const l = vlq();
+                if (type === 0x51) evs.push({ tick, seq: seq++, kind: 'tempo', tempo: (dv.getUint8(p) << 16) | (dv.getUint8(p + 1) << 8) | dv.getUint8(p + 2) });
+                p += l; status = 0;
+            } else if (ev === 0xf0 || ev === 0xf7) { const sl = vlq(); p += sl; status = 0; }
+            else if (hi === 0x90) { const n = u8(), v = u8(); evs.push({ tick, seq: seq++, kind: v > 0 ? 'on' : 'off', note: n, vel: v }); }
+            else if (hi === 0x80) { const n = u8(); u8(); evs.push({ tick, seq: seq++, kind: 'off', note: n, vel: 0 }); }
+            else if (hi === 0xa0 || hi === 0xb0 || hi === 0xe0) { p += 2; }
+            else if (hi === 0xc0 || hi === 0xd0) { p += 1; }
+            else break;
+        }
+        p = end;
+    }
+    evs.sort((a, b) => a.tick - b.tick || a.seq - b.seq);
+    let tempo = 500000, lastTick = 0, sec = 0;
+    const held = {}, notes = [];
+    for (const e of evs) {
+        sec += (e.tick - lastTick) * (tempo / 1e6) / tpb; lastTick = e.tick;
+        if (e.kind === 'tempo') tempo = e.tempo;
+        else if (e.kind === 'on') (held[e.note] = held[e.note] || []).push({ s: sec, v: e.vel });
+        else if (e.kind === 'off') { const a = held[e.note]; if (a && a.length) { const st = a.shift(); notes.push([st.s, sec, e.note, st.v]); } }
+    }
+    // de-dupe exact (startMs, pitch) unisons; keep the longer; then index retriggers
+    const seen = new Map();
+    for (const n of notes) { const k = Math.round(n[0] * 1000) + ':' + n[2]; const q = seen.get(k); if (!q || (n[1] - n[0]) > (q[1] - q[0])) seen.set(k, n); }
+    const arr = [...seen.values()].sort((a, b) => a[0] - b[0] || a[2] - b[2]);
+    const occ = {}, out = [];
+    for (const [s, e, midi, vel] of arr) { const k = occ[midi] | 0; occ[midi] = k + 1; out.push([Math.round(s * 1000), midi, Math.round((e - s) * 1000), vel, k]); }
+    return out;
+}
+
+// user songs, persisted in localStorage so uploads survive reloads
+const USER_KEY = 'piano_user_songs';
+function loadUserSongs() {
+    try { const raw = localStorage.getItem(USER_KEY); if (!raw) return;
+        for (const u of JSON.parse(raw)) SONGS[u.id] = { name: u.name, by: u.by || 'your MIDI', events: u.events, user: true };
+    } catch (e) {}
+}
+function saveUserSongs() {
+    const arr = Object.entries(SONGS).filter(([, s]) => s.user).map(([id, s]) => ({ id, name: s.name, by: s.by, events: s.events }));
+    try { localStorage.setItem(USER_KEY, JSON.stringify(arr)); return true; }
+    catch (e) { return false; }
+}
+function addUserMIDI(name, events) {
+    const id = 'u' + Date.now() + '_' + Math.floor(performance.now());
+    SONGS[id] = { name, by: 'your MIDI', events, user: true };
+    const saved = saveUserSongs();
+    renderSongs();
+    return { id, saved };
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
 function renderSongs() {
     const list = document.getElementById('songsList');
     if (!list) return;
@@ -710,9 +796,19 @@ function renderSongs() {
     for (const [id, s] of Object.entries(SONGS)) {
         const row = document.createElement('div');
         row.className = 'songRow' + (songPlaying === id ? ' playing' : '');
-        row.innerHTML = '<span class="nm2">' + (songPlaying === id ? '⏹ ' : '▶ ') + s.name +
-            '</span><span class="by">' + s.by + '</span>';
+        row.innerHTML = '<span class="nm2">' + (songPlaying === id ? '⏹ ' : '▶ ') + esc(s.name) +
+            '</span><span class="by">' + esc(s.by) + '</span>';
         row.addEventListener('click', () => { songPlaying === id ? stopSong() : playSong(id); });
+        if (s.user) {
+            const x = document.createElement('span');
+            x.className = 'del'; x.textContent = '✕'; x.title = 'Remove this upload';
+            x.addEventListener('click', ev => {
+                ev.stopPropagation();
+                if (songPlaying === id) stopSong();
+                delete SONGS[id]; saveUserSongs(); renderSongs();
+            });
+            row.appendChild(x);
+        }
         list.appendChild(row);
     }
 }
@@ -724,6 +820,27 @@ document.getElementById('songsBtn').addEventListener('click', () => {
 document.getElementById('songsClose').addEventListener('click', () => {
     document.getElementById('songsModal').classList.remove('open');
 });
+const midiInput = document.getElementById('midiInput');
+document.getElementById('uploadBtn').addEventListener('click', () => midiInput.click());
+midiInput.addEventListener('change', async e => {
+    const files = [...e.target.files];
+    midiInput.value = '';
+    let lastId = null, warnedSave = false;
+    for (const f of files) {
+        try {
+            const events = parseMIDI(await f.arrayBuffer());
+            if (!events.length) { alert('No notes found in “' + f.name + '”.'); continue; }
+            const name = (f.name.replace(/\.(midi?|kar)$/i, '').replace(/[_]+/g, ' ').trim()) || 'Untitled';
+            const { id, saved } = addUserMIDI(name, events);
+            lastId = id;
+            if (!saved && !warnedSave) { warnedSave = true; alert('Added — but it couldn’t be saved for next time (browser storage is full).'); }
+        } catch (err) {
+            alert('Couldn’t read “' + f.name + '”: ' + err.message);
+        }
+    }
+    if (lastId) { ensureAudio(); playSong(lastId); }
+});
+loadUserSongs();
 
 // test hook
 window.PIANO = {
@@ -733,6 +850,7 @@ window.PIANO = {
     playSong, stopSong,
     songs: () => Object.keys(SONGS),
     playing: () => songPlaying,
+    parseMIDI, addUserMIDI,
 };
 function updateVoiceReadout() {}
 
