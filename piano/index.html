@@ -830,13 +830,19 @@ function computeVoicing(events) {
 // When was this strike's string damped, and when does its key come back up?
 // Computed at strike time, so the pedal timeline and the *current* instrument
 // (its decay, or hold for organ/synth) are always honoured.
+const LIT_MAX = 6000;   // ≈ two whole notes at a moderate tempo. Written holds
+                        // longer than this are rare, and a key frozen "down"
+                        // through many seconds of silence reads as stuck — so
+                        // the light follows the score only up to this cap.
 function strikeDeadlines(t, dur) {
     const I = INSTRUMENTS[instrument];
     const ring = I.hold ? 1e9 : I.decay * 1000;      // one strike can only ring this long
     const end = t + dur;
     return {
         sound: Math.min(Math.max(end, pedalReleaseAt(songPedal, end)), t + ring),
-        lit: end,                                     // the key stays down as written
+        // held instruments genuinely sound the whole written duration, so their
+        // keys stay down with the sound; decaying ones cap at LIT_MAX
+        lit: I.hold ? end : Math.min(end, t + LIT_MAX),
     };
 }
 function silenceLive() {
