@@ -720,7 +720,7 @@ const SONGS = {
 // =============================================================================
 let songTimers = [], songPlaying = null;
 const songActive = new Set();   // midis currently sounding from the song
-const songGen = {};             // transposed-midi -> owning event token (guards note-offs)
+let songMerged = {};            // pitch -> merged sounding intervals [start, end, lastStrike]
 let songRate = 1;               // 0.40 .. 1.50 (tempo scale)
 let songTranspose = 0;          // semitones
 let songLoop = false;
@@ -745,22 +745,59 @@ function songTimeNow() {
     if (songPaused) return clkOff0;
     return clkOff0 + (performance.now() - clkPerf0) * songRate;
 }
+// A song may voice the same pitch in two parts at once (a held harmony note
+// under a short melody note). The synth is one voice per pitch, so collapse
+// each pitch's notes into merged sounding intervals: every note start still
+// re-strikes, but the pitch is only released once no part is holding it.
+// Each interval also records its last re-strike, so the release can be capped
+// to how long the instrument can actually still ring.
+function buildMerged(events, ring) {
+    const by = {};
+    for (const e of events) {
+        // a struck note cannot ring longer than the instrument's decay, however
+        // long the score holds the key — otherwise it stays "down" in silence
+        const end = Math.min(e[0] + e[2], e[0] + ring);
+        (by[e[1]] = by[e[1]] || []).push([e[0], end]);
+    }
+    const out = {};
+    for (const p in by) {
+        const iv = by[p].sort((a, b) => a[0] - b[0]);
+        const merged = []; let ce = iv[0][1];
+        for (let i = 1; i < iv.length; i++) {
+            const s = iv[i][0], e = iv[i][1];
+            if (s <= ce) ce = Math.max(ce, e);
+            else { merged.push(ce); ce = e; }
+        }
+        merged.push(ce);
+        out[p] = merged;          // end time of each sounding interval
+    }
+    return out;
+}
 function scheduleFrom(offset) {
     songTimers.forEach(clearTimeout); songTimers = [];
     if (ac) for (const midi of songActive) { releaseVoice(midi, false); lightKey(midi, false); }
     songActive.clear();
     clkPerf0 = performance.now(); clkOff0 = offset;
+    const I = INSTRUMENTS[instrument];
+    const ring = I.hold ? 1e9 : I.decay * 1000;        // how long one strike can still sound
+    songMerged = buildMerged(songEvents, ring);        // depends on the current instrument
     let endW = 0;
-    for (const [t, midi, dur, vel, k] of songEvents) {
+    for (const [t, midi, dur, vel] of songEvents) {          // strikes
         if (t + dur <= offset) continue;
         const m = midi + songTranspose;
         if (m < 0 || m > 127) continue;
         const onW = Math.max(0, (t - offset) / songRate);
-        const offW = (t + dur - offset) / songRate;
-        const tok = midi + '_' + k;
-        songTimers.push(setTimeout(() => { songGen[m] = tok; songActive.add(m); noteOn(m, Math.min(1, vel / 104)); }, onW));
-        songTimers.push(setTimeout(() => { if (songGen[m] === tok) { releaseVoice(m, false); lightKey(m, false); } }, offW));
-        if (offW > endW) endW = offW;
+        songTimers.push(setTimeout(() => { songActive.add(m); noteOn(m, Math.min(1, vel / 104)); }, onW));
+    }
+    for (const p in songMerged) {                            // releases
+        const m = (+p) + songTranspose;
+        if (m < 0 || m > 127) continue;
+        for (const end of songMerged[p]) {
+            if (end <= offset) continue;
+            const offW = (end - offset) / songRate;
+            songTimers.push(setTimeout(() => { releaseVoice(m, false); lightKey(m, false); songActive.delete(m); }, offW));
+            if (offW > endW) endW = offW;
+        }
     }
     songTimers.push(setTimeout(() => { if (songLoop) playFrom(songPlaying, 0); else stopSong(); }, endW + 300));
 }
@@ -769,6 +806,7 @@ function playFrom(id, offset) {
     const s = SONGS[id]; if (!s) return;
     if (id !== songLoadedId) {
         songEvents = normalizeEvents(s);
+
         songDur = songEvents.reduce((a, e) => Math.max(a, e[0] + e[2]), 0);
         songLoadedId = id;
     }
