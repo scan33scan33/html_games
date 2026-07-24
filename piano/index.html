@@ -724,6 +724,7 @@ let songTimers = [], songPlaying = null;
 const songActive = new Set();   // midis currently sounding from the song
 let songMerged = {};            // pitch -> end time of each merged sounding interval
 let songPedal = [];             // damper-pedal timeline [[ms, down], ...]
+let songVoicing = [];           // per-note gain weight (melody sings, inner voices recede)
 let songRate = 1;               // 0.40 .. 1.50 (tempo scale)
 let songTranspose = 0;          // semitones
 let songLoop = false;
@@ -765,6 +766,36 @@ function pedalReleaseAt(pedal, t) {
     for (let i = idx + 1; i < pedal.length; i++) if (!pedal[i][1]) return pedal[i][0];
     return t;                                                       // never lifted again
 }
+// Many arrangements are exported with every note at one flat velocity, which
+// makes the melody sit level with the accompaniment. A pianist voices a chord:
+// the top note sings, the bass keeps the foundation, inner parts recede. Work
+// out each note's role in the texture at the moment it is struck.
+function computeVoicing(events) {
+    const w = new Float32Array(events.length);
+    const order = events.map((e, i) => i).sort((a, b) => events[a][0] - events[b][0]);
+    const active = [];
+    let i = 0;
+    while (i < order.length) {
+        const t = events[order[i]][0];
+        let j = i; while (j < order.length && events[order[j]][0] === t) j++;
+        for (let k = active.length - 1; k >= 0; k--) {          // drop finished notes
+            const a = active[k];
+            if (events[a][0] + events[a][2] <= t) active.splice(k, 1);
+        }
+        for (let k = i; k < j; k++) active.push(order[k]);       // add everything starting now
+        let hi = -1, lo = 128;
+        for (const a of active) { const p = events[a][1]; if (p > hi) hi = p; if (p < lo) lo = p; }
+        for (let k = i; k < j; k++) {
+            const n = order[k], p = events[n][1];
+            if (active.length <= 1) w[n] = 1.05;                 // a bare line: lift slightly
+            else if (p === hi) w[n] = 1.22;                      // melody on top
+            else if (p === lo) w[n] = 0.94;                      // bass foundation
+            else w[n] = 0.72;                                    // inner voices step back
+        }
+        i = j;
+    }
+    return w;
+}
 function buildMerged(events, ring, pedal) {
     const by = {};
     for (const e of events) {
@@ -797,12 +828,14 @@ function scheduleFrom(offset) {
     const ring = I.hold ? 1e9 : I.decay * 1000;        // how long one strike can still sound
     songMerged = buildMerged(songEvents, ring, songPedal);   // depends on the current instrument
     let endW = 0;
-    for (const [t, midi, dur, vel] of songEvents) {          // strikes
+    for (let i = 0; i < songEvents.length; i++) {            // strikes
+        const [t, midi, dur, vel] = songEvents[i];
         if (t + dur <= offset) continue;
         const m = midi + songTranspose;
         if (m < 0 || m > 127) continue;
         const onW = Math.max(0, (t - offset) / songRate);
-        songTimers.push(setTimeout(() => { songActive.add(m); noteOn(m, Math.min(1, vel / 104)); }, onW));
+        const g = Math.min(1, (vel / 104) * (songVoicing[i] || 1));
+        songTimers.push(setTimeout(() => { songActive.add(m); noteOn(m, g); }, onW));
     }
     for (const p in songMerged) {                            // releases
         const m = (+p) + songTranspose;
@@ -822,6 +855,7 @@ function playFrom(id, offset) {
     if (id !== songLoadedId) {
         songEvents = normalizeEvents(s);
         songPedal = s.pedal || [];
+        songVoicing = computeVoicing(songEvents);
         songDur = songEvents.reduce((a, e) => Math.max(a, e[0] + e[2]), 0);
         songLoadedId = id;
     }
