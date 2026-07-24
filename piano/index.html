@@ -137,6 +137,28 @@
             position: absolute; bottom: 4px; right: 8px; z-index: 3;
             font-size: 11px; color: rgba(255,255,255,0.28); pointer-events: none;
         }
+        /* Songs modal */
+        #songsModal {
+            display: none; position: fixed; inset: 0; z-index: 50;
+            background: rgba(6,6,10,0.72); align-items: center; justify-content: center;
+        }
+        #songsModal.open { display: flex; }
+        #songsPanel {
+            background: #14141a; border: 1px solid #2a2a34; border-radius: 16px;
+            padding: 18px; width: 300px; max-width: 92vw; box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+        }
+        #songsPanel h3 { margin: 2px 0 4px; font-size: 18px; }
+        #songsPanel .sub2 { color: #8a8f99; font-size: 12px; margin-bottom: 12px; }
+        .songRow {
+            display: flex; align-items: center; gap: 10px; width: 100%;
+            background: #1e1e26; border: 1px solid #2c2c36; border-radius: 10px;
+            padding: 11px 13px; margin-bottom: 8px; color: #ecf0f1; font-size: 15px; cursor: pointer;
+        }
+        .songRow:hover { background: #262630; }
+        .songRow.playing { border-color: #6d4bd8; background: #241a3a; }
+        .songRow .nm2 { font-weight: 600; }
+        .songRow .by { color: #8a8f99; font-size: 12px; margin-left: auto; }
+        #songsClose { width: 100%; margin-top: 4px; justify-content: center; }
         @media (max-width: 640px) { #hint, .seg.hideSm { display: none; } .seg { padding: 8px 11px; } }
     </style>
 </head>
@@ -148,6 +170,7 @@
             <div class="seg hideSm" id="segChord">🎶 Chords</div>
         </div>
         <div class="spacer"></div>
+        <div class="btn" id="songsBtn">♫ <span class="hideSm">Songs</span></div>
         <div class="btn" id="installBtn" style="display:none">⤓ <span class="hideSm">Install</span></div>
         <div class="btn" id="instrBtn">🎼 <span id="instrName" class="hideSm">Grand Piano</span></div>
         <div class="btn icon" id="gear">⚙️</div>
@@ -170,6 +193,15 @@
         <div id="felt"></div>
         <div id="keys"></div>
         <div id="hint">Computer keys: A S D F G H J K L&nbsp;&nbsp;·&nbsp;&nbsp;W E T Y U (sharps)&nbsp;&nbsp;·&nbsp;&nbsp;Z / X octave&nbsp;&nbsp;·&nbsp;&nbsp;Space = sustain</div>
+    </div>
+</div>
+
+<div id="songsModal">
+    <div id="songsPanel">
+        <h3>♫ Songs</h3>
+        <div class="sub2">Tap to auto-play — then play along on the keys.</div>
+        <div id="songsList"></div>
+        <div class="btn" id="songsClose">Close</div>
     </div>
 </div>
 
@@ -559,11 +591,93 @@ installBtn.addEventListener('click', async () => {
     }
 });
 
+// ---------------------------------------------------------------------------
+//  Songs — public-domain melodies that auto-play (play along on top)
+//  Each note is [midi, beats]; 0 = rest. beat is ms per beat.
+// ---------------------------------------------------------------------------
+const SONGS = {
+    canon: { name: 'Canon in D', by: 'Pachelbel', beat: 480, notes: [
+        // the famous two descending half-note phrases (D major)…
+        [78,2],[76,2],[74,2],[73,2],[71,2],[69,2],[71,2],[73,2],
+        [74,2],[73,2],[71,2],[69,2],[67,2],[66,2],[67,2],[64,2],
+        // …then the running-quarter variation
+        [74,1],[78,1],[81,1],[79,1],[78,1],[74,1],[78,1],[76,1],
+        [74,1],[71,1],[74,1],[73,1],[71,1],[67,1],[71,1],[69,1],
+        [74,4],
+    ]},
+    may: { name: 'May Song', by: 'trad. · Alle Vögel sind schon da', beat: 400, notes: [
+        // opens on the A-major arpeggio (A C# E A), the piece’s signature
+        [69,1],[73,1],[76,1],[81,1],[73,1],[71,1],[69,2],
+        [69,1],[73,1],[76,1],[81,1],[73,1],[71,1],[69,2],
+        [76,1],[73,1],[71,1],[73,1],[76,1],[73,1],[69,2],
+        [69,1],[73,1],[76,1],[81,1],[73,1],[71,1],[69,2],
+    ]},
+    longago: { name: 'Long, Long Ago', by: 'T. H. Bayly, 1833', beat: 440, notes: [
+        [76,1],[76,1],[74,1],[72,1],[74,1],[76,1],[77,1],[76,1],[74,2],
+        [76,1],[76,1],[74,1],[72,1],[74,1],[76,1],[74,1],[72,2],
+        [79,1],[79,1],[77,1],[76,1],[77,1],[79,1],[81,1],[79,1],[77,2],
+        [76,1],[76,1],[74,1],[72,1],[74,1],[76,1],[74,1],[72,2],
+    ]},
+};
+let songTimers = [], songPlaying = null;
+function playSong(id) {
+    stopSong();
+    ensureAudio();
+    const s = SONGS[id];
+    if (!s) return;
+    songPlaying = id;
+    let t = 0;
+    for (const [midi, beats] of s.notes) {
+        const dur = beats * s.beat;
+        if (midi > 0) {
+            const m = midi;
+            songTimers.push(setTimeout(() => noteOn(m, 0.95), t));
+            songTimers.push(setTimeout(() => { releaseVoice(m, false); lightKey(m, false); }, t + dur * 0.92));
+        }
+        t += dur;
+    }
+    songTimers.push(setTimeout(() => { songPlaying = null; renderSongs(); }, t + 100));
+    renderSongs();
+}
+function stopSong() {
+    songTimers.forEach(clearTimeout);
+    songTimers = [];
+    if (songPlaying && ac) {
+        for (const [midi] of SONGS[songPlaying].notes) if (midi > 0) { releaseVoice(midi, false); lightKey(midi, false); }
+    }
+    songPlaying = null;
+    renderSongs();
+}
+function renderSongs() {
+    const list = document.getElementById('songsList');
+    if (!list) return;
+    list.innerHTML = '';
+    for (const [id, s] of Object.entries(SONGS)) {
+        const row = document.createElement('div');
+        row.className = 'songRow' + (songPlaying === id ? ' playing' : '');
+        row.innerHTML = '<span class="nm2">' + (songPlaying === id ? '⏹ ' : '▶ ') + s.name +
+            '</span><span class="by">' + s.by + '</span>';
+        row.addEventListener('click', () => { songPlaying === id ? stopSong() : playSong(id); });
+        list.appendChild(row);
+    }
+}
+document.getElementById('songsBtn').addEventListener('click', () => {
+    ensureAudio();
+    renderSongs();
+    document.getElementById('songsModal').classList.add('open');
+});
+document.getElementById('songsClose').addEventListener('click', () => {
+    document.getElementById('songsModal').classList.remove('open');
+});
+
 // test hook
 window.PIANO = {
     activeVoices: () => voices.size,
     noteOn: pressNote, noteOff, setSustain: setSustain,
     state: () => ({ voices: voices.size, sustain, instrument, LOW, HIGH, kbOctave }),
+    playSong, stopSong,
+    songs: () => Object.keys(SONGS),
+    playing: () => songPlaying,
 };
 function updateVoiceReadout() {}
 
