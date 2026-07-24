@@ -170,6 +170,9 @@
         }
         .black.down { background: linear-gradient(180deg, #17181c, #050506); top: 2px; }
         .black.lit { background: linear-gradient(180deg, #6d4bd8, #3a2778); }
+        /* a re-struck key flashes, so repeated notes are visible while held */
+        @keyframes keystrike { from { filter: brightness(1.8); } to { filter: brightness(1); } }
+        .white.struck, .black.struck { animation: keystrike 150ms ease-out; }
         .lab { font-size: 12px; font-weight: 600; color: #9aa0aa; pointer-events: none; }
         .lab.c { color: #454a53; }
         #hint {
@@ -374,6 +377,7 @@ function noteOn(midi, vel) {
     }
     voices.set(id, { oscs, gain: g, midi, released: false, hold: I.hold });
     lightKey(midi, true);
+    strikeKey(midi);
     updateVoiceReadout();
 }
 
@@ -467,7 +471,18 @@ function buildKeyboard() {
 
 function lightKey(midi, on) {
     const el = keyEls.get(midi);
-    if (el) el.classList.toggle('lit', on);
+    if (!el) return;
+    el.classList.toggle('lit', on);
+    if (!on) el.classList.remove('struck');
+}
+// re-trigger the strike flash even if the key is already down, so a repeated
+// note reads as a new attack instead of one frozen highlight
+function strikeKey(midi) {
+    const el = keyEls.get(midi);
+    if (!el) return;
+    el.classList.remove('struck');
+    void el.offsetWidth;                 // reflow, so the animation restarts
+    el.classList.add('struck');
 }
 
 function fitRange() {
@@ -826,7 +841,10 @@ function scheduleFrom(offset) {
     clkPerf0 = performance.now(); clkOff0 = offset;
     const I = INSTRUMENTS[instrument];
     const ring = I.hold ? 1e9 : I.decay * 1000;        // how long one strike can still sound
-    songMerged = buildMerged(songEvents, ring, songPedal);   // depends on the current instrument
+    // sound and key are not the same thing: the string stops ringing after the
+    // decay, but the key stays down for as long as the music holds it
+    songMerged = buildMerged(songEvents, ring, songPedal);
+    const litMerged = buildMerged(songEvents, 1e9, null);
     let endW = 0;
     for (let i = 0; i < songEvents.length; i++) {            // strikes
         const [t, midi, dur, vel] = songEvents[i];
@@ -837,13 +855,23 @@ function scheduleFrom(offset) {
         const g = Math.min(1, (vel / 104) * (songVoicing[i] || 1));
         songTimers.push(setTimeout(() => { songActive.add(m); noteOn(m, g); }, onW));
     }
-    for (const p in songMerged) {                            // releases
+    for (const p in songMerged) {                            // stop the sound
         const m = (+p) + songTranspose;
         if (m < 0 || m > 127) continue;
         for (const end of songMerged[p]) {
             if (end <= offset) continue;
             const offW = (end - offset) / songRate;
-            songTimers.push(setTimeout(() => { releaseVoice(m, false); lightKey(m, false); songActive.delete(m); }, offW));
+            songTimers.push(setTimeout(() => { releaseVoice(m, false); songActive.delete(m); }, offW));
+            if (offW > endW) endW = offW;
+        }
+    }
+    for (const p in litMerged) {                             // lift the key
+        const m = (+p) + songTranspose;
+        if (m < 0 || m > 127) continue;
+        for (const end of litMerged[p]) {
+            if (end <= offset) continue;
+            const offW = (end - offset) / songRate;
+            songTimers.push(setTimeout(() => lightKey(m, false), offW));
             if (offW > endW) endW = offW;
         }
     }
