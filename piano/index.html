@@ -90,6 +90,21 @@
         .rbtn:active { transform: translateY(1px); }
         #vol { width: 110px; accent-color: #6d4bd8; }
         .lbl { font-size: 12px; color: #8a8f99; }
+        #sizeSel {
+            display: flex; align-items: center; gap: 4px;
+            background: #050506; border: 1px solid #1c1c22; border-radius: 10px; padding: 6px 8px;
+        }
+        .szbtn {
+            width: 30px; height: 30px; flex: none; border-radius: 7px;
+            background: #23232a; border: 1px solid #34343e; color: #cfd3da;
+            font-size: 14px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .szbtn.active {
+            color: #fff; border-color: #6d4bd8;
+            background: linear-gradient(180deg, #6d4bd8, #4b2fb0);
+        }
+        .szbtn:active { transform: translateY(1px); }
 
         /* ---------- keyboard ---------- */
         #stage { flex: 1; position: relative; background: #000; overflow: hidden; }
@@ -179,6 +194,13 @@
     <div id="toolbar">
         <div class="btn icon on" id="sustainBtn" title="Sustain (hold notes) — Space">🦶</div>
         <div class="btn icon" id="labelBtn" title="Toggle note labels">🔤</div>
+        <div id="sizeSel" title="How many octaves to show">
+            <span class="lbl hideSm">Size</span>
+            <div class="szbtn" data-oct="2" title="2 octaves">2</div>
+            <div class="szbtn" data-oct="3" title="3 octaves">3</div>
+            <div class="szbtn" data-oct="4" title="4 octaves">4</div>
+            <div class="szbtn" data-oct="5" title="5 octaves">5</div>
+        </div>
         <div id="range">
             <div class="rbtn" id="octDown" title="Lower octave (Z)">−</div>
             <div id="miniWrap"><canvas id="mini"></canvas></div>
@@ -383,6 +405,24 @@ function fitRange() {
     buildKeyboard();
 }
 
+// explicit size: show exactly `oct` octaves (C..C), centred near middle C
+let userOctaves = null;               // null = auto-fit to width
+function applyOctaves(oct) {
+    let low = 60 - Math.floor(oct / 2) * 12;     // start on a C below middle C
+    let high = low + oct * 12;                    // end on a C
+    if (high > 108) { high = 108; low = high - oct * 12; }
+    if (low < 24) { low = 24; high = low + oct * 12; }
+    LOW = low; HIGH = high;
+    buildKeyboard();
+}
+function setSize(oct) {
+    userOctaves = oct;
+    applyOctaves(oct);
+    document.querySelectorAll('.szbtn').forEach(b =>
+        b.classList.toggle('active', Number(b.dataset.oct) === oct));
+}
+function relayout() { if (userOctaves) applyOctaves(userOctaves); else fitRange(); }
+
 // mini keyboard range indicator
 function drawMini() {
     const c = document.getElementById('mini');
@@ -529,8 +569,10 @@ document.getElementById('segChord').addEventListener('click', () => {
 
 // unlock audio on first gesture
 ['pointerdown', 'keydown', 'touchstart'].forEach(ev => window.addEventListener(ev, ensureAudio, { once: false }));
-window.addEventListener('resize', () => { fitRange(); });
-window.addEventListener('orientationchange', () => setTimeout(fitRange, 150));
+window.addEventListener('resize', () => { relayout(); });
+window.addEventListener('orientationchange', () => setTimeout(relayout, 150));
+document.querySelectorAll('.szbtn').forEach(b =>
+    b.addEventListener('click', () => setSize(Number(b.dataset.oct))));
 
 // ---------------------------------------------------------------------------
 //  Lock out zooming so chords (two fingers) and fast taps don't zoom the page
