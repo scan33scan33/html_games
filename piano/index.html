@@ -621,6 +621,14 @@ const SONGS = {
         [72,1],[72,1],[74,1],[76,2],[76,1],[77,1],[79,1],[81,1],[79,1],[76,2],
         [79,1],[77,1],[76,1],[74,2],[77,1],[76,1],[74,1],[72,2],
     ]},
+    clairdelune: { name: 'Clair de Lune', by: 'Debussy · Suite bergamasque', beat: 300, notes: [
+        // Andante très expressif, con sordina — the top voice of the opening
+        // thirds in D♭ major, gently descending from the dominant to the tonic
+        [80,3],[80,3],[77,3],   // m1:  A♭5  A♭5  F5
+        [77,3],[75,3],[77,3],   // m2:  F5   E♭5  F5
+        [75,4],[77,2],[75,3],   // m3:  E♭5……  F5  E♭5
+        [73,3],[75,2],[73,4],   // m4:  D♭5  E♭5  D♭5
+    ]},
 };
 let songTimers = [], songPlaying = null;
 function playSong(id) {
