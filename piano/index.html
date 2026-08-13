@@ -158,6 +158,7 @@
         .white.lit { background: linear-gradient(180deg, #e6ddff 0%, #cbb8ff 100%); }
         .black {
             position: absolute; top: 0; z-index: 2;
+            display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7px;
             background: linear-gradient(180deg, #33343a 0%, #17181c 55%, #0a0a0d 100%);
             border-radius: 0 0 5px 5px;
             box-shadow: inset 0 -3px 4px rgba(255,255,255,0.12), 0 4px 6px rgba(0,0,0,0.6);
@@ -168,6 +169,7 @@
             background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0));
             border-radius: 3px;
         }
+        .black .lab { font-size: 10px; }        /* fingering only — note names stay on the whites */
         .black.down { background: linear-gradient(180deg, #17181c, #050506); top: 2px; }
         .black.lit { background: linear-gradient(180deg, #6d4bd8, #3a2778); }
         /* a re-struck key flashes, so repeated notes are visible while held */
@@ -205,7 +207,9 @@
             background: #241a3a; border-color: #6d4bd8; color: #fff; }
         .songRow .del { margin-left: 8px; padding: 0 5px; border-radius: 6px; color: #8a8f99; }
         .songRow .del:hover { color: #ff6b6b; background: #33333e; }
-        @media (max-width: 640px) { #hint, .seg.hideSm { display: none; } .seg { padding: 8px 11px; } }
+        @media (max-width: 640px) { #hint, .seg.hideSm { display: none; } .seg { padding: 8px 11px; }
+            .lab { font-size: 10px; } .black .lab { font-size: 8px; }   /* fingering still fits a phone-width black key */
+        }
     </style>
 </head>
 <body>
@@ -226,6 +230,7 @@
     <div id="toolbar">
         <div class="btn icon on" id="sustainBtn" title="Sustain (hold notes) — Space">🦶</div>
         <div class="btn icon" id="labelBtn" title="Toggle note labels">🔤</div>
+        <div class="btn icon" id="violinBtn" title="Violin mode — labels and falling notes show first-position fingering (A0 A1 A2 A3, E0 E1 E2 E3…)">🎻</div>
         <div class="btn icon" id="learnBtn" title="Learn mode — notes fall onto the keys so you can play along">🎓</div>
         <div class="btn icon rec" id="recBtn" title="Record your playing">⏺</div>
         <div id="sizeSel" title="How many octaves to show">
@@ -428,7 +433,55 @@ const noteName = m => NAMES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1);
 let LOW = 48, HIGH = 84;         // visible midi range (C3..C6), rebuilt on resize
 const keyEls = new Map();        // midi -> element
 let showLabels = true;
+let violinMode = false;          // label keys/notes as violin fingering instead of note names
 let kbOctave = 4;                // base octave for computer-keyboard mapping
+
+// ---------------------------------------------------------------------------
+//  VIOLIN FINGERING — first position
+//
+//  The four strings are tuned in fifths, and in first position each one is
+//  covered by four fingers over the seven semitones up to the next string:
+//  finger 1 and 2 each have a low and a high placement (a half step apart),
+//  which is why 8 semitones map onto 5 labels. A note is named by the highest
+//  string that can reach it without leaving first position, so A4 is the open
+//  A ("A0") rather than a stopped note on D, and C#5 is "A2".
+// ---------------------------------------------------------------------------
+const VIOLIN_STRINGS = [    // c = ink on white keys, cl = ink on black keys / falling bars
+    { n: 'G', open: 55, c: '#a76a10', cl: '#f0b055' },
+    { n: 'D', open: 62, c: '#1f7d45', cl: '#63d894' },
+    { n: 'A', open: 69, c: '#5b34b8', cl: '#b79bff' },
+    { n: 'E', open: 76, c: '#b62c66', cl: '#ff86b0' },
+];
+const FINGER_OF = [0, 1, 1, 2, 2, 3, 3, 4];   // semitones above the open string -> finger
+function violinFinger(midi) {
+    for (let i = VIOLIN_STRINGS.length - 1; i >= 0; i--) {
+        const s = VIOLIN_STRINGS[i], d = midi - s.open;
+        if (d >= 0 && d <= 7) return { text: s.n + FINGER_OF[d], c: s.c, cl: s.cl };
+    }
+    return null;            // below the G string or above first position — unlabelled
+}
+
+// Labels are a view over the keys, so switching modes just rewrites them.
+function applyLabels() {
+    for (const [m, el] of keyEls) {
+        const lab = el.querySelector('.lab');
+        if (!lab) continue;
+        const black = isBlack(m);
+        if (violinMode) {
+            const f = violinFinger(m);
+            // a black key on a phone at 5 octaves is ~9px wide: drop to the bare
+            // finger number there, since the colour already names the string
+            const narrow = black && el.clientWidth < 14;
+            lab.textContent = f ? (narrow ? f.text.slice(1) : f.text) : '';
+            lab.style.color = f ? (black ? f.cl : f.c) : '';
+        } else {
+            lab.textContent = black ? '' : NAMES[m % 12] + (Math.floor(m / 12) - 1);
+            lab.style.color = '';
+        }
+        lab.classList.toggle('c', !violinMode && m % 12 === 0);
+        lab.style.display = showLabels ? '' : 'none';
+    }
+}
 
 function buildKeyboard() {
     const keys = document.getElementById('keys');
@@ -444,9 +497,7 @@ function buildKeyboard() {
         el.className = 'white';
         el.style.left = (i * ww) + '%';
         el.style.width = ww + '%';
-        const oct = Math.floor(m / 12) - 1;
-        const nm = NAMES[m % 12] + oct;
-        el.innerHTML = '<span class="lab' + (m % 12 === 0 ? ' c' : '') + '">' + nm + '</span>';
+        el.innerHTML = '<span class="lab"></span>';
         el.dataset.midi = m;
         keys.appendChild(el);
         keyEls.set(m, el);
@@ -460,11 +511,12 @@ function buildKeyboard() {
         el.style.left = ((leftWhite + 1) * ww - ww * 0.3) + '%';
         el.style.width = (ww * 0.6) + '%';
         el.style.height = '62%';
+        el.innerHTML = '<span class="lab"></span>';
         el.dataset.midi = m;
         keys.appendChild(el);
         keyEls.set(m, el);
     }
-    document.querySelectorAll('.lab').forEach(l => l.style.display = showLabels ? '' : 'none');
+    applyLabels();
     drawMini();
     // the keyboard is a VIEW — rebuilding it (resize, size buttons, learn mode)
     // must not lose playing state, so restore lights from the state of record
@@ -613,10 +665,20 @@ function flashRange() { drawMini(); }
 // =============================================================================
 const sustainBtn = document.getElementById('sustainBtn');
 sustainBtn.addEventListener('click', () => { ensureAudio(); setSustain(!sustain); });
+document.getElementById('violinBtn').addEventListener('click', () => {
+    violinMode = !violinMode;
+    document.getElementById('violinBtn').classList.toggle('on', violinMode);
+    // fingering you cannot see is no help, so turning violin mode on turns labels on
+    if (violinMode && !showLabels) {
+        showLabels = true;
+        document.getElementById('labelBtn').classList.add('on');
+    }
+    applyLabels();
+});
 document.getElementById('labelBtn').addEventListener('click', () => {
     showLabels = !showLabels;
     document.getElementById('labelBtn').classList.toggle('on', showLabels);
-    document.querySelectorAll('.lab').forEach(l => l.style.display = showLabels ? '' : 'none');
+    applyLabels();
 });
 document.getElementById('labelBtn').classList.add('on');
 document.getElementById('vol').addEventListener('input', e => {
@@ -1012,11 +1074,22 @@ function drawFall() {
         const top = bottom - Math.max(40, e[2]) * pxMs;
         if (bottom < 0 || top > H) continue;
         const h = Math.max(3, bottom - top);
-        g.fillStyle = rect.black ? '#8f6bff' : '#b49bff';
+        // in violin mode a bar is coloured by its string, and notes off the
+        // violin (the piano accompaniment) recede so the melody line reads
+        const f = violinMode ? violinFinger(m) : null;
+        g.fillStyle = violinMode ? (f ? (rect.black ? f.c : f.cl) : '#4b4560')
+                                 : (rect.black ? '#8f6bff' : '#b49bff');
         const x = rect.x + 1, w = Math.max(2, rect.w - 2), rad = Math.min(4, w / 2);
         g.beginPath(); g.moveTo(x + rad, top); g.arcTo(x + w, top, x + w, top + rad, rad);
         g.arcTo(x + w, bottom, x + w - rad, bottom, rad); g.arcTo(x, bottom, x, bottom - rad, rad);
         g.arcTo(x, top, x + rad, top, rad); g.closePath(); g.fill();
+        // the fingering rides at the leading (bottom) edge — the end that reaches the keys
+        if (f && w >= 17 && h >= 15) {
+            g.fillStyle = '#17102b';
+            g.font = '700 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+            g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.fillText(f.text, x + w / 2, Math.max(top + 8, Math.min(bottom - 9, H - 8)));
+        }
     }
 }
 document.getElementById('learnBtn').addEventListener('click', () => {
@@ -1276,6 +1349,8 @@ window.PIANO = {
     parseMIDI, addUserMIDI, eventsToMIDI, exportSongMidi,
     setRate: setSongRate, setTranspose: setSongTranspose, seek: seekSong,
     toggleRecord: () => recBtn.click(),
+    toggleViolin: () => document.getElementById('violinBtn').click(),
+    violinFinger, violin: () => violinMode,
     _ctx: () => ac, _comp: () => comp,
     _events: () => songEvents, _songTime: songTimeNow,
     _live: () => [...songLive.entries()].map(([p, v]) => [p, { ...v }]),
